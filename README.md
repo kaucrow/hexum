@@ -66,6 +66,8 @@ graph TD
     I -->|No| K[Force Re-login]
 ```
 
+<hr>
+
 ## Local Development
 
 Follow these steps to set up and run the application suite locally on your machine for development.
@@ -130,4 +132,6 @@ Because the production credentials and server settings are strictly excluded fro
 Whenever code is pushed to the `main` branch, the GitHub Actions runner automatically executes the following pipeline:
 * Compiles the production-ready, minimal Rust image.
 * Pushes the compiled artifact to the GitHub Container Registry (GHCR).
-* Securely connects to the VPS via SSH, moves into the app folder, pulls down the fresh image, and boots it using only the main production file (`docker compose up -d`), successfully completing the deployment.
+* Securely connects to the VPS via an SSH key.
+* Checks if a Traefik container is running. If not, the workflow automatically provisions the external `web-network`, navigates into `~/traefik`, and spins up the Traefik stack using its standalone compose configuration found [here](ops/traefik/docker-compose.yml) before proceeding. If Traefik is already active, this initialization step is skipped.
+* Pulls down the fresh application image from GHCR and deploys it using the main [docker-compose.yml](docker-compose.yml) file via `docker compose up -d`, successfully completing the deployment.
