@@ -74,11 +74,17 @@ jobs:
                   - APP_ENV=production
                 labels:
                   - "traefik.enable=true"
-                  - "traefik.http.routers.myapi.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
-                  - "traefik.http.routers.myapi.entrypoints=websecure"
-                  - "traefik.http.routers.myapi.tls=true"
-                  - "traefik.http.routers.myapi.tls.certresolver=certresolver"
-                  - "traefik.http.services.myapi.loadbalancer.server.port=8080"
+                  # Catch every request that starts with /api
+                  - "traefik.http.routers.api.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
+                  - "traefik.http.routers.api.entrypoints=websecure"
+                  - "traefik.http.routers.api.tls=true"
+                  - "traefik.http.routers.api.tls.certresolver=certresolver"
+                  # Strip "/api" off the front of every path
+                  - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
+                  # Attach the stripping middleware to this router
+                  - "traefik.http.routers.api.middlewares=api-strip"
+                  # Forward the stripped request to the app port
+                  - "traefik.http.services.api.loadbalancer.server.port=8080"
               postgres:
                 image: postgres:18-alpine
                 restart: unless-stopped
