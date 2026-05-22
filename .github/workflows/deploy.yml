@@ -77,7 +77,7 @@ jobs:
                   - "traefik.http.routers.myapi.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
                   - "traefik.http.routers.myapi.entrypoints=websecure"
                   - "traefik.http.routers.myapi.tls=true"
-                  - "traefik.http.routers.myapi.tls.certresolver=myresolver"
+                  - "traefik.http.routers.myapi.tls.certresolver=certresolver"
                   - "traefik.http.services.myapi.loadbalancer.server.port=8080"
               postgres:
                 image: postgres:18-alpine
