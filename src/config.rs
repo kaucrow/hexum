@@ -202,7 +202,7 @@ pub struct GitHubConfig {
 pub fn get_config() -> Result<Config, config::ConfigError> {
     let base_path = get_base_path();
 
-    let environment: String = std::env::var("RAILWAY_ENVIRONMENT_NAME")
+    let environment: String = std::env::var("APP_ENV")
         .unwrap_or_else(|_| "development".into());
 
     let config_directory = base_path.join(format!("config/{}", environment));
@@ -229,7 +229,6 @@ pub fn get_config() -> Result<Config, config::ConfigError> {
 
     if environment == "production" {
         app_config.api.protocol = ApiProtocol::Https;
-        app_config.api.domain = std::env::var("RAILWAY_PUBLIC_DOMAIN").expect("Failed to get Railway public domain.");
     } else {
         let local_ip = local_ip().unwrap_or("127.0.0.1".parse().unwrap()).to_string();
 

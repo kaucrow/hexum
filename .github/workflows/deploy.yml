@@ -66,9 +66,12 @@ jobs:
                   - redis
                 networks:
                   - web-network
+                volumes:
+                  - /home/kaucrow/hexum/config/production:/app/config/production:ro
                 environment:
                   - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
                   - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+                  - APP_ENV=production
                 labels:
                   - "traefik.enable=true"
                   - "traefik.http.routers.myapi.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
