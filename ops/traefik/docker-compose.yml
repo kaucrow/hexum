@@ -1,0 +1,63 @@
+# ================================================
+#  - acme.json Init Service (Creates acme.json)
+#  - Traefik Service
+# ================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # Helper Service: Automated SSL File Provisioner
+  # ----------------------------------------------------------------------------
+  acme-init:
+    image: alpine:latest
+    container_name: traefik-acme-init
+    volumes:
+      - ./data:/etc/traefik/data
+    # Creates the file if missing and forces strict 600 (owner read/write only)
+    command: >
+      sh -c "mkdir -p /etc/traefik/data && 
+             touch /etc/traefik/data/acme.json && 
+             chmod 600 /etc/traefik/data/acme.json"
+
+  # ----------------------------------------------------------------------------
+  # Core Proxy Service: Traefik Engine
+  # ----------------------------------------------------------------------------
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    restart: unless-stopped
+    # Delays Traefik until the initialization script finishes successfully
+    depends_on:
+      acme-init:
+        condition: service_completed_successfully
+    ports:
+      - "80:80"     # HTTP
+      - "443:443"   # HTTPS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./data/acme.json:/acme.json
+    command:
+      # Look for docker containers
+      - "--providers.docker=true"
+
+      # Don't expose containers unless we explicitly tell it to
+      - "--providers.docker.exposedbydefault=false"
+
+      # Define the entry ports
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+
+      # Automatically redirect all HTTP traffic to HTTPS
+      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
+      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
+
+      # Enable Let's Encrypt automation
+      - "--certificatesresolvers.certresolver.acme.httpchallenge=true"
+      - "--certificatesresolvers.certresolver.acme.httpchallenge.entrypoint=web"
+      - "--certificatesresolvers.certresolver.acme.email=kaucrow@protonmail.com"
+      - "--certificatesresolvers.certresolver.acme.storage=/acme.json"
+    networks:
+      - web-network
+
+networks:
+  web-network:
+    external: true

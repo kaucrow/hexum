@@ -9,8 +9,22 @@ RUN apk add --no-cache \
     build-base \
     postgresql-dev
 
+# Copy only the dependency manifests
+COPY Cargo.toml Cargo.lock ./
+
+# Create a dummy source file to satisfy Cargo's compiler expectations
+RUN mkdir src && echo "fn main() {}" > src/main.rs
+
+# Build dependencies first. Docker caches these dependencies
+RUN cargo build --release
+
+# Tear down the dummy source file
+RUN rm -rf src/
+
+# Copy the app's code
 COPY . .
 
+# Compile just the app layer
 RUN cargo build --release
 
 # =======================

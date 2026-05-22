@@ -4,6 +4,7 @@ use sqlx::{
 };
 use anyhow::{Result, Context};
 
+use crate::prelude::*;
 use crate::Config;
 use super::queries;
 
@@ -21,6 +22,12 @@ impl PostgresAdapter {
             .connect(&config.postgres.url())
             .await
             .context("Failed to connect to PostgreSQL database.")?;
+
+        info!("Postgres migrations ran successfully.");
+
+        sqlx::migrate!("postgres/migrations")
+            .run(&pool)
+            .await?;
 
         Ok(Self { pool })
     }

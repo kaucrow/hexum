@@ -15,14 +15,14 @@ protocol = "http"
 
 [postgresql]
 pool_max_conn = 5
-host = "localhost"
+host = "postgres"
 port = 5432
 user = ""
 passwd = ""
 name = ""
 
 [redis]
-host = "localhost"
+host = "redis"
 port = 6379
 passwd = ""
 number = "0"

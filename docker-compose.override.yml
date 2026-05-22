@@ -1,0 +1,42 @@
+# ==============================================
+#  HEXUM LOCAL DEVELOPMENT OVERRIDES
+# ==============================================
+
+services:
+  api:
+    # Build the image locally from the Dockerfile
+    image: hexum-api:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Clear out all the Traefik routing labels
+    labels: []
+
+    # Map port 8080 straight to the computer's localhost interface
+    ports:
+      - "8080:8080"
+
+    # Swap the configuration mount directory to the local path
+    volumes:
+      - ./config/development:/app/config/development:ro
+
+    # Set the environment to development
+    environment:
+      - APP_ENV=development
+
+  postgres:
+    ports:
+      - "5432:5432"
+
+  redis:
+    ports:
+      - "6379:6379"
+
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  web-network:
+    external: false

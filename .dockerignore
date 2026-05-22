@@ -1,0 +1,19 @@
+# Ignore local compiled Rust artifacts
+target/
+
+# Ignore Docker Compose config files
+docker-compose.yml
+docker-compose.override.yml
+
+# Ignore local environment variables
+.env
+
+# Ignore version control files
+.git
+.gitignore
+.github
+
+# Ignore any local data folders or logs
+*.log
+data/
+ops/traefik/data/

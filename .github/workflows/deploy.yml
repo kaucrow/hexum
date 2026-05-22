@@ -39,8 +39,35 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code (to grab docker-compose)
+      - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Create App Directory on VPS
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: mkdir -p ~/hexum
+
+      - name: Copy app docker-compose.yml to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "docker-compose.yml"
+          target: "/home/${{ secrets.VPS_USER }}/hexum/"
+
+      - name: Copy traefik docker-compose.yml to VPS
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: "ops/traefik/docker-compose.yml"
+          target: "/home/${{ secrets.VPS_USER }}/traefik/"
+          strip_components: 2   # Strips 'ops/traefik' from the path, so the file lands as ~/traefik/docker-compose.yml
 
       - name: Deploy to VPS via SSH
         uses: appleboy/ssh-action@master
@@ -49,65 +76,32 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
+            # =========================
+            #   Traefik Guard Check
+            # =========================
+            # Check if a container named 'traefik' is running
+            if [ -z "$(docker ps -q -f name=^traefik$ -f status=running)" ]; then
+              echo "Traefik is NOT active! Initializing gateway network and container..."
+
+              # Ensure the external web-network exists
+              docker network create web-network || true
+
+              # Boot up Traefik
+              cd ~/traefik
+              docker compose up -d
+              echo "Traefik container started successfully."
+            else
+              echo "Traefik container is already running. Skipping initialization."
+            fi
+
+            # =========================
+            #   App Deployment
+            # =========================
             # Move to the app's directory
-            mkdir -p ~/hexum && cd ~/hexum
+            cd ~/hexum
 
             # Log into GHCR on the VPS so it's authorized to pull the image
             echo "${{ secrets.GH_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
-
-            # Create or update the docker-compose.yml file on the server
-            cat << 'EOF' > docker-compose.yml
-            services:
-              api:
-                image: ghcr.io/${{ github.repository_owner }}/hexum:latest
-                restart: unless-stopped
-                depends_on:
-                  - postgres
-                  - redis
-                networks:
-                  - web-network
-                volumes:
-                  - /home/kaucrow/hexum/config/production:/app/config/production:ro
-                environment:
-                  - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
-                  - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
-                  - APP_ENV=production
-                labels:
-                  - "traefik.enable=true"
-                  # Catch every request that starts with /api
-                  - "traefik.http.routers.api.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
-                  - "traefik.http.routers.api.entrypoints=websecure"
-                  - "traefik.http.routers.api.tls=true"
-                  - "traefik.http.routers.api.tls.certresolver=certresolver"
-                  # Strip "/api" off the front of every path
-                  - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
-                  # Attach the stripping middleware to this router
-                  - "traefik.http.routers.api.middlewares=api-strip"
-                  # Forward the stripped request to the app port
-                  - "traefik.http.services.api.loadbalancer.server.port=8080"
-              postgres:
-                image: postgres:18-alpine
-                restart: unless-stopped
-                environment:
-                  POSTGRES_USER: ${DB_USER}
-                  POSTGRES_PASSWORD: ${DB_PASSWORD}
-                  POSTGRES_DB: ${DB_NAME}
-                volumes:
-                  - pgdata:/var/lib/postgresql
-                networks:
-                  - web-network
-              redis:
-                image: redis:alpine
-                restart: unless-stopped
-                command: redis-server --requirepass ${REDIS_PASSWORD}
-                networks:
-                  - web-network
-            volumes:
-              pgdata:
-            networks:
-              web-network:
-                external: true
-            EOF
 
             # Pull the brand new image and restart the containers
             docker compose pull
