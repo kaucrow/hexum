@@ -58,6 +58,10 @@ services:
     networks:
       - internal-network
 
+volumes:
+  pgdata:
+    driver: local
+
 networks:
   web-network:
     external: true  # Use the Traefik bridge
