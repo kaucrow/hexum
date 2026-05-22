@@ -1,0 +1,108 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main ]  # Triggers on every push to the main branch
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/hexum:latest
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GH_PAT }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Runs the Dockerfile using GitHub's servers
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (to grab docker-compose)
+        uses: actions/checkout@v4
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_IP }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            # Move to the app's directory
+            mkdir -p ~/hexum && cd ~/hexum
+
+            # Log into GHCR on the VPS so it's authorized to pull the image
+            echo "${{ secrets.GH_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
+
+            # Create or update the docker-compose.yml file on the server
+            cat << 'EOF' > docker-compose.yml
+            services:
+              api:
+                image: ghcr.io/${{ github.repository_owner }}/hexum:latest
+                restart: unless-stopped
+                depends_on:
+                  - postgres
+                  - redis
+                networks:
+                  - web-network
+                environment:
+                  - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+                  - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+                labels:
+                  - "traefik.enable=true"
+                  - "traefik.http.routers.myapi.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
+                  - "traefik.http.routers.myapi.entrypoints=websecure"
+                  - "traefik.http.routers.myapi.tls=true"
+                  - "traefik.http.routers.myapi.tls.certresolver=myresolver"
+                  - "traefik.http.services.myapi.loadbalancer.server.port=8080"
+              postgres:
+                image: postgres:18-alpine
+                restart: unless-stopped
+                environment:
+                  POSTGRES_USER: ${DB_USER}
+                  POSTGRES_PASSWORD: ${DB_PASSWORD}
+                  POSTGRES_DB: ${DB_NAME}
+                volumes:
+                  - pgdata:/var/lib/postgresql/data
+                networks:
+                  - web-network
+              redis:
+                image: redis:alpine
+                restart: unless-stopped
+                command: redis-server --requirepass ${REDIS_PASSWORD}
+                networks:
+                  - web-network
+            volumes:
+              pgdata:
+            networks:
+              web-network:
+                external: true
+            EOF
+
+            # Pull the brand new image and restart the containers
+            docker compose pull
+            docker compose up -d
+
+            # Clean up old images to save space
+            docker system prune -f
