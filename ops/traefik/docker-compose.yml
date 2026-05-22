@@ -6,7 +6,7 @@
 
 services:
   # ----------------------------------------------------------------------------
-  # Helper Service: Automated SSL File Provisioner
+  #  Helper Service: Automated SSL File Provisioner
   # ----------------------------------------------------------------------------
   acme-init:
     image: alpine:latest
@@ -20,7 +20,7 @@ services:
              chmod 600 /etc/traefik/data/acme.json"
 
   # ----------------------------------------------------------------------------
-  # Core Proxy Service: Traefik Engine
+  #  Core Proxy Service: Traefik Engine
   # ----------------------------------------------------------------------------
   traefik:
     image: traefik:latest
