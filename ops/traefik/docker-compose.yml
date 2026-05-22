@@ -1,4 +1,5 @@
 # ================================================
+#  TRAEFIK CONTAINERS
 #  - acme.json Init Service (Creates acme.json)
 #  - Traefik Service
 # ================================================
@@ -41,6 +42,9 @@ services:
 
       # Don't expose containers unless we explicitly tell it to
       - "--providers.docker.exposedbydefault=false"
+
+      # Use the web-network network
+      - "--providers.docker.network=web-network"
 
       # Define the entry ports
       - "--entrypoints.web.address=:80"

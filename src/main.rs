@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
         format!("{}:{}", config.api.host, config.api.port)
     ).await.unwrap();
 
-    info!("Hexum is running on {} mode", config.environment.cyan().bold());
+    info!("Hexum is running on {} mode.", config.environment.cyan().bold());
     info!("API listening on {}", config.api.url().yellow());
     info!("View API docs at {}{}", config.api.url().yellow(), config.api.docs_endpoint.yellow().bold());
 
