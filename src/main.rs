@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use anyhow::Result;
-use axum::{Router, routing::{get, post, delete}};
+use axum::{
+    Router,
+    routing::{get, post},
+};
 use utoipa::OpenApi;
 use utoipa_scalar::{Scalar, Servable};
 use owo_colors::OwoColorize;
+use anyhow::Result;
 
 use hexum::{
     AppState,
@@ -12,20 +15,8 @@ use hexum::{
     prelude::*,
     config::EmailSender,
     telemetry,
-    application::{
-        ports::output::EmailPort,
-        services::{AuthService, UserService}
-    },
-    infrastructure::{
-        PostgresAdapter,
-        RedisSessionAdapter,
-        PasetoSecurityAdapter,
-        RedisVerificationAdapter,
-        LettreEmailAdapter,
-        ResendEmailAdapter,
-        OAuthAdapter,
-    },
-    presentation::http::{self, routes},
+    features::*,
+    api::{self, routes},
 };
 
 #[tokio::main]
@@ -38,27 +29,27 @@ async fn main() -> Result<()> {
     let (subscriber, _guard) = telemetry::get_subscriber(&config).await?;
     telemetry::init(subscriber);
 
-    let pg_adapter = Arc::new(PostgresAdapter::new(&config).await?);
-    let redis_session_adapter = Arc::new(RedisSessionAdapter::new(&config).await?);
-    let paseto_security_adapter = Arc::new(PasetoSecurityAdapter::new()?);
-    let oauth_adapter = Arc::new(OAuthAdapter::new(&config));
+    let pg_user_adapter = Arc::new(user::PostgresAdapter::new(&config).await?);
+    let redis_session_adapter = Arc::new(session::RedisAdapter::new(&config).await?);
+    let paseto_security_adapter = Arc::new(security::PasetoAdapter::new()?);
+    let oauth_adapter = Arc::new(oauth::OAuthAdapter::new(&config));
 
-    let auth_service = AuthService::new(
-        pg_adapter.clone(),
+    let auth_service = auth::Service::new(
+        pg_user_adapter.clone(),
         redis_session_adapter.clone(),
         paseto_security_adapter.clone(),
         oauth_adapter,
     );
 
-    let redis_verification_adapter = Arc::new(RedisVerificationAdapter::new(&config).await?);
-    let email_adapter: Arc<dyn EmailPort> = if let EmailSender::Smtp(_) = config.email.sender {
-        Arc::new(LettreEmailAdapter::new(&config)?)
+    let redis_verification_adapter = Arc::new(verification::RedisAdapter::new(&config).await?);
+    let email_adapter: Arc<dyn email::Port> = if let EmailSender::Smtp(_) = config.email.sender {
+        Arc::new(email::LettreAdapter::new(&config)?)
     } else {
-        Arc::new(ResendEmailAdapter::new(&config)?)
+        Arc::new(email::ResendAdapter::new(&config)?)
     };
 
-    let user_service = UserService::new(
-        pg_adapter,
+    let user_service = user::Service::new(
+        pg_user_adapter,
         redis_verification_adapter,
         paseto_security_adapter,
         email_adapter,
@@ -83,12 +74,10 @@ async fn main() -> Result<()> {
             .route("/user/verify-ui", get(routes::user::verify_ui))
             .route("/auth/oauth/login-ui", get(routes::auth::oauth::oauth_login_ui))
             .route("/auth/oauth/callback-ui", get(routes::auth::oauth::oauth_callback_ui))
-            .route("/dashboard", get(routes::management::manager_dashboard))
-            .route("/nuke", delete(routes::management::delete_database))
     }
 
     let app = app
-        .merge(Scalar::with_url(format!("/{}", config.api.docs_endpoint), http::ApiDocs::openapi()))
+        .merge(Scalar::with_url(format!("/{}", config.api.docs_endpoint), api::Docs::openapi()))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(
