@@ -91,7 +91,7 @@ jobs:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          envs: GITHUB_REF_NAME, PROJECT_SLUG
+          envs: GITHUB_REF_NAME, PROJECT_SLUG, DB_USER, DB_PASSWORD, DB_NAME, REDIS_PASSWORD
           script: |
             # =========================
             #   Traefik Guard Check
@@ -127,6 +127,14 @@ jobs:
             # Append BUSINESS_NAME & IMAGE_TAG
             echo "BUSINESS_NAME=${PROJECT_SLUG}" >> .env
             echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> .env
+
+            # Append database secrets only if they don't exist yet
+            if ! grep -q "^DB_PASSWORD=" .env; then
+              echo "DB_USER=${DB_USER}" >> .env
+              echo "DB_PASSWORD=${DB_PASSWORD}" >> .env
+              echo "DB_NAME=${DB_NAME}" >> .env
+              echo "REDIS_PASSWORD=${REDIS_PASSWORD}" >> .env
+            fi
 
             # Log into GHCR on the VPS so it's authorized to pull the image
             echo "${{ secrets.GH_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
