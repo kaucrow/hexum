@@ -44,12 +44,12 @@ pub enum EmailSender {
 }
 
 pub fn get_config() -> Result<Config, config::ConfigError> {
-    let base_path = get_base_path();
+    let root_path = get_root_path();
 
     let environment: String = std::env::var("APP_ENV")
         .unwrap_or_else(|_| "development".into());
 
-    let config_directory = base_path.join(format!("config/{}", environment));
+    let config_directory = root_path.join(format!("config/{}", environment));
 
     let filename = "base.toml";
 

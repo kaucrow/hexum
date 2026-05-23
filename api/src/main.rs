@@ -9,7 +9,7 @@ use utoipa_scalar::{Scalar, Servable};
 use owo_colors::OwoColorize;
 use anyhow::Result;
 
-use hexum::{
+use platform::{
     AppState,
     get_config,
     prelude::*,

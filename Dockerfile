@@ -1,46 +1,53 @@
 # =======================
-#   Builder
+#  Chef (Caching Tool)
 # =======================
-FROM rust:1.88-alpine AS builder
+FROM rust:alpine AS chef
 WORKDIR /usr/src/app
 
-RUN apk add --no-cache \
-    musl-dev \
-    build-base \
-    postgresql-dev
+RUN cargo install cargo-chef
 
-# Copy only the dependency manifests
-COPY Cargo.toml Cargo.lock ./
+# ================================
+#  Planner (Analyzes Workspace)
+# ================================
+FROM chef AS planner
+COPY . .
+# This analyzes all workspace crates and creates a dependency recipe
+RUN cargo chef prepare --recipe-path recipe.json
 
-# Create a dummy source file to satisfy Cargo's compiler expectations
-RUN mkdir src && echo "fn main() {}" > src/main.rs
+# ==========================
+#  Builder (Compiles App)
+# ==========================
+FROM chef AS builder
+COPY --from=planner /usr/src/app/recipe.json recipe.json
 
-# Build dependencies first. Docker caches these dependencies
-RUN cargo build --release
+# Build just the dependencies first so Docker caches this layer
+RUN cargo chef cook --release --recipe-path recipe.json
 
-# Tear down the dummy source file
-RUN rm -rf src/
-
-# Copy the app's code
+# Now copy the code
 COPY . .
 
-# Compile just the app layer
-RUN cargo build --release
+# Compile just the api crate
+RUN cargo build --release -p api
 
 # =======================
-#   Runtime environment
+#  Runtime Environment
 # =======================
 FROM alpine:latest
 WORKDIR /app
 
-RUN apk add --no-cache \
-    libpq \
-    redis \
-    ca-certificates
+RUN apk add --no-cache redis ca-certificates
 
-COPY --from=builder /usr/src/app/target/release/hexum /app/hexum
+# Copy the compiled executable
+COPY --from=builder /usr/src/app/target/release/api /app/api
 
+# Copy the global configuration from the workspace root
 COPY --from=builder /usr/src/app/config /app/config
-COPY --from=builder /usr/src/app/postgres /app/postgres
 
-CMD ["/app/hexum"]
+# Copy the crate-specific assets into their namespaced folders
+COPY --from=builder /usr/src/app/platform/postgres /app/platform/postgres
+
+# TODO: Add business crate
+# COPY --from=builder /usr/src/app/business/postgres /app/business/postgres
+
+# Run the compiled binary
+CMD ["/app/api"]

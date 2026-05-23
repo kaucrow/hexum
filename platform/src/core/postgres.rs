@@ -19,9 +19,9 @@ pub fn init() -> anyhow::Result<()> {
 }
 
 pub fn get_queries() -> Result<Queries, config::ConfigError> {
-    let base_path = get_base_path();
+    let crate_assets_path = get_crate_assets_path();
 
-    let queries_directory = base_path.join("postgres");
+    let queries_directory = crate_assets_path.join("postgres");
 
     let filename = "queries.yaml";
 

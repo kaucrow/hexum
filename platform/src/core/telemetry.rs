@@ -44,8 +44,8 @@ impl FormatTime for TimeFormat {
 
 /// Build a tracing subscriber.
 pub async fn get_subscriber(config: &Config) -> Result<(impl tracing::Subscriber + Send + Sync, tracing_appender::non_blocking::WorkerGuard)> {
-    let base_path = get_base_path();
-    let log_dir = base_path.join("log");
+    let root_path = get_root_path();
+    let log_dir = root_path.join("log");
     let log_path = log_dir.join("server.log");
 
     if log_path.exists() && log_path.is_file() {

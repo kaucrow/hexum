@@ -1,41 +1,6 @@
-[package]
-name = "hexum"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-anyhow = "1.0.102"
-argon2 = { version = "0.5.3", features = ["std"] }
-askama = "0.16.0"
-async-trait = "0.1.89"
-axum = { version = "0.8.9", features = ["macros"] }
-axum-extra = { version = "0.12.6", features = ["cookie"] }
-chrono = { version = "0.4.44", features = ["serde"] }
-config = { version = "0.15.22", features = ["toml"] }
-dotenvy = "0.15.7"
-lettre = { version = "0.11.21", default-features = false, features = ["tokio1", "tokio1-rustls-tls", "hostname", "smtp-transport", "builder"] }
-local-ip-address = "0.6.12"
-oauth2 = "5.0.0"
-owo-colors = "4.3.0"
-pasetors = "0.7.8"
-rand = "0.10.1"
-redis = { version = "1.2.1", features = ["connection-manager", "tokio-comp"] }
-reqwest = { version = "0.13.3", features = ["form", "json", "rustls"] }
-resend-rs = { version = "0.25.1", default-features = false, features = ["rustls-tls"] }
-serde = { version = "1.0.228", features = ["derive"] }
-serde_json = "1.0.149"
-sqlx = { version = "0.8.6", features = ["postgres", "runtime-tokio", "uuid", "tls-rustls"] }
-strip-ansi-escapes = "0.2.1"
-strum = { version = "0.28.0", features = ["derive"] }
-thiserror = "2.0.18"
-time = "0.3.47"
-tokio = { version = "1.52.1", features = ["full"] }
-tracing = "0.1.44"
-tracing-appender = "0.2.5"
-tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "time"] }
-utoipa = { version = "5.4.0", features = ["chrono"] }
-utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-uuid = { version = "1.23.1", features = ["serde", "v4"] }
-
-[package.metadata.askama]
-path = "templates"
+[workspace]
+members = [
+    "platform",
+    "api"
+]
+resolver = "3"
