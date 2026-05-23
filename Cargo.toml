@@ -2,5 +2,5 @@
 members = [
     "platform",
     "api"
-]
+, "business"]
 resolver = "3"

@@ -2,7 +2,9 @@ name: Build and Deploy
 
 on:
   push:
-    branches: [ main ]  # Triggers on every push to the main branch
+    branches:
+      - main          # Triggers on every push to main
+      - 'business-*'  # Triggers on every business implementation
 
 env:
   REGISTRY: ghcr.io

@@ -45,9 +45,7 @@ COPY --from=builder /usr/src/app/config /app/config
 
 # Copy the crate-specific assets into their namespaced folders
 COPY --from=builder /usr/src/app/platform/postgres /app/platform/postgres
-
-# TODO: Add business crate
-# COPY --from=builder /usr/src/app/business/postgres /app/business/postgres
+COPY --from=builder /usr/src/app/business/postgres /app/business/postgres
 
 # Run the compiled binary
 CMD ["/app/api"]

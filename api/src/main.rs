@@ -16,8 +16,9 @@ use platform::{
     config::EmailSender,
     telemetry,
     features::*,
-    api::{self, routes},
 };
+
+use api::docs::MasterDocs;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -62,22 +63,27 @@ async fn main() -> Result<()> {
     };
 
     let mut app = Router::new()
-        .route("/user/register", post(routes::user::register))
-        .route("/user/verify", get(routes::user::verify))
-        .route("/auth/local/login", post(routes::auth::local::login))
-        .route("/auth/oauth/google/login", post(routes::auth::oauth::google_login))
-        .route("/auth/oauth/github/login", post(routes::auth::oauth::github_login))
-        .route("/auth/refresh-session", post(routes::auth::refresh_session));
+        .route("/user/register", post(platform::routes::user::register))
+        .route("/user/verify", get(platform::routes::user::verify))
+        .route("/auth/local/login", post(platform::routes::auth::local::login))
+        .route("/auth/oauth/google/login", post(platform::routes::auth::oauth::google_login))
+        .route("/auth/oauth/github/login", post(platform::routes::auth::oauth::github_login))
+        .route("/auth/refresh-session", post(platform::routes::auth::refresh_session))
+        .route("/business-health", get(business::routes::health::health));
 
     if config.api.enable_dev_endpoints {
         app = app
-            .route("/user/verify-ui", get(routes::user::verify_ui))
-            .route("/auth/oauth/login-ui", get(routes::auth::oauth::oauth_login_ui))
-            .route("/auth/oauth/callback-ui", get(routes::auth::oauth::oauth_callback_ui))
+            .route("/user/verify-ui", get(platform::routes::user::verify_ui))
+            .route("/auth/oauth/login-ui", get(platform::routes::auth::oauth::oauth_login_ui))
+            .route("/auth/oauth/callback-ui", get(platform::routes::auth::oauth::oauth_callback_ui))
     }
 
+    let mut openapi = MasterDocs::openapi();
+    openapi.merge(platform::api::Docs::openapi());
+    openapi.merge(business::api::Docs::openapi());
+
     let app = app
-        .merge(Scalar::with_url(format!("/{}", config.api.docs_endpoint), api::Docs::openapi()))
+        .merge(Scalar::with_url(format!("/{}", config.api.docs_endpoint), openapi))
         .with_state(state);
 
     let listener = tokio::net::TcpListener::bind(

@@ -6,7 +6,6 @@ use super::routes;
 
 #[derive(OpenApi)]
 #[openapi(
-    info(description = "Scalable Axum backend using Hexagonal Architecture"),
     paths(
         // /user
         routes::user::register,

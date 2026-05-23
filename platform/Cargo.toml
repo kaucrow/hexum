@@ -29,7 +29,7 @@ time = "0.3.47"
 tracing = "0.1.44"
 tracing-appender = "0.2.5"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "fmt", "time"] }
-utoipa = { version = "5.4.0", features = ["chrono"] }
+utoipa = { version = "5.5.0", features = ["chrono"] }
 uuid = { version = "1.23.1", features = ["serde", "v4"] }
 
 [package.metadata.askama]

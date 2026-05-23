@@ -1,6 +1,5 @@
 pub use tracing::{debug, info, warn, error};
 pub use serde::{Serialize, Deserialize};
-pub use anyhow::Context;
 
 use std::path::PathBuf;
 
@@ -58,6 +57,6 @@ pub fn get_crate_assets_path() -> PathBuf {
         // Production: Look inside a namespaced folder relative to the executable
         std::env::current_dir()
             .expect("Failed to get current directory")
-            .join("platform")
+            .join("business")
     }
 }
