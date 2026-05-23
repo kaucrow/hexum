@@ -8,7 +8,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/hexum:latest
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/hexum:${{ github.ref_name }}
 
 jobs:
   build-and-push:
@@ -46,13 +46,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Determine Project Slug
+        run: |
+          BRANCH_NAME="${{ github.ref_name }}"
+          # If the branch name is 'main', the project slug is 'hexum'
+          if [ "$BRANCH_NAME" == "main" ]; then
+            echo "PROJECT_SLUG=hexum" >> $GITHUB_ENV
+          else
+            # Strips "business-" from the start of the branch name
+            SLUG=${BRANCH_NAME#business-}
+            echo "PROJECT_SLUG=$SLUG" >> $GITHUB_ENV
+          fi
+
       - name: Create App Directory on VPS
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          script: mkdir -p ~/hexum
+          script: mkdir -p ~/hexum/${{ env.PROJECT_SLUG }}
 
       - name: Copy app docker-compose.yml to VPS
         uses: appleboy/scp-action@master
@@ -61,7 +73,7 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           source: "docker-compose.yml"
-          target: "/home/${{ secrets.VPS_USER }}/hexum/"
+          target: "/home/${{ secrets.VPS_USER }}/hexum/${{ env.PROJECT_SLUG }}"
 
       - name: Copy traefik docker-compose.yml to VPS
         uses: appleboy/scp-action@master
@@ -79,6 +91,7 @@ jobs:
           host: ${{ secrets.VPS_IP }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          envs: GITHUB_REF_NAME, PROJECT_SLUG
           script: |
             # =========================
             #   Traefik Guard Check
@@ -102,14 +115,25 @@ jobs:
             #   App Deployment
             # =========================
             # Move to the app's directory
-            cd ~/hexum
+            cd ~/hexum/${PROJECT_SLUG}
+
+            # Ensure .env exists
+            touch .env
+
+            # Delete any existing lines that start with BUSINESS_NAME= or IMAGE_TAG=
+            sed -i '/^BUSINESS_NAME=/d' .env
+            sed -i '/^IMAGE_TAG=/d' .env
+
+            # Append BUSINESS_NAME & IMAGE_TAG
+            echo "BUSINESS_NAME=${PROJECT_SLUG}" >> .env
+            echo "IMAGE_TAG=${GITHUB_REF_NAME}" >> .env
 
             # Log into GHCR on the VPS so it's authorized to pull the image
             echo "${{ secrets.GH_PAT }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
             # Pull the brand new image and restart the containers
             docker compose pull
-            docker compose up -d
+            docker compose -p ${PROJECT_SLUG} up -d
 
             # Clean up old images to save space
             docker system prune -f

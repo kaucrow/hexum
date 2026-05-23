@@ -7,8 +7,10 @@
 
 services:
   api:
-    image: ghcr.io/kaucrow/hexum:latest
-    container_name: hexum-api-1
+    # Pulls the branch name as the image tag
+    image: ghcr.io/kaucrow/hexum:${IMAGE_TAG}
+    # Prefix containers with the business name
+    container_name: ${BUSINESS_NAME}-api-1
     restart: unless-stopped
     depends_on:
       - postgres
@@ -17,7 +19,7 @@ services:
       - web-network       # For Traefik
       - internal-network  # For internal communication
     volumes:
-      - /home/kaucrow/hexum/config/production:/app/config/production:ro
+      - ./config/production:/app/config/production:ro
     environment:
       - APP_ENV=production
     labels:
@@ -25,21 +27,21 @@ services:
       - "traefik.enable=true"
 
       # Catch every request that starts with /api
-      - "traefik.http.routers.api.rule=Host(`kaucrow.com`) && PathPrefix(`/api`)"
-      - "traefik.http.routers.api.entrypoints=websecure"
-      - "traefik.http.routers.api.tls=true"
-      - "traefik.http.routers.api.tls.certresolver=certresolver"
+      - "traefik.http.routers.${BUSINESS_NAME}-api.rule=Host(`${BUSINESS_NAME}.kaucrow.com`) && PathPrefix(`/api`)"
+      - "traefik.http.routers.${BUSINESS_NAME}-api.entrypoints=websecure"
+      - "traefik.http.routers.${BUSINESS_NAME}-api.tls=true"
+      - "traefik.http.routers.${BUSINESS_NAME}-api.tls.certresolver=certresolver"
 
       # Strip "/api" off the front of every path
-      - "traefik.http.middlewares.api-strip.stripprefix.prefixes=/api"
-      - "traefik.http.routers.api.middlewares=api-strip"
+      - "traefik.http.middlewares.${BUSINESS_NAME}-api-strip.stripprefix.prefixes=/api"
+      - "traefik.http.routers.${BUSINESS_NAME}-api.middlewares=${BUSINESS_NAME}-api-strip"
 
       # Forward the stripped request to the app port
-      - "traefik.http.services.api.loadbalancer.server.port=8080"
+      - "traefik.http.services.${BUSINESS_NAME}-api.loadbalancer.server.port=8080"
 
   postgres:
     image: postgres:18-alpine
-    container_name: hexum-postgres-1
+    container_name: ${BUSINESS_NAME}-postgres-1
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -52,7 +54,7 @@ services:
 
   redis:
     image: redis:alpine
-    container_name: hexum-redis-1
+    container_name: ${BUSINESS_NAME}-redis-1
     restart: unless-stopped
     command: redis-server --requirepass ${REDIS_PASSWORD}
     networks:

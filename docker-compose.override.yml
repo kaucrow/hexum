@@ -6,6 +6,7 @@ services:
   api:
     # Build the image locally from the Dockerfile
     image: hexum-api:local
+    container_name: hexum-api-1
     build:
       context: .
       dockerfile: Dockerfile
@@ -26,10 +27,12 @@ services:
       - APP_ENV=development
 
   postgres:
+    container_name: hexum-postgres-1
     ports:
       - "5432:5432"
 
   redis:
+    container_name: hexum-redis-1
     ports:
       - "6379:6379"
 
