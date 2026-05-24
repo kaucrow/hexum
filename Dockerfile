@@ -4,6 +4,7 @@
 FROM rust:alpine AS chef
 WORKDIR /usr/src/app
 
+RUN apk add --no-cache musl-dev
 RUN cargo install cargo-chef
 
 # ================================
@@ -11,7 +12,7 @@ RUN cargo install cargo-chef
 # ================================
 FROM chef AS planner
 COPY . .
-# This analyzes all workspace crates and creates a dependency recipe
+# Analyze all workspace crates and create a dependency recipe
 RUN cargo chef prepare --recipe-path recipe.json
 
 # ==========================
@@ -35,7 +36,7 @@ RUN cargo build --release -p api
 FROM alpine:latest
 WORKDIR /app
 
-RUN apk add --no-cache redis ca-certificates
+RUN apk add --no-cache ca-certificates
 
 # Copy the compiled executable
 COPY --from=builder /usr/src/app/target/release/api /app/api
