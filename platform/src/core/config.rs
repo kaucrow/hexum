@@ -18,7 +18,7 @@ pub struct Config {
     pub oauth: self::internal::OAuthConfig,
 }
 
-#[derive(Deserialize, Clone, Debug, Display, Default, EnumString)]
+#[derive(Deserialize, Clone, Debug, Display, Default, PartialEq, EnumString)]
 #[strum(serialize_all = "lowercase")]
 #[serde(rename_all = "lowercase")]
 pub enum Environment {

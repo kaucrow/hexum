@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
 use axum::Router;
-use utoipa::OpenApi;
+use utoipa::{OpenApi, openapi::Server};
 use utoipa_scalar::{Scalar, Servable};
 use tracing::info;
 use owo_colors::OwoColorize;
 use anyhow::Result;
 
-use platform::get_config;
+use platform::{Environment, get_config};
 
 use api::{
     docs::MasterDocs,
@@ -29,6 +29,13 @@ async fn main() -> Result<()> {
     let business_router = business::api::router(business_state);
 
     let mut openapi = MasterDocs::openapi();
+
+    if config.environment == Environment::Production {
+        openapi.servers = Some(vec![
+            Server::new("/api")
+        ]);
+    }
+
     openapi.merge(platform::api::Docs::openapi());
     openapi.merge(business::api::Docs::openapi());
 
