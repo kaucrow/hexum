@@ -21,8 +21,8 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder
 COPY --from=planner /usr/src/app/recipe.json recipe.json
 
-# Build just the dependencies first so Docker caches this layer
-RUN cargo chef cook --release --recipe-path recipe.json
+# Build the dependencies first so Docker caches this layer
+RUN cargo chef cook --release -p api --recipe-path recipe.json
 
 # Now copy the code
 COPY . .
