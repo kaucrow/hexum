@@ -36,6 +36,6 @@ pub enum RepositoryError {
     UsernameInUse,
     #[error("The email provided is already in use.")]
     EmailInUse,
-    #[error("User Repository: {0}")]
+    #[error("User: {0}")]
     Internal(String),
 }

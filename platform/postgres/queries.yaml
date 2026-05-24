@@ -1,38 +1,38 @@
 user:
   get_by_id: |
     SELECT id, username, email, roles, is_active
-    FROM "user"
+    FROM platform.user
     WHERE id = $1
 
   get_by_username: |
     SELECT id, username, email, roles, is_active
-    FROM "user"
+    FROM platform.user
     WHERE username = $1
 
   get_by_email: |
     SELECT id, username, email, roles, is_active
-    FROM "user"
+    FROM platform.user
     WHERE email = $1
 
   insert: |
-    INSERT INTO "user" (id, username, email, roles, is_active)
+    INSERT INTO platform.user (id, username, email, roles, is_active)
     VALUES ($1, $2, $3, $4, $5)
 
   delete_by_id: |
-    DELETE FROM "user"
+    DELETE FROM platform.user
     WHERE id = $1
 
 user_authenticator:
   get_by_user_id_and_provider: |
     SELECT id, user_id, provider, provider_id, passwd, is_verified
-    FROM user_authenticator
+    FROM platform.user_authenticator
     WHERE user_id = $1 AND provider = $2
 
   verify_local_by_user_id: |
-    UPDATE user_authenticator
+    UPDATE platform.user_authenticator
     SET is_verified = TRUE
     WHERE user_id = $1 AND PROVIDER = 'Local'
 
   insert: |
-    INSERT INTO user_authenticator (id, user_id, provider, provider_id, passwd, is_verified)
+    INSERT INTO platform.user_authenticator (id, user_id, provider, provider_id, passwd, is_verified)
     VALUES ($1, $2, $3, $4, $5, $6)

@@ -1,7 +1,7 @@
 pub mod config;
 pub mod postgres;
 pub mod telemetry;
-mod app;
+mod state;
 
-pub use app::AppState;
+pub use state::PlatformState;
 pub use config::{Config, get_config};

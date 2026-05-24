@@ -12,6 +12,6 @@ pub trait Port: Send + Sync + 'static {
 
 #[derive(Error, Debug)]
 pub enum PortError {
-    #[error("{0}")]
+    #[error("Session: {0}")]
     Internal(String)
 }

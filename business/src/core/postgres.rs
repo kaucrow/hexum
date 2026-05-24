@@ -1,32 +1,27 @@
 pub(crate) use sqlx::postgres::PgPool;
+pub(crate) use platform::postgres::sql;
 
 use std::sync::LazyLock;
 
 use crate::prelude::*;
 
-#[inline(always)]
-pub fn sql(query: &String) -> sqlx::AssertSqlSafe<&str> {
-    sqlx::AssertSqlSafe(query.as_str())
-}
-
 pub async fn run_migrations(pool: &PgPool) -> Result<()> {
     sqlx::migrate!("postgres/migrations")
-    .dangerous_set_table_name("_platform_migrations")
+    .dangerous_set_table_name("_business_migrations")
     .run(pool)
     .await
-    .context("Platform postgres migrations failed.")?;
+    .context("Business postgres migrations failed.")?;
 
     Ok(())
 }
 
 pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
-    get_queries().expect("Failed to initialize platform postgres queries.")
+    get_queries().expect("Failed to initialize business postgres queries.")
 });
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct Queries {
-    pub user: self::internal::User,
-    pub user_authenticator: self::internal::UserAuthenticator,
+    pub base: self::internal::Base,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -49,18 +44,7 @@ mod internal {
     use crate::prelude::*;
 
     #[derive(Deserialize, Debug)]
-    pub struct User {
-        pub get_by_id: String,
-        pub get_by_username: String,
-        pub get_by_email: String,
-        pub insert: String,
-        pub delete_by_id: String,
-    }
-
-    #[derive(Deserialize, Debug)]
-    pub struct UserAuthenticator {
-        pub get_by_user_id_and_provider: String,
-        pub verify_local_by_user_id: String,
-        pub insert: String,
+    pub struct Base {
+        pub ping: String,
     }
 }

@@ -15,6 +15,6 @@ pub enum UseCaseError {
     UsernameInUse,
     #[error("The email provided is already in use.")]
     EmailInUse,
-    #[error("UserUseCase: {0}.")]
+    #[error("User service: {0}.")]
     Internal(String),
 }

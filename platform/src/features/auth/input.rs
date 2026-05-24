@@ -45,6 +45,6 @@ pub enum UseCaseError {
     #[error("Parsing error: {0}")]
     Parse(String),
 
-    #[error("AuthUseCase: {0}")]
+    #[error("Auth service: {0}")]
     Internal(String),
 }

@@ -5,11 +5,7 @@ use thiserror::Error;
 use uuid::Uuid;
 use anyhow::Result;
 
-use crate::{
-    Config,
-    prelude::*,
-    postgres::*,
-};
+use crate::postgres::*;
 use super::*;
 
 #[derive(Clone)]
@@ -18,28 +14,12 @@ pub struct PostgresAdapter {
 }
 
 impl PostgresAdapter {
-    pub async fn new(config: &Config) -> Result<Self> {
-        postgres::init()?;
-
-        let pool = PgPoolOptions::new()
-            .max_connections(config.postgres.pool_max_conn)
-            .connect(&config.postgres.url())
-            .await
-            .context("Failed to connect to PostgreSQL database.")?;
-
-        info!("Postgres migrations ran successfully.");
-
-        sqlx::migrate!("postgres/migrations")
-            .run(&pool)
-            .await?;
-
-        Ok(Self { pool })
+    pub fn new(pool: PgPool) -> Self {
+        Self { pool }
     }
 
     async fn do_add_new_user(&self, user: User) -> Result<(), LocalError> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        let user_by_username = sqlx::query_as::<_, UserDbRow>(&queries.user.get_by_username)
+        let user_by_username = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
             .bind(user.username.as_str())
             .fetch_optional(&self.pool)
             .await?;
@@ -48,7 +28,7 @@ impl PostgresAdapter {
             return Err(LocalError::Logic(RepositoryError::UsernameInUse));
         }
 
-        let user_by_email = sqlx::query_as::<_, UserDbRow>(&queries.user.get_by_email)
+        let user_by_email = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
             .bind(user.email.as_str())
             .fetch_optional(&self.pool)
             .await?;
@@ -62,7 +42,7 @@ impl PostgresAdapter {
             .map(|r| r.to_string())
             .collect();
 
-        sqlx::query(&queries.user.insert)
+        sqlx::query(sql(&QUERIES.user.insert))
             .bind(user.id)
             .bind(user.username.as_str())
             .bind(user.email.as_str())
@@ -79,10 +59,8 @@ impl PostgresAdapter {
         user_id: &Uuid,
         auth_provider: AuthProvider,
     ) -> Result<Option<UserAuthenticator>, LocalError> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        let record = sqlx::query_as::<_, UserAuthenticatorDbRow>(
-            &queries.user_authenticator.get_by_user_id_and_provider
+        let user_authenticator = sqlx::query_as::<_, UserAuthenticatorDbRow>(
+            sql(&QUERIES.user_authenticator.get_by_user_id_and_provider)
         )
         .bind(user_id)
         .bind(auth_provider.to_string())
@@ -97,13 +75,11 @@ impl PostgresAdapter {
             is_verified: row.is_verified,
         });
 
-        Ok(record)
+        Ok(user_authenticator)
     }
 
     async fn do_add_authenticator(&self, user_authenticator: UserAuthenticator) -> Result<(), LocalError> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        sqlx::query(&queries.user_authenticator.insert)
+        sqlx::query(sql(&QUERIES.user_authenticator.insert))
             .bind(user_authenticator.id)
             .bind(user_authenticator.user_id)
             .bind(user_authenticator.provider.to_string())
@@ -117,9 +93,7 @@ impl PostgresAdapter {
     }
 
     async fn do_verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), LocalError> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        sqlx::query(&queries.user_authenticator.verify_local_by_user_id)
+        sqlx::query(sql(&QUERIES.user_authenticator.verify_local_by_user_id))
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -128,9 +102,7 @@ impl PostgresAdapter {
     }
 
     async fn do_delete_user_by_id(&self, id: &Uuid) -> Result<(), LocalError> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        sqlx::query(&queries.user.delete_by_id)
+        sqlx::query(sql(&QUERIES.user.delete_by_id))
             .bind(id)
             .execute(&self.pool)
             .await?;
@@ -142,9 +114,7 @@ impl PostgresAdapter {
 #[async_trait]
 impl Repository for PostgresAdapter {
     async fn get_user_by_id(&self, id: &Uuid) -> Option<User> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        let record = sqlx::query_as::<_, UserDbRow>(&queries.user.get_by_id)
+        let record = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_id))
             .bind(id)
             .fetch_optional(&self.pool)
             .await
@@ -168,54 +138,50 @@ impl Repository for PostgresAdapter {
     }
 
     async fn get_user_by_username(&self, username: &str) -> Option<User> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        let record = sqlx::query_as::<_, UserDbRow>(&queries.user.get_by_username)
+        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
             .bind(username)
             .fetch_optional(&self.pool)
             .await
             .ok()??;
 
-        let parsed_roles: Vec<Role> = record.roles
+        let parsed_roles: Vec<Role> = user.roles
             .into_iter()
             .filter_map(|r| Role::from_str(&r).ok())
             .collect();
 
-        let username_vo = Username::new(record.username).ok()?;
-        let email_vo = EmailAddress::new(record.email).ok()?;
+        let username_vo = Username::new(user.username).ok()?;
+        let email_vo = EmailAddress::new(user.email).ok()?;
 
         Some(User {
-            id: record.id,
+            id: user.id,
             username: username_vo,
             email: email_vo,
             roles: parsed_roles,
-            is_active: record.is_active,
+            is_active: user.is_active,
         })
     }
 
     async fn get_user_by_email(&self, email: &EmailAddress) -> Option<User> {
-        let queries = QUERIES.get().expect("Queries not initialized.");
-
-        let record = sqlx::query_as::<_, UserDbRow>(&queries.user.get_by_email)
+        let user_db_row = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
             .bind(email.as_str())
             .fetch_optional(&self.pool)
             .await
             .ok()??;
 
-        let parsed_roles: Vec<Role> = record.roles
+        let parsed_roles: Vec<Role> = user_db_row.roles
             .into_iter()
             .filter_map(|r| Role::from_str(&r).ok())
             .collect();
 
-        let username_vo = Username::new(record.username).ok()?;
-        let email_vo = EmailAddress::new(record.email).ok()?;
+        let username_vo = Username::new(user_db_row.username).ok()?;
+        let email_vo = EmailAddress::new(user_db_row.email).ok()?;
 
         Some(User {
-            id: record.id,
+            id: user_db_row.id,
             username: username_vo,
             email: email_vo,
             roles: parsed_roles,
-            is_active: record.is_active,
+            is_active: user_db_row.is_active,
         })
     }
 

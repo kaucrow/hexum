@@ -8,22 +8,22 @@ use axum_extra::extract::cookie::CookieJar;
 
 use crate::{
     prelude::*,
-    AppState,
+    PlatformState,
     features::{user, auth},
 };
 
 pub struct AuthenticatedUser(pub user::User);
 
-impl FromRequestParts<AppState> for AuthenticatedUser {
+impl FromRequestParts<PlatformState> for AuthenticatedUser {
     type Rejection = StatusCode;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &AppState,
+        state: &PlatformState,
     ) -> Result<Self, Self::Rejection> {
         info!("Session verification request received");
 
-        // Pull dependencies from AppState
+        // Pull dependencies from PlatformState
         let auth_service: Arc<dyn auth::UseCase> = axum::extract::FromRef::from_ref(state);
 
         // Grab the CookieJar from the incoming headers

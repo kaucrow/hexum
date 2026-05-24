@@ -1,18 +1,8 @@
-use std::sync::Arc;
-
-use axum::{
-    Json,
-    extract::State,
-    response::{Html, IntoResponse},
-};
-use axum_extra::extract::cookie::CookieJar;
-use askama::Template;
-
 use crate::{
     Config,
     prelude::*,
     features::auth,
-    api::ApiError,
+    api::*,
 };
 use super::{
     build_cookie,

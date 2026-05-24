@@ -8,7 +8,7 @@ use crate::{
 };
 
 #[derive(Clone, FromRef)]
-pub struct AppState {
+pub struct PlatformState {
     pub config: Arc<Config>,
     pub auth: Arc<dyn auth::UseCase>,
     pub user: Arc<dyn user::UseCase>,

@@ -1,0 +1,3 @@
+base:
+  ping: |
+    SELECT 1 as value

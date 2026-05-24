@@ -1,32 +1,9 @@
-pub use tracing::{debug, info, warn, error};
+pub use std::sync::Arc;
+pub use tracing::{info, warn, error};
 pub use serde::{Serialize, Deserialize};
-pub use anyhow::Context;
+pub use anyhow::{Result, Context};
 
 use std::path::PathBuf;
-
-use strum::Display;
-
-#[derive(Display)]
-#[strum(serialize_all = "lowercase")]
-pub enum Environment {
-    Development,
-    Production,
-}
-
-impl TryFrom<String> for Environment {
-    type Error = String;
-
-    fn try_from(s: String) -> Result<Self, Self::Error> {
-        match s.to_lowercase().as_str() {
-            "development" => Ok(Self::Development),
-            "production" => Ok(Self::Production),
-            other => Err(format!(
-                "{} is not a supported environment. Use either `development` or `production`.",
-                other
-            )),
-        }
-    }
-}
 
 /// Finds the base path for config files.
 /// In development (cargo run), it resolves to the workspace root.

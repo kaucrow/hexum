@@ -1,15 +1,17 @@
 [package]
 name = "api"
 version = "0.1.0"
-edition = "2024"
+edition = { workspace = true }
 
 [dependencies]
 platform = { path = "../platform" }
 business = { path = "../business" }
-utoipa = { version = "5.4.0", features = ["chrono"] }
-utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-dotenvy = "0.15.7"
-anyhow = "1.0.102"
-owo-colors = "4.3.0"
-axum = "0.8.9"
-tokio = { version = "1.52.1", features = ["full"] }
+anyhow = { workspace = true }
+axum = { workspace = true }
+sqlx = { workspace = true }
+tracing = { workspace = true }
+utoipa = { workspace = true }
+utoipa-scalar = { workspace = true }
+dotenvy = { workspace = true }
+owo-colors = { workspace = true }
+tokio = { workspace = true }

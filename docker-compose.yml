@@ -20,6 +20,11 @@ services:
       - internal-network  # For internal communication
     volumes:
       - ./config/production:/app/config/production:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: 5
     environment:
       - APP_ENV=production
     labels:

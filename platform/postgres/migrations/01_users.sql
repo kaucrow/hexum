@@ -1,4 +1,4 @@
-CREATE TABLE "user" (
+CREATE TABLE platform.user (
     id UUID PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
@@ -7,9 +7,9 @@ CREATE TABLE "user" (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE user_authenticator (
+CREATE TABLE platform.user_authenticator (
     id UUID PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES platform.user(id) ON DELETE CASCADE,
     -- "local", "google", "github"
     provider VARCHAR(50) NOT NULL,
     -- The unique ID from the OAuth provider or NULL for local
