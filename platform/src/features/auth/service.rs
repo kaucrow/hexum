@@ -130,10 +130,10 @@ impl UseCase for Service {
             }
         }
 
-        let passwd_hash = local_authenticator.passwd
+        let hashed_passwd = local_authenticator.hashed_passwd
             .ok_or(UseCaseError::Internal("User with local auth has no password set.".to_string()))?;
 
-        if !self.security.verify_password(&passwd, &passwd_hash) {
+        if !self.security.verify_password(&passwd, &hashed_passwd) {
             return Err(UseCaseError::InvalidPassword);
         }
 
@@ -218,25 +218,23 @@ impl UseCase for Service {
 
 impl From<user::RepositoryError> for UseCaseError {
     fn from(e: user::RepositoryError) -> Self {
-        match e {
-            _ => UseCaseError::Internal(e.to_string()),
-        }
+        UseCaseError::Internal(e.to_string())
     }
 }
 
 impl From<session::PortError> for UseCaseError {
     fn from(e: session::PortError) -> Self {
-        match e {
-            _ => UseCaseError::Internal(e.to_string()),
-        }
+        UseCaseError::Internal(e.to_string())
     }
 }
 
 impl From<security::PortError> for UseCaseError {
     fn from(e: security::PortError) -> Self {
         match e {
-            security::PortError::TokenVerificationFailed => UseCaseError::InvalidAccessToken(e.to_string()),
-            _ => UseCaseError::Internal(e.to_string()),
+            security::PortError::TokenVerificationFailed => {
+                UseCaseError::InvalidAccessToken(e.to_string())
+            }
+            security::PortError::Internal(s) => UseCaseError::Internal(s),
         }
     }
 }
@@ -245,7 +243,9 @@ impl From<oauth::PortError> for UseCaseError {
     fn from(e: oauth::PortError) -> Self {
         match e {
             oauth::PortError::InvalidCode => UseCaseError::InvalidOAuthCode(e.to_string()),
-            _ => UseCaseError::Internal(e.to_string()),
+            oauth::PortError::NetworkError(s) => UseCaseError::Internal(s),
+            oauth::PortError::ParseError => UseCaseError::Internal(e.to_string()),
+            oauth::PortError::Internal(s) => UseCaseError::Internal(s),
         }
     }
 }

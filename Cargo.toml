@@ -41,3 +41,4 @@ uuid = { version = "1.23.1", features = ["serde", "v4"] }
 dotenvy = "0.15.7"
 owo-colors = "4.3.0"
 tokio = { version = "1.52.1", features = ["full"] }
+mockall = "0.14.0"

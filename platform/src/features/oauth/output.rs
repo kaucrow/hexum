@@ -1,6 +1,7 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Port: Send + Sync {
     /// Exchanges a code for Google user info

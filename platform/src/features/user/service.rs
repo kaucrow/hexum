@@ -32,7 +32,8 @@ impl UseCase for Service {
         let user_id = user.id.clone();
         let user_email = user.email.clone();
 
-        let passwd_hash = self.security.hash(passwd)?;
+        let passwd = Password::new(passwd.to_string())?;
+        let passwd_hash = self.security.hash_password(&passwd)?;
         let auth = UserAuthenticator::new_local(user_id, passwd_hash);
 
         self.user_repo.add_new_user(user).await?;
@@ -63,9 +64,8 @@ impl UseCase for Service {
 impl From<RepositoryError> for UseCaseError {
     fn from(e: RepositoryError) -> Self {
         match e {
-            RepositoryError::UsernameInUse => UseCaseError::UsernameInUse,
-            RepositoryError::EmailInUse => UseCaseError::EmailInUse,
-            _ => UseCaseError::Internal(e.to_string()),
+            RepositoryError::Conflict(c) => UseCaseError::Conflict(c),
+            RepositoryError::Internal(s) => UseCaseError::Internal(s),
         }
     }
 }
@@ -73,23 +73,25 @@ impl From<RepositoryError> for UseCaseError {
 impl From<security::PortError> for UseCaseError {
     fn from(e: security::PortError) -> Self {
         match e {
-            _ => UseCaseError::Internal(e.to_string()),
+            security::PortError::TokenVerificationFailed => {
+                UseCaseError::Internal(e.to_string())
+            }
+            security::PortError::Internal(s) => UseCaseError::Internal(s),
         }
     }
 }
 
 impl From<email::PortError> for UseCaseError {
     fn from(e: email::PortError) -> Self {
-        match e {
-            _ => UseCaseError::Internal(e.to_string()),
-        }
+        UseCaseError::Internal(e.to_string())
     }
 }
 
 impl From<verification::PortError> for UseCaseError {
     fn from(e: verification::PortError) -> Self {
         match e {
-            _ => UseCaseError::Internal(e.to_string()),
+            verification::PortError::VerificationTokenInvalid => UseCaseError::VerificationTokenInvalid,
+            verification::PortError::Internal(s) => UseCaseError::Internal(s),
         }
     }
 }

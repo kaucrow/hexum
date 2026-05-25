@@ -5,7 +5,7 @@ use utoipa::{ToSchema, IntoParams};
 pub struct RegisterRequest {
     #[schema(example = "johndoe")]
     pub username: String,
-    #[schema(example = "password123")]
+    #[schema(example = "MyP@ssword123")]
     pub password: String,
     #[schema(example = "johndoe@gmail.com")]
     pub email: String

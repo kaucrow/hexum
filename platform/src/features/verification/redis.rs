@@ -25,9 +25,7 @@ impl RedisAdapter {
 
         Ok(Self { conn })
     }
-}
 
-impl RedisAdapter {
     async fn do_store_verification_token(&self, user_id: &Uuid, token: &str, expires_in_secs: u64) -> Result<(), LocalError> {
         let key = self.format_key(token);
 
@@ -66,7 +64,7 @@ impl Port for RedisAdapter {
 
 #[derive(Error, Debug)]
 pub enum LocalError {
-    #[error("The verification token is invalid or expired.")]
+    #[error("")]
     VerificationTokenInvalid,
     #[error(transparent)]
     Redis(#[from] ::redis::RedisError),
@@ -77,7 +75,7 @@ pub enum LocalError {
 impl From<LocalError> for PortError {
     fn from(e: LocalError) -> Self {
         match e {
-            LocalError::VerificationTokenInvalid => PortError::VerificationTokenInvalid(e.to_string()),
+            LocalError::VerificationTokenInvalid => PortError::VerificationTokenInvalid,
             LocalError::Redis(e) => PortError::Internal(e.to_string()),
             LocalError::Uuid(e) => PortError::Internal(e.to_string()),
         }

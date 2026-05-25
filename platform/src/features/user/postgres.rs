@@ -25,7 +25,9 @@ impl PostgresAdapter {
             .await?;
 
         if user_by_username.is_some() {
-            return Err(LocalError::Logic(RepositoryError::UsernameInUse));
+            return Err(LocalError::Logic(
+                RepositoryError::Conflict(ConflictError::UsernameInUse)
+            ));
         }
 
         let user_by_email = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
@@ -34,7 +36,9 @@ impl PostgresAdapter {
             .await?;
 
         if user_by_email.is_some() {
-            return Err(LocalError::Logic(RepositoryError::EmailInUse));
+            return Err(LocalError::Logic(
+                RepositoryError::Conflict(ConflictError::EmailInUse)
+            ));
         }
 
         let roles_strings: Vec<String> = user.roles
@@ -71,7 +75,7 @@ impl PostgresAdapter {
             user_id: row.user_id,
             provider: auth_provider,
             provider_id: row.provider_id,
-            passwd: row.passwd,
+            hashed_passwd: row.passwd,
             is_verified: row.is_verified,
         });
 
@@ -84,7 +88,7 @@ impl PostgresAdapter {
             .bind(user_authenticator.user_id)
             .bind(user_authenticator.provider.to_string())
             .bind(user_authenticator.provider_id)
-            .bind(user_authenticator.passwd)
+            .bind(user_authenticator.hashed_passwd)
             .bind(user_authenticator.is_verified)
             .execute(&self.pool)
             .await?;

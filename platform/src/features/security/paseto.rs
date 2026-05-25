@@ -20,6 +20,7 @@ use thiserror::Error;
 use uuid::Uuid;
 use anyhow::Result;
 
+use crate::features::user;
 use super::*;
 
 #[derive(Clone)]
@@ -33,12 +34,11 @@ impl PasetoAdapter {
 
         Ok(Self { sk })
     }
-}
-impl PasetoAdapter {
-    fn do_hash(&self, s: &str) -> Result<String, LocalError> {
+
+    fn do_hash_password(&self, password: &user::Password) -> Result<String, LocalError> {
         let salt = SaltString::generate(&mut OsRng);
         let argon2 = Argon2::default();
-        let hash = argon2.hash_password(s.as_bytes(), &salt)?.to_string();
+        let hash = argon2.hash_password(password.as_str().as_bytes(), &salt)?.to_string();
 
         Ok(hash)
     }
@@ -96,8 +96,8 @@ impl Port for PasetoAdapter {
     }
 
     // Hash a string with Argon2
-    fn hash(&self, s: &str) -> Result<String, PortError> {
-        Ok(self.do_hash(s)?)
+    fn hash_password(&self, password: &user::Password) -> Result<String, PortError> {
+        Ok(self.do_hash_password(password)?)
     }
 
     // Verify a PASETO v4 access token & return the user_id

@@ -23,8 +23,7 @@ impl RedisAdapter {
 
         Ok(Self { conn })
     }
-}
-impl RedisAdapter {
+
     async fn do_store_session(&self, refresh_token: &str, user_id: &Uuid, ttl_days: u64) -> Result<(), LocalError> {
         let ttl_seconds = ttl_days * 24 * 60 * 60;
 

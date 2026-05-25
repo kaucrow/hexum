@@ -3,6 +3,7 @@ use thiserror::Error;
 
 use crate::features::user;
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Port: Send + Sync + 'static {
     async fn send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), PortError>;

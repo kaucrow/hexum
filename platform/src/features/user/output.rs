@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use super::{User, EmailAddress, UserAuthenticator, AuthProvider};
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Repository: Send + Sync + 'static {
     // --- Getters ---
@@ -30,12 +31,18 @@ pub trait Repository: Send + Sync + 'static {
     ) -> Result<(), RepositoryError>;
 }
 
-#[derive(Error, Debug)]
-pub enum RepositoryError {
+#[derive(Error, Debug, Clone, PartialEq)]
+pub enum ConflictError {
     #[error("The username provided is already in use.")]
     UsernameInUse,
     #[error("The email provided is already in use.")]
     EmailInUse,
-    #[error("User: {0}")]
+}
+
+#[derive(Error, Debug)]
+pub enum RepositoryError {
+    #[error(transparent)]
+    Conflict(#[from] ConflictError),
+    #[error("User repository: {0}")]
     Internal(String),
 }

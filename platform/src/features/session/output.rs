@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use thiserror::Error;
 use uuid::Uuid;
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Port: Send + Sync + 'static {
     // Stores the refresh token and associates it with a user ID for a given number of days

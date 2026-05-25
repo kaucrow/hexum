@@ -64,13 +64,15 @@ pub async fn verify(
 
 impl From<user::UserError> for ApiError {
     fn from(e: user::UserError) -> Self {
-        #[allow(unreachable_patterns)]
         match e {
-            user::UserError::InvalidUsername | user::UserError::InvalidEmail | user::UserError::PasswordTooShort => {
+            user::UserError::InvalidUsername
+            | user::UserError::InvalidEmail
+            | user::UserError::InvalidPassword => {
                 warn!("Validation error: {e}");
                 ApiError::BadRequest(e.to_string())
             }
-            _ => {
+            user::UserError::UserAlreadyDeactivated
+            | user::UserError::InsufficientPermissions => {
                 error!("Unexpected domain error: {e}");
                 ApiError::Internal("An internal error occurred".to_string())
             }
@@ -99,6 +101,7 @@ pub struct VerifyTemplate {
             content_type = "text/html"
         ),
         (status = 400, description = "Missing or invalid query parameters"),
+        (status = 401, description = "Verification token invalid/expired"),
         (status = 500, description = "Internal Server Error: Template rendering failed")
     ),
     tags = ["User"]
@@ -119,22 +122,27 @@ pub async fn verify_ui(
 
 impl From<user::UseCaseError> for ApiError {
     fn from(e: user::UseCaseError) -> Self {
-        #[allow(unreachable_patterns)]
         match e {
-            user::UseCaseError::UsernameInUse => {
-                warn!("{e}");
-                ApiError::Conflict("A user with this username already exists.".to_string())
-            }
-            user::UseCaseError::EmailInUse => {
-                warn!("{e}");
-                ApiError::Conflict("A user with this email already exists.".to_string())
-            }
+            user::UseCaseError::Conflict(c) => match c {
+                user::ConflictError::UsernameInUse => {
+                    warn!("{c}");
+                    ApiError::Conflict("A user with this username already exists.".to_string())
+                }
+                user::ConflictError::EmailInUse => {
+                    warn!("{c}");
+                    ApiError::Conflict("A user with this email already exists.".to_string())
+                }
+            },
+            user::UseCaseError::Validation(e) => {
+                warn!("Validation error: {e}");
+                ApiError::BadRequest(e.to_string())
+            },
+            user::UseCaseError::VerificationTokenInvalid => {
+                warn!("User verification token is invalid. It might have expired.");
+                ApiError::Unauthorized("Failed to verify account due to email expiration.".to_string())
+            },
             user::UseCaseError::Internal(e) => {
                 error!("An internal error occurred: {e}");
-                ApiError::Internal("An internal error occurred".to_string())
-            }
-            _ => {
-                error!("Unexpected domain error: {e}");
                 ApiError::Internal("An internal error occurred".to_string())
             }
         }

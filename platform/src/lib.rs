@@ -1,8 +1,11 @@
 pub mod api;
+pub mod features;
 pub(crate) mod prelude;
-pub(crate) mod features;
 mod init;
 mod core;
+
+#[cfg(test)]
+mod tests;
 
 pub use init::init;
 pub use core::{

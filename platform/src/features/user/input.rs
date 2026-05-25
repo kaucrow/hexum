@@ -1,7 +1,7 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use super::User;
+use super::{User, UserError, ConflictError};
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
@@ -11,10 +11,19 @@ pub trait UseCase: Send + Sync + 'static {
 
 #[derive(Error, Debug)]
 pub enum UseCaseError {
-    #[error("The username provided is already in use.")]
-    UsernameInUse,
-    #[error("The email provided is already in use.")]
-    EmailInUse,
+    /// Resource conflict (e.g., duplicate username/email).
+    #[error(transparent)]
+    Conflict(#[from] ConflictError),
+
+    /// Domain validation failure (e.g., invalid password format).
+    #[error(transparent)]
+    Validation(#[from] UserError),
+
+    /// User account verification token is invalid/expired.
+    #[error("The verification token is invalid or expired.")]
+    VerificationTokenInvalid,
+
+    /// Unexpected internal error.
     #[error("User service: {0}.")]
     Internal(String),
 }

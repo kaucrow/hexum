@@ -2,6 +2,7 @@ use async_trait::async_trait;
 use thiserror::Error;
 use uuid::Uuid;
 
+#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Port: Send + Sync + 'static {
     // Stores a token mapped to a User ID with an expiry
@@ -12,8 +13,8 @@ pub trait Port: Send + Sync + 'static {
 
 #[derive(Error, Debug)]
 pub enum PortError {
-    #[error("{0}")]
-    VerificationTokenInvalid(String),
+    #[error("The verification token is invalid or expired.")]
+    VerificationTokenInvalid,
 
     #[error("Verification: {0}")]
     Internal(String),
