@@ -24,6 +24,7 @@ pub struct Config {
 pub enum Environment {
     #[default]
     Development,
+    Testing,
     Production,
 }
 

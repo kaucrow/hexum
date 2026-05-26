@@ -1,5 +1,5 @@
-use integration_tests::{spawn_test_app, TestApp};
 use uuid::Uuid;
+use integration_tests::{spawn_test_app, TestApp};
 
 #[tokio::test]
 async fn verify_user_with_valid_token() {

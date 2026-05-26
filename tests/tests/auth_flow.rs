@@ -1,6 +1,6 @@
-use integration_tests::{spawn_test_app, TestApp};
 use serde_json::json;
 use uuid::Uuid;
+use integration_tests::{spawn_test_app, TestApp};
 
 /// End-to-end test covering the full authentication lifecycle:
 /// seed user -> verify -> login -> refresh → logout -> stale refresh rejected

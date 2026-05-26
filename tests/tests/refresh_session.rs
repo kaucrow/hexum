@@ -1,5 +1,5 @@
-use integration_tests::spawn_test_app;
 use serde_json::json;
+use integration_tests::spawn_test_app;
 
 #[tokio::test]
 async fn refresh_session_missing_cookie_returns_401() {

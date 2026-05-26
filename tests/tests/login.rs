@@ -1,5 +1,5 @@
-use integration_tests::{spawn_test_app, TestApp};
 use serde_json::json;
+use integration_tests::{spawn_test_app, TestApp};
 
 #[tokio::test]
 async fn login_user_not_verified() {

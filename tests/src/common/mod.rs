@@ -1,27 +1,31 @@
 use std::sync::Arc;
 
 use axum::Router;
-use platform::features::security::Port;
 use sqlx::PgPool;
 use tokio::sync::OnceCell;
 use uuid::Uuid;
+use wiremock::{MockServer, Mock, ResponseTemplate};
+use wiremock::matchers::{method, path};
+use platform::features::security::Port;
 
 /// A test application instance with its own server bound to a random port.
 pub struct TestApp {
-    /// Base URL of the spawned server
+    /// Base URL of the spawned server.
     pub address: String,
-    /// Reqwest client with cookie store enabled (handles Set-Cookie automatically)
+    /// Reqwest client with cookie store enabled.
     pub client: reqwest::Client,
-    /// PostgreSQL pool connected to the shared test database
+    /// PostgreSQL pool connected to the shared test database.
     pub pool: PgPool,
-    /// Loaded application config (development)
+    /// Loaded application config (testing).
     pub config: Arc<platform::Config>,
-    /// Redis connection manager for direct token lookups
+    /// Redis connection manager for direct token lookups.
     pub redis_conn: ::redis::aio::ConnectionManager,
+    /// Wiremock server that mocks the Resend API.
+    pub mock_server: MockServer,
 }
 
 impl TestApp {
-    /// Convenience: builds a full URL relative to this server.
+    /// Builds a full URL relative to this server.
     pub fn url(&self, path: &str) -> String {
         let path = path.trim_start_matches('/');
         format!("{}/{}", self.address, path)
@@ -253,12 +257,21 @@ pub async fn spawn_test_app() -> TestApp {
         .with_env_filter("info")
         .try_init();
 
+    // ── Wiremock server (mocks Resend API) ────────────────────
+    let mock_server = MockServer::start().await;
+
+    // Mock POST /emails (Resend send-email endpoint) -> 200 success
+    Mock::given(method("POST"))
+        .and(path("/emails"))
+        .respond_with(ResponseTemplate::new(200)
+            .set_body_json(serde_json::json!({"id": "mock-email-id"})))
+        .mount(&mock_server)
+        .await;
+
     unsafe {
-        std::env::set_var("APP_ENV", "development");
-        // Override Docker-internal hostnames so tests can reach Postgres/Redis
-        // from the host machine via localhost.
-        std::env::set_var("HEXUM_POSTGRESQL__HOST", "127.0.0.1");
-        std::env::set_var("HEXUM_REDIS__HOST", "127.0.0.1");
+        std::env::set_var("APP_ENV", "testing");
+        // Point the Resend client at our wiremock server
+        std::env::set_var("RESEND_BASE_URL", mock_server.uri());
     }
 
     let config = Arc::new(platform::get_config().expect("Failed to load config"));
@@ -375,5 +388,6 @@ pub async fn spawn_test_app() -> TestApp {
         pool,
         config,
         redis_conn,
+        mock_server,
     }
 }
