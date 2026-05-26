@@ -54,15 +54,15 @@ jobs:
 
       # Run Unit Tests
       - name: Run unit tests
-        run: cargo nextest run -p platform --lib --junit junit-unit.xml
+        run: cargo nextest run -p platform --lib --message-format junit --output-file junit-unit.xml
 
       # Run Integration Tests
       - name: Run integration tests
-        run: cargo nextest run -p integration-tests --junit junit-integration.xml
+        run: cargo nextest run -p integration-tests --message-format junit --output-file junit-integration.xml
 
       # Generate and publish a test results badge to a Gist
       - name: Generate and publish tests badge
-        if: always() 
+        if: always()
         uses: gaelgirodon/ci-badges-action@v1
         with:
           gist-id: 5ede7a8ee0dee36b052f2b085c8f0270
