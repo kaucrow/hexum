@@ -40,7 +40,6 @@ jobs:
           --health-timeout 2s
           --health-retries 10
         command: redis-server --requirepass redis
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -48,13 +47,26 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      # Run Unit Tests first
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      # Run Unit Tests
       - name: Run unit tests
-        run: cargo test -p platform --lib
+        run: cargo nextest run -p platform --lib --junit junit-unit.xml
 
       # Run Integration Tests
       - name: Run integration tests
-        run: cargo test -p integration-tests
+        run: cargo nextest run -p integration-tests --junit junit-integration.xml
+
+      # Generate and publish a test results badge to a Gist
+      - name: Generate and publish tests badge
+        if: always() 
+        uses: gaelgirodon/ci-badges-action@v1
+        with:
+          gist-id: 5ede7a8ee0dee36b052f2b085c8f0270
+          token: ${{ secrets.GIST_TOKEN }}
 
   # ============================================================
   #  Build with the Dockerfile & push the container
