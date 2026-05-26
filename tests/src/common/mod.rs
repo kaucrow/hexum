@@ -1,3 +1,5 @@
+pub(crate) mod postgres;
+
 use std::sync::Arc;
 
 use axum::Router;
@@ -6,7 +8,12 @@ use tokio::sync::OnceCell;
 use uuid::Uuid;
 use wiremock::{MockServer, Mock, ResponseTemplate};
 use wiremock::matchers::{method, path};
-use platform::features::security::Port;
+use platform::{
+    features::security::Port,
+    postgres::sql,
+};
+
+use self::postgres::QUERIES;
 
 /// A test application instance with its own server bound to a random port.
 pub struct TestApp {
@@ -56,7 +63,7 @@ impl TestApp {
 
     /// Deletes a user (and their authenticators via CASCADE) by email.
     pub async fn delete_user_by_email(&self, email: &str) {
-        sqlx::query("DELETE FROM platform.user WHERE email = $1")
+        sqlx::query(sql(&QUERIES.common.delete_user_by_email))
             .bind(email)
             .execute(&self.pool)
             .await
@@ -65,9 +72,7 @@ impl TestApp {
 
     /// Returns the user_id for a given email, if the user exists.
     pub async fn get_user_id_by_email(&self, email: &str) -> Option<Uuid> {
-        sqlx::query_scalar::<_, Uuid>(
-            "SELECT id FROM platform.user WHERE email = $1",
-        )
+        sqlx::query_scalar::<_, Uuid>(sql(&QUERIES.common.get_user_id_by_email))
         .bind(email)
         .fetch_optional(&self.pool)
         .await
@@ -76,10 +81,7 @@ impl TestApp {
 
     /// Returns whether the local authenticator for a user is verified.
     pub async fn is_user_verified(&self, user_id: &Uuid) -> Option<bool> {
-        sqlx::query_scalar::<_, Option<bool>>(
-            "SELECT is_verified FROM platform.user_authenticator \
-             WHERE user_id = $1 AND provider = 'Local'",
-        )
+        sqlx::query_scalar::<_, Option<bool>>(sql(&QUERIES.common.is_user_verified))
         .bind(user_id)
         .fetch_optional(&self.pool)
         .await
@@ -140,24 +142,18 @@ impl TestApp {
     pub async fn seed_verified_user(&self, username: &str, email: &str) -> Uuid {
         let user_id = Uuid::new_v4();
         let hash = Self::hash_known_password();
-        sqlx::query(
-            "INSERT INTO platform.user (id, username, email, roles, is_active) \
-             VALUES ($1, $2, $3, ARRAY['user'], true)"
-        )
+        sqlx::query(sql(&QUERIES.common.insert_user))
         .bind(user_id)
         .bind(username)
         .bind(email)
         .execute(&self.pool)
         .await
         .expect("Failed to seed user");
-        sqlx::query(
-            "INSERT INTO platform.user_authenticator \
-             (id, user_id, provider, passwd, is_verified) \
-             VALUES ($1, $2, 'Local', $3, true)"
-        )
+        sqlx::query(sql(&QUERIES.common.insert_authenticator))
         .bind(Uuid::new_v4())
         .bind(user_id)
         .bind(&hash)
+        .bind(true)
         .execute(&self.pool)
         .await
         .expect("Failed to seed authenticator");
@@ -169,24 +165,18 @@ impl TestApp {
     pub async fn seed_unverified_user_with_password(&self, username: &str, email: &str) -> Uuid {
         let user_id = Uuid::new_v4();
         let hash = Self::hash_known_password();
-        sqlx::query(
-            "INSERT INTO platform.user (id, username, email, roles, is_active) \
-             VALUES ($1, $2, $3, ARRAY['user'], true)"
-        )
+        sqlx::query(sql(&QUERIES.common.insert_user))
         .bind(user_id)
         .bind(username)
         .bind(email)
         .execute(&self.pool)
         .await
         .expect("Failed to seed user");
-        sqlx::query(
-            "INSERT INTO platform.user_authenticator \
-             (id, user_id, provider, passwd, is_verified) \
-             VALUES ($1, $2, 'Local', $3, false)"
-        )
+        sqlx::query(sql(&QUERIES.common.insert_authenticator))
         .bind(Uuid::new_v4())
         .bind(user_id)
         .bind(&hash)
+        .bind(false)
         .execute(&self.pool)
         .await
         .expect("Failed to seed authenticator");
@@ -197,10 +187,7 @@ impl TestApp {
     /// Useful for testing conflict detection (duplicate username/email).
     pub async fn seed_unverified_user(&self, username: &str, email: &str) -> Uuid {
         let user_id = Uuid::new_v4();
-        sqlx::query(
-            "INSERT INTO platform.user (id, username, email, roles, is_active) \
-             VALUES ($1, $2, $3, ARRAY['user'], true)"
-        )
+        sqlx::query(sql(&QUERIES.common.insert_user))
         .bind(user_id)
         .bind(username)
         .bind(email)

@@ -1,0 +1,19 @@
+common:
+  delete_user_by_email: |
+    DELETE FROM platform.user WHERE email = $1
+
+  get_user_id_by_email: |
+    SELECT id FROM platform.user WHERE email = $1
+
+  is_user_verified: |
+    SELECT is_verified FROM platform.user_authenticator
+    WHERE user_id = $1 AND provider = 'Local'
+
+  insert_user: |
+    INSERT INTO platform.user (id, username, email, roles, is_active)
+    VALUES ($1, $2, $3, ARRAY['user'], true)
+
+  insert_authenticator: |
+    INSERT INTO platform.user_authenticator
+    (id, user_id, provider, passwd, is_verified)
+    VALUES ($1, $2, 'Local', $3, $4)
