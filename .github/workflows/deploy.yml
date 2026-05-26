@@ -54,11 +54,12 @@ jobs:
 
       # Run Unit Tests
       - name: Run unit tests
-        run: cargo nextest run -p platform --lib --message-format junit --output-file junit-unit.xml
+        run: cargo nextest run -p platform --lib --profile unit
 
       # Run Integration Tests
       - name: Run integration tests
-        run: cargo nextest run -p integration-tests --message-format junit --output-file junit-integration.xml
+        if: always()
+        run: cargo nextest run -p integration-tests --profile integration
 
       # Generate and publish a test results badge to a Gist
       - name: Generate and publish tests badge

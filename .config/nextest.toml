@@ -1,0 +1,5 @@
+[profile.unit.junit]
+path = "junit-report.xml"
+
+[profile.integration.junit]
+path = "junit-report.xml"
