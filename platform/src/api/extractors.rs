@@ -12,6 +12,7 @@ use crate::{
     features::{user, auth},
 };
 
+#[allow(dead_code)]
 pub struct AuthenticatedUser(pub user::User);
 
 impl FromRequestParts<PlatformState> for AuthenticatedUser {

@@ -12,24 +12,9 @@ env:
 
 jobs:
   # ============================================================
-  #  Unit Tests
+  #  Run Unit Tests & Integration Tests
   # ============================================================
-  unit-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-
-      - name: Run unit tests (platform)
-        run: cargo test -p platform --lib
-
-  # ============================================================
-  #  Integration Tests using `integration-tests` crate
-  # ============================================================
-  integration-test:
+  test:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -40,7 +25,6 @@ jobs:
           POSTGRES_DB: hexum_postgres
         ports:
           - 5432:5432
-        # Give Postgres a few seconds to be ready before health checks
         options: >-
           --health-cmd pg_isready
           --health-interval 2s
@@ -56,6 +40,7 @@ jobs:
           --health-timeout 2s
           --health-retries 10
         command: redis-server --requirepass redis
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -63,6 +48,11 @@ jobs:
       - name: Install Rust toolchain
         uses: actions-rust-lang/setup-rust-toolchain@v1
 
+      # Run Unit Tests first
+      - name: Run unit tests
+        run: cargo test -p platform --lib
+
+      # Run Integration Tests
       - name: Run integration tests
         run: cargo test -p integration-tests
 
@@ -70,7 +60,7 @@ jobs:
   #  Build with the Dockerfile & push the container
   # ============================================================
   build-and-push:
-    needs: [unit-test, integration-test]
+    needs: [test]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
