@@ -167,7 +167,7 @@ mod internal {
                 format!("redis://{}:{}/{}", self.host, self.port, self.number)
             } else {
                 format!(
-                    "redis://{}@{}:{}/{}",
+                    "redis://:{}@{}:{}/{}",
                     self.passwd, self.host, self.port, self.number
                 )
             }

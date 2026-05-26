@@ -15,7 +15,11 @@ pub fn get_root_path() -> PathBuf {
 
         // If the path ends in a known workspace member folder (like 'api' or 'platform'),
         // step up one level to get to the true workspace root.
-        if path.ends_with("api") || path.ends_with("platform") || path.ends_with("business") {
+        if path.ends_with("api")
+            || path.ends_with("platform")
+            || path.ends_with("business")
+            || path.ends_with("tests")
+        {
             path.pop();
         }
 

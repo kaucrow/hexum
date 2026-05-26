@@ -2,7 +2,8 @@
 members = [
     "platform",
     "api",
-    "business"
+    "business",
+    "tests"
 ]
 resolver = "3"
 
