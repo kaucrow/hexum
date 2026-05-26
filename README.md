@@ -1,28 +1,24 @@
-<p align="center">
+<div align="center">
   <h1>Hexum</h1>
+
+  <h3>Axum Hexagonal API</h3>
 
   <!-- Rust + Axum -->
   <img src="https://img.shields.io/badge/-Rust+Axum-orange?logo=rust&logoColor=white&style=flat-square" alt="Rust+Axum">
-
   <!-- Postgres -->
   <img src="https://img.shields.io/badge/-Postgres-4169E1?logo=postgresql&logoColor=white&style=flat-square" alt="Postgres">
-
   <!-- Redis -->
   <img src="https://img.shields.io/badge/-Redis-DC382D?logo=redis&logoColor=white&style=flat-square" alt="Redis">
 
   <br>
 
   <!-- Version -->
-  <img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkaucrow%2Fhexum%2Fmain%2Fplatform%2FCargo.toml&query=package.version&label=Version&style=flat-square&color=blue" alt="Version">
-
+  <img src="https://img.shields.io/badge/dynamic/toml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fkaucrow%2Fhexum%2Fmain%2Fplatform%2FCargo.toml&query=package.version&label=version&style=flat-square&color=blue" alt="version">
   <!-- CI Status -->
-  <img src="https://img.shields.io/github/actions/workflow/status/kaucrow/hexum/deploy.yml?label=CI&style=flat-square" alt="CI">
-
+  <img src="https://img.shields.io/github/actions/workflow/status/kaucrow/hexum/deploy.yml?branch=main&event=push&label=CI&style=flat-square&v=1" alt="CI">
   <!-- Tests passing/failed -->
   <img src="https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/kaucrow/5ede7a8ee0dee36b052f2b085c8f0270/raw/hexum-junit-tests.json&style=flat-square" alt="Tests">
-</p>
-
-<h3>Axum Hexagonal API</h3>
+</div>
 
 <br>
 
@@ -176,7 +172,7 @@ Because the production credentials and server settings are strictly excluded fro
 
 ### 2. Deployment via GitHub Actions CI/CD Pipeline
 Whenever code is pushed to the `main` branch, the GitHub Actions runner automatically executes the following pipeline:
-* **Runs the full test suite** (unit + integration) against ephemeral PostgreSQL and Redis service containers. The pipeline halts if any test fails.
+* Runs the full test suite (unit + integration) against ephemeral PostgreSQL and Redis service containers. The pipeline halts if any test fails.
 * Compiles the production-ready, minimal Rust image.
 * Pushes the compiled artifact to the GitHub Container Registry (GHCR).
 * Securely connects to the VPS via an SSH key.
