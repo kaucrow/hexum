@@ -44,5 +44,6 @@ owo-colors = "4.3.0"
 tokio = { version = "1.52.1", features = ["full"] }
 tower-http = { version = "0.6.11", features = ["auth"] }
 base64 = "0.22.1"
+textdistance = "1.1.1"
 mockall = "0.14.0"
 wiremock = "0.6"

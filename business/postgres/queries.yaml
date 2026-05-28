@@ -1,3 +1,40 @@
 base:
   ping: |
     SELECT 1 as value
+
+recipe:
+  search_many_by_name: |
+    SELECT
+      r.id,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        jsonb_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        '[]'::jsonb
+      ) AS tags,
+    FROM recipe.recipe r
+    WHERE r.recipe_name % $1
+    ORDER BY similarity(r.recipe_name, $1) DESC
+  get_many_by_id: |
+    SELECT
+      r.id,
+      r.recipe_name,
+      r.recipe_description,
+      r.instructions,
+      r.thumbnail_url,
+      r.video_url,
+      -- Maps tags to a Vec --
+      COALESCE(
+        jsonb_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        '[]'::jsonb
+      ) AS tags,
+      -- Maps ingredients to a BTreeMap --
+      COALESCE(
+        jsonb_object_agg(ri.ingredient_name, ri.measure) FILTER (WHERE ri.ingredient_name IS NOT NULL),
+        '{}'::jsonb
+      ) AS ingredients
+    FROM recipe.recipe r
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    LEFT JOIN recipe.recipe_ingredient ri ON r.id = ri.recipe_id
+    WHERE r.id = ANY($1)  -- Should pass in a Vec
+    GROUP BY r.id
