@@ -8,6 +8,9 @@ port = 8080
 protocol = "http"
 docs_endpoint = "docs"
 
+[api.docs_users]
+docs-user-1 = "password"
+
 [frontend]
 domain = "localhost"
 port = 8080

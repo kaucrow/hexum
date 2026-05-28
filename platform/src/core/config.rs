@@ -96,6 +96,7 @@ mod internal {
         #[serde(default)]
         pub protocol: ApiProtocol,
         pub docs_endpoint: String,
+        pub docs_users: HashMap<String, String>,
     }
 
     impl ApiConfig {

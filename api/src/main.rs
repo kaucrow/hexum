@@ -10,7 +10,7 @@ use anyhow::Result;
 use platform::{Environment, get_config};
 
 use api::{
-    docs::MasterDocs,
+    docs::{self, MasterDocs},
     db::init_postgres_pool,
 };
 
@@ -39,10 +39,16 @@ async fn main() -> Result<()> {
     openapi.merge(platform::api::Docs::openapi());
     openapi.merge(business::api::Docs::openapi());
 
+    let docs_auth_layer = docs::get_auth_layer(config.clone());
+
+    let docs_router: Router<()> = Router::new()
+        .merge(Scalar::with_url("/", openapi)) 
+        .layer(docs_auth_layer);
+
     let app = Router::new()
         .merge(platform_router)
         .merge(business_router)
-        .merge(Scalar::with_url(format!("/{}", config.api.docs_endpoint), openapi));
+        .nest(&format!("/{}", config.api.docs_endpoint), docs_router);
 
     let listener = tokio::net::TcpListener::bind(
         format!("{}:{}", config.api.host, config.api.port)
