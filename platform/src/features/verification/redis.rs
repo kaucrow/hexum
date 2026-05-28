@@ -1,28 +1,21 @@
-use ::redis::AsyncCommands;
+use ::redis::{
+    AsyncCommands,
+    aio::ConnectionManager,
+};
 use async_trait::async_trait;
 use thiserror::Error;
 use uuid::Uuid;
 use anyhow::Result;
 
-use crate::{
-    Config,
-    prelude::*,
-};
 use super::*;
 
 #[derive(Clone)]
 pub struct RedisAdapter {
-    pub conn: ::redis::aio::ConnectionManager,
+    pub conn: ConnectionManager,
 }
 
 impl RedisAdapter {
-    pub async fn new(config: &Config) -> Result<Self> {
-        let client = ::redis::Client::open(config.redis.url())?;
-
-        let conn = ::redis::aio::ConnectionManager::new(client)
-            .await
-            .context("Failed to connect to Redis database.")?;
-
+    pub async fn new(conn: ConnectionManager) -> Result<Self> {
         Ok(Self { conn })
     }
 

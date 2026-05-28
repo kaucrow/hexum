@@ -306,7 +306,7 @@ pub async fn spawn_test_app() -> TestApp {
     );
 
     let redis_verification_adapter = Arc::new(
-        platform::features::verification::RedisAdapter::new(&config)
+        platform::features::verification::RedisAdapter::new(redis_conn.clone())
             .await
             .expect("Failed to create verification RedisAdapter"),
     );
@@ -339,7 +339,7 @@ pub async fn spawn_test_app() -> TestApp {
     };
 
     // ── Business layer (uses business::init) ───────────────────
-    let business_state = business::init(pool.clone())
+    let business_state = business::init(pool.clone(), redis_conn.clone(), config.clone())
         .await
         .expect("Failed to init business state");
 

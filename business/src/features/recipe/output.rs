@@ -1,9 +1,8 @@
-use uuid::Uuid;
 use async_trait::async_trait;
 use thiserror::Error;
 
 use crate::prelude::*;
-use super::{Recipe, RecipeSearchResult, RecipeOrigin};
+use super::{Recipe, RecipeSearchResult};
 
 // ────────────────────────────────────────────────
 //  Local Repository
@@ -29,7 +28,7 @@ pub enum LocalRepositoryError {
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait ExternalRepository: Send + Sync + 'static {
-    async fn search_by_name(&self, name: &str) -> Result<Vec<RecipeSearchResult>, ExternalRepositoryError>;
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, ExternalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
@@ -52,7 +51,7 @@ pub enum ExternalRepositoryError {
 pub trait CacheRepository: Send + Sync + 'static {
     // ─── Search results caching ───
     async fn get_search_results(&self, key: &str) -> Result<Option<Vec<RecipeSearchResult>>, CacheRepositoryError>;
-    async fn set_search_results(&self, key: &str, candidates: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
+    async fn set_search_results(&self, key: &str, search_results: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
 
     // ─── Individual full recipes caching ───
     async fn get_recipe(&self, id: &str) -> Result<Option<Recipe>, CacheRepositoryError>;

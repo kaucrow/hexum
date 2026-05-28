@@ -1,5 +1,6 @@
 use std::collections::BTreeMap;
 use uuid::Uuid;
+use strum::Display;
 
 use crate::prelude::*;
 
@@ -23,8 +24,11 @@ pub struct RecipeSearchResult {
     pub thumbnail_url: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Display, Debug, Clone)]
 pub enum RecipeOrigin {
+    #[strum(to_string = "local")]
     Local(Uuid),
+
+    #[strum(to_string = "external")]
     External(String),
 }

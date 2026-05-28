@@ -1,2 +1,2 @@
 pub mod docs;
-pub mod db;
+pub mod init;

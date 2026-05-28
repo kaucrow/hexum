@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use uuid::Uuid;
 use async_trait::async_trait;
 use textdistance::nstr::jaro_winkler;
 
@@ -29,7 +28,7 @@ impl Service {
 
 #[async_trait]
 impl UseCase for Service {
-    async fn search_by_name(&self, name: &str, page: usize) -> Result<Vec<RecipeSearchResult>, UseCaseError> {
+    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<Vec<RecipeSearchResult>, UseCaseError> {
         let index_cache_key = format!("search:name:{}", name);
 
         // ─── Get API search results ───
@@ -43,21 +42,12 @@ impl UseCase for Service {
         {
             api_search_results = cached_search_results;
         } else {
-            // Cache miss: Hit the external API.
-            api_search_results = self.external_repo.search_by_name(name).await?;
+            // Cache miss: Hit the external API
+            api_search_results = self.external_repo.get_recipe_search_results(name).await?;
 
             // Set index & individual recipes concurrently.
             // Save the search results (valid for 1 hour).
             let _ = self.cache_repo.set_search_results(&index_cache_key, &api_search_results, 3600).await;
-
-            // Save the individual full recipes so the hydration step can find them later (valid for 24 hours)
-            /*
-            for recipe in &api_response.full_recipes {
-                if let RecipeOrigin::External(id) = &recipe.origin {
-                    let _ = self.cache_repo.set_recipe(id, recipe, 86400).await;
-                }
-            }
-            */
         }
 
         // ─── Get DB candidates ───

@@ -48,3 +48,7 @@ client_secret = ""
 login_endpoint = "auth/oauth/github/login"
 client_id = ""
 client_secret = ""
+
+[external_api]
+url = "www.themealdb.com/api/json/v1"
+key = "1"

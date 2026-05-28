@@ -16,6 +16,8 @@ pub struct Config {
     pub redis: self::internal::RedisConfig,
     pub email: self::internal::EmailConfig,
     pub oauth: self::internal::OAuthConfig,
+
+    pub external_api: self::internal::ExternalApiConfig,
 }
 
 #[derive(Deserialize, Clone, Debug, Display, Default, PartialEq, EnumString)]
@@ -242,5 +244,11 @@ mod internal {
         pub login_endpoint: String,
         pub client_id: String,
         pub client_secret: String,
+    }
+
+    #[derive(Deserialize, Clone)]
+    pub struct ExternalApiConfig {
+        pub url: String,
+        pub key: String,
     }
 }

@@ -9,6 +9,7 @@ use crate::{
 
 pub async fn init(
     pool: sqlx::PgPool,
+    redis_conn: redis::aio::ConnectionManager,
     config: Arc<Config>
 ) -> Result<PlatformState, anyhow::Error> {
     // Init the tracing subscriber
@@ -27,7 +28,7 @@ pub async fn init(
         oauth_adapter,
     );
 
-    let redis_verification_adapter = Arc::new(verification::RedisAdapter::new(&config).await?);
+    let redis_verification_adapter = Arc::new(verification::RedisAdapter::new(redis_conn).await?);
 
     let email_adapter: Arc<dyn email::Port> = match config.email.sender {
         EmailSender::Smtp(_) => Arc::new(email::LettreAdapter::new(&config)?),

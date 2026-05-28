@@ -11,7 +11,7 @@ pub struct RedisCacheAdapter {
 }
 
 impl RedisCacheAdapter {
-    pub async fn new(conn: ConnectionManager) -> Self {
+    pub fn new(conn: ConnectionManager) -> Self {
         Self { conn }
     }
 }
@@ -19,10 +19,10 @@ impl RedisCacheAdapter {
 #[async_trait]
 impl CacheRepository for RedisCacheAdapter {
     // ───────────────────────────────────────────────────
-    //  Search Candidate Index Arrays Caching
+    //  Search Results Caching
     // ───────────────────────────────────────────────────
 
-    async fn get_candidates(&self, key: &str) -> Result<Option<Vec<RecipeSearchCandidate>>, CacheRepositoryError> {
+    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<RecipeSearchResult>>, CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
         // Fetch the raw payload string from redis
@@ -38,11 +38,11 @@ impl CacheRepository for RedisCacheAdapter {
         }
     }
 
-    async fn set_candidates(&self, key: &str, candidates: &[RecipeSearchCandidate], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
+    async fn set_search_results(&self, key: &str, search_results: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
         // Serialize the candidates
-        let json_str = serde_json::to_string(candidates)?;
+        let json_str = serde_json::to_string(search_results)?;
 
         // Set in redis
         let _: () = conn.set_ex(key, json_str, ttl_secs).await?;

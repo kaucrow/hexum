@@ -17,39 +17,23 @@ impl PostgresAdapter {
         Self { pool }
     }
 
-    async fn do_get_search_candidates(&self, name: &str) -> Result<Vec<RecipeSearchCandidate>, LocalError> {
-        let recipe_search_candidates = sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.search_many_id_by_name))
+    async fn do_get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalError> {
+        let recipe_search_candidates = sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.search_many_by_name))
             .bind(name)
             .fetch_all(&self.pool)
             .await?
             .into_iter()
-            .map(|row| RecipeSearchCandidate::from(row))
+            .map(|row| RecipeSearchResult::from(row))
             .collect();
 
         Ok(recipe_search_candidates)
-    }
-
-    async fn do_get_recipes_by_id(&self, ids: &Vec<Uuid>) -> Result<Vec<Recipe>, LocalError> {
-        let recipes = sqlx::query_as::<_, RecipeDbRow>(sql(&QUERIES.recipe.get_many_by_id))
-            .bind(ids)
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|row| Recipe::from(row))
-            .collect();
-
-        Ok(recipes)
     }
 }
 
 #[async_trait]
 impl LocalRepository for PostgresAdapter {
-    async fn get_search_candidates(&self, name: &str) -> Result<Vec<RecipeSearchCandidate>, LocalRepositoryError> {
-        Ok(self.do_get_search_candidates(name).await?)
-    }
-
-    async fn get_recipes_by_id(&self, ids: &Vec<Uuid>) -> Result<Vec<Recipe>, LocalRepositoryError> {
-        Ok(self.do_get_recipes_by_id(ids).await?)
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError> {
+        Ok(self.do_get_recipe_search_results(name).await?)
     }
 }
 
@@ -101,13 +85,17 @@ impl From<RecipeDbRow> for Recipe {
 struct RecipeSearchDbRow {
     id: Uuid,
     recipe_name: String,
+    tags: Vec<String>,
+    thumbnail_url: Option<String>,
 }
 
-impl From<RecipeSearchDbRow> for RecipeSearchCandidate {
+impl From<RecipeSearchDbRow> for RecipeSearchResult {
     fn from(row: RecipeSearchDbRow) -> Self {
         Self {
             origin: RecipeOrigin::Local(row.id),
-            recipe_name: row.recipe_name,
+            name: row.recipe_name,
+            tags: row.tags,
+            thumbnail_url: row.thumbnail_url,
         }
     }
 }

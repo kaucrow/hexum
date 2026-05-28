@@ -1,11 +1,11 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use super::{Recipe, RecipeSearchResult};
+use super::RecipeSearchResult;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
-    async fn search_by_name(&self, name: &str, page: usize) -> Result<Vec<RecipeSearchResult>, UseCaseError>;
+    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<Vec<RecipeSearchResult>, UseCaseError>;
 }
 
 #[derive(Error, Debug)]

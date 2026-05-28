@@ -4,4 +4,5 @@ mod mealdb;
 
 pub use super::*;
 pub use postgres::PostgresAdapter;
+pub use redis::RedisCacheAdapter;
 pub use mealdb::MealdbAdapter;

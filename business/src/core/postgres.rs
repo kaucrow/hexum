@@ -51,7 +51,7 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Recipe {
-        pub search_many_id_by_name: String,
+        pub search_many_by_name: String,
         pub get_many_by_id: String,
     }
 }

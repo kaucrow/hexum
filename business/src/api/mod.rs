@@ -1,4 +1,4 @@
-pub(crate) mod routes;
+mod routes;
 mod error;
 mod docs;
 
@@ -11,6 +11,7 @@ pub(crate) use axum::{
     response::{Html, Response, IntoResponse},
     http::StatusCode,
 };
+pub(crate) use utoipa::{IntoParams, ToSchema};
 
 pub(crate) use error::ApiError;
 
@@ -19,6 +20,7 @@ use crate::BusinessState;
 
 pub fn router(state: BusinessState) -> Router {
     Router::new()
-        .route("/business-health", get(crate::routes::health::health))
+        .route("/business-health", get(routes::health::health))
+        .route("/recipes/search", get(routes::recipes::recipe_search))
         .with_state(state)
 }
