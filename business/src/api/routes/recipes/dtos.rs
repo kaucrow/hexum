@@ -15,7 +15,7 @@ pub struct RecipeSearchQueryParams {
     #[param(example = 0, minimum = 1)]
     pub page: usize,
 
-    /// The amount of recipes to fetch.
+    /// The max amount of recipes to fetch.
     #[param(example = 10)]
     pub limit: usize,
 

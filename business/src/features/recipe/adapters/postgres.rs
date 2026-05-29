@@ -52,6 +52,20 @@ impl PostgresAdapter {
 
         Ok(recipe_search_results)
     }
+
+    async fn do_get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalError> {
+        let tag_search_results = sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_search_matches))
+            .bind(query)
+            .bind(limit as i64)
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|row| row.name)
+            .collect();
+
+        Ok(tag_search_results)
+
+    }
 }
 
 #[async_trait]
@@ -66,6 +80,10 @@ impl LocalRepository for PostgresAdapter {
     ) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>
     {
         Ok(self.do_get_recipe_search_data_by_ids(ids).await?)
+    }
+
+    async fn get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalRepositoryError> {
+        Ok(self.do_get_tag_search_matches(query, limit).await?)
     }
 }
 
@@ -145,4 +163,9 @@ impl TryFrom<RecipeSearchDbRow> for domain::RecipeSearchResult {
             thumbnail_url: row.thumbnail_url,
         })
     }
+}
+
+#[derive(FromRow)]
+struct TagDbRow {
+    name: String,
 }

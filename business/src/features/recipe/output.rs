@@ -14,11 +14,13 @@ pub trait LocalRepository: Send + Sync + 'static {
     // ─── Getters ───
     async fn get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalRepositoryError>;
     async fn get_recipe_search_data_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
+
+    async fn get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
 pub enum LocalRepositoryError {
-    #[error("User repository: {0}")]
+    #[error("Recipe local repository: {0}")]
     Internal(String),
 }
 
@@ -39,16 +41,6 @@ pub trait CacheRepository: Send + Sync + 'static {
 
 #[derive(Error, Debug)]
 pub enum CacheRepositoryError {
-    #[error(transparent)]
-    Conflict(#[from] ConflictError),
-    #[error("User repository: {0}")]
+    #[error("Recipe cache repository: {0}")]
     Internal(String),
-}
-
-#[derive(Error, Debug, Clone, PartialEq)]
-pub enum ConflictError {
-    #[error("The username provided is already in use.")]
-    UsernameInUse,
-    #[error("The email provided is already in use.")]
-    EmailInUse,
 }

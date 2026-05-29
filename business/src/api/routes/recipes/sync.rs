@@ -6,13 +6,13 @@ use crate::{
 
 #[utoipa::path(
     get,
-    path = "/recipe/sync",
+    path = "/recipes/sync",
     description = "Syncs the local recipes from the external API.",
     responses(
         (status = 202, description = "Began Recipes Sync"),
         (status = 500, description = "Internal Server Error")
     ),
-    tags = ["Recipe"]
+    tags = ["Recipes"]
 )]
 pub async fn sync(
     State(data_ingestion_service): State<Arc<dyn data_ingestion::UseCase>>,

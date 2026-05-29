@@ -90,6 +90,12 @@ impl UseCase for Service {
             search_id,
         })
     }
+
+    async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError> {
+        let tag_matches = self.local_repo.get_tag_search_matches(query, limit).await?;
+
+        Ok(tag_matches)
+    }
 }
 
 impl From<LocalRepositoryError> for UseCaseError {

@@ -7,20 +7,20 @@ use super::dtos::*;
 
 #[utoipa::path(
     get,
-    path = "/recipe/search",
-    description = "Checks if the business logic is healthy.",
+    path = "/recipes/search",
+    description = "Searches for a recipe.",
     params(RecipeSearchQueryParams),
     responses(
         (status = 200, description = "Recipe search results", body = RecipeSearchResponse),
         (status = 500, description = "Internal Server Error")
     ),
-    tags = ["Recipe"]
+    tags = ["Recipes"]
 )]
 pub async fn search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     Query(queries): Query<RecipeSearchQueryParams>,
 ) -> Result<Json<RecipeSearchResponse>, ApiError> {
-    info!("Getting {} recipes from page {} of search for recipe '{}'", queries.limit, queries.page, queries.query);
+    info!("Getting {} recipes from page {} of search for query '{}'", queries.limit, queries.page, queries.query);
 
     let search_id: Option<Uuid> = queries.search_id
         .and_then(|id| Uuid::from_str(&id).ok());

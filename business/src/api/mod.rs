@@ -21,7 +21,8 @@ use crate::BusinessState;
 pub fn router(state: BusinessState) -> Router {
     Router::new()
         .route("/business-health", get(routes::health::health))
-        .route("/recipe/sync", get(routes::recipes::sync))
-        .route("/recipe/search", get(routes::recipes::search))
+        .route("/recipes/sync", get(routes::recipes::sync))
+        .route("/recipes/search", get(routes::recipes::search))
+        .route("/tags/autocomplete", get(routes::tags::autocomplete))
         .with_state(state)
 }

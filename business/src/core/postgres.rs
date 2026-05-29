@@ -29,6 +29,7 @@ pub(crate) struct Queries {
     pub base: internal::Base,
     pub data_ingestion: internal::DataIngestion,
     pub recipe: internal::Recipe,
+    pub tag: internal::Tag,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -69,5 +70,10 @@ mod internal {
         pub get_search_results_by_id: String,
 
         pub get_many_by_id: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Tag {
+        pub get_search_matches: String,
     }
 }
