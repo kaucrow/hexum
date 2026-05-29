@@ -1,7 +1,8 @@
 CREATE TABLE IF NOT EXISTS recipe.recipe (
     id UUID PRIMARY KEY,
+    external_id INT UNIQUE,
     recipe_name VARCHAR(255) NOT NULL,
-    recipe_description TEXT NOT NULL UNIQUE,
+    recipe_description TEXT,
     instructions TEXT NOT NULL,
     thumbnail_url TEXT,
     video_url TEXT
@@ -21,6 +22,9 @@ CREATE TABLE IF NOT EXISTS recipe.recipe_ingredient (
     measure VARCHAR(255) NOT NULL,
     UNIQUE(recipe_id, ingredient_name)
 );
+
+CREATE INDEX IF NOT EXISTS idx_recipe_external_id
+ON recipe.recipe (external_id);
 
 CREATE INDEX IF NOT EXISTS idx_recipe_name_trgm
 ON recipe.recipe

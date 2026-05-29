@@ -29,12 +29,12 @@ pub struct RecipeSearchQueryParams {
     }
 }))]
 pub struct RecipeSearchResponse {
-    pub recipes: Vec<RecipeSearchResult>,
+    pub recipes: Vec<RecipeSearchResultItem>,
     pub meta: RecipeSearchMeta,
 }
 
 impl RecipeSearchResponse {
-    pub fn new(recipes: Vec<RecipeSearchResult>, total_items: usize) -> Self {
+    pub fn new(recipes: Vec<RecipeSearchResultItem>, total_items: usize) -> Self {
         Self {
             recipes,
             meta: RecipeSearchMeta {
@@ -45,7 +45,7 @@ impl RecipeSearchResponse {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct RecipeSearchResult {
+pub struct RecipeSearchResultItem {
     /// UUID for local & String for external
     pub id: String,
     /// "local" (from DB) or "external" (from API)

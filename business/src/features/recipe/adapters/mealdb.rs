@@ -19,7 +19,7 @@ impl MealdbAdapter {
         Self { client, api_url, api_key }
     }
 
-    async fn do_get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, LocalError> {
+    async fn do_get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalError> {
         let url = format!("{}/{}/search.php", self.api_url, self.api_key);
 
         let response = self.client
@@ -61,7 +61,7 @@ impl MealdbAdapter {
                 combined_tags.extend(parsed_tags);
             }
 
-            search_results.push(domain::RecipeSearchResult {
+            search_results.push(RecipeSearchResult {
                 origin: RecipeOrigin::External(item.id),
                 name: item.name,
                 thumbnail_url: item.image_url,
@@ -75,7 +75,7 @@ impl MealdbAdapter {
 
 #[async_trait]
 impl ExternalRepository for MealdbAdapter {
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, ExternalRepositoryError> {
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, ExternalRepositoryError> {
         Ok(self.do_get_recipe_search_results(name).await?)
     }
 }
@@ -99,12 +99,12 @@ impl From<LocalError> for ExternalRepositoryError {
 
 #[derive(Deserialize)]
 struct MealdbRecipeResponse {
-    meals: Option<Vec<MealdbRecipeSearchResult>>,
+    meals: Option<Vec<MealdbMeal>>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct MealdbRecipeSearchResult {
+struct MealdbMeal {
     #[serde(rename = "idMeal")]
     id: String,
     #[serde(rename = "strMeal")]

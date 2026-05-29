@@ -1,7 +1,11 @@
 use crate::{
     prelude::*,
     api::*,
-    features::recipe,
+    features::recipe::{
+        self,
+        RecipeSearchResult,
+        RecipeOrigin
+    },
 };
 use super::dtos::*;
 
@@ -16,7 +20,7 @@ use super::dtos::*;
     ),
     tags = ["Recipe"]
 )]
-pub async fn recipe_search(
+pub async fn search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     Query(queries): Query<RecipeSearchQueryParams>,
 ) -> Result<Json<RecipeSearchResponse>, ApiError> {
@@ -25,18 +29,18 @@ pub async fn recipe_search(
     let search_result = recipe_service.search_recipe_by_name(&queries.name, queries.page).await?;
 
     let response = RecipeSearchResponse::new(
-        search_result.items.into_iter().map(|item| RecipeSearchResult::from(item)).collect(),
+        search_result.items.into_iter().map(|item| RecipeSearchResultItem::from(item)).collect(),
         search_result.total_items,
     );
 
     Ok(Json(response))
 }
 
-impl From<recipe::domain::RecipeSearchResult> for RecipeSearchResult {
-    fn from(search_result: recipe::domain::RecipeSearchResult) -> Self {
+impl From<RecipeSearchResult> for RecipeSearchResultItem {
+    fn from(search_result: RecipeSearchResult) -> Self {
         let id = match search_result.origin {
-            recipe::RecipeOrigin::Local(id) => id.to_string(),
-            recipe::RecipeOrigin::External(ref id) => id.clone(),
+            RecipeOrigin::Local(id) => id.to_string(),
+            RecipeOrigin::External(ref id) => id.clone(),
         };
 
         Self {

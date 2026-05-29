@@ -22,7 +22,7 @@ impl CacheRepository for RedisCacheAdapter {
     //  Search Results Caching
     // ───────────────────────────────────────────────────
 
-    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<domain::RecipeSearchResult>>, CacheRepositoryError> {
+    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<RecipeSearchResult>>, CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
         // Fetch the raw payload string from redis
@@ -38,7 +38,7 @@ impl CacheRepository for RedisCacheAdapter {
         }
     }
 
-    async fn set_search_results(&self, key: &str, search_results: &[domain::RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
+    async fn set_search_results(&self, key: &str, search_results: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
         // Serialize the candidates

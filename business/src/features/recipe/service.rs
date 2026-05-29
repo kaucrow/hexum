@@ -28,11 +28,11 @@ impl Service {
 
 #[async_trait]
 impl UseCase for Service {
-    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<input::RecipeSearchResult, UseCaseError> {
+    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<SearchResultsPage, UseCaseError> {
         let index_cache_key = format!("search:name:{}", name);
 
         // ─── Get API search results ───
-        let api_search_results: Vec<domain::RecipeSearchResult>;
+        let api_search_results: Vec<RecipeSearchResult>;
 
         // ─── Check the cache for the search results ───
         if let Some(cached_search_results) = self.cache_repo.get_search_results(&index_cache_key)
@@ -54,7 +54,7 @@ impl UseCase for Service {
         let db_search_results = self.local_repo.get_recipe_search_results(name).await?;
 
         // ─── Sort the candidates by similarity to the search ───
-        let mut scored_candidates: Vec<(domain::RecipeSearchResult, f64)> = api_search_results
+        let mut scored_candidates: Vec<(RecipeSearchResult, f64)> = api_search_results
             .into_iter()
             .chain(db_search_results.into_iter())
             .map(|candidate| {
@@ -80,14 +80,14 @@ impl UseCase for Service {
         let page_size = 10;
         let start_index = page * page_size;
 
-        let paginated_results: Vec<domain::RecipeSearchResult> = scored_candidates
+        let paginated_results: Vec<RecipeSearchResult> = scored_candidates
             .into_iter()
             .skip(start_index)
             .take(page_size)
             .map(|(candidate, _score)| candidate)
             .collect();
 
-        Ok(input::RecipeSearchResult {
+        Ok(SearchResultsPage {
             items: paginated_results,
             total_items,
         })

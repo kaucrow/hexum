@@ -12,8 +12,8 @@ use platform::Config;
 #[derive(OpenApi)]
 #[openapi(
     info(
-        title = "Hexum",
-        description = "Scalable Axum backend using Hexagonal Architecture",
+        title = "NativEat API",
+        description = "Hexum-based API for the NativEat mobile app",
     )
 )]
 pub struct MasterDocs;

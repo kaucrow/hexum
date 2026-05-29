@@ -21,6 +21,7 @@ use crate::BusinessState;
 pub fn router(state: BusinessState) -> Router {
     Router::new()
         .route("/business-health", get(routes::health::health))
-        .route("/recipe/search", get(routes::recipes::recipe_search))
+        .route("/recipe/sync", get(routes::recipes::sync))
+        .route("/recipe/search", get(routes::recipes::search))
         .with_state(state)
 }

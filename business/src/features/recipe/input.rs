@@ -5,11 +5,11 @@ use super::*;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
-    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<RecipeSearchResult, UseCaseError>;
+    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<SearchResultsPage, UseCaseError>;
 }
 
-pub struct RecipeSearchResult {
-    pub items: Vec<domain::RecipeSearchResult>,
+pub struct SearchResultsPage {
+    pub items: Vec<RecipeSearchResult>,
     pub total_items: usize,
 }
 

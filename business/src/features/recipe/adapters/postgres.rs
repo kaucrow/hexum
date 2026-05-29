@@ -17,13 +17,13 @@ impl PostgresAdapter {
         Self { pool }
     }
 
-    async fn do_get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, LocalError> {
+    async fn do_get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalError> {
         let recipe_search_candidates = sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.search_many_by_name))
             .bind(name)
             .fetch_all(&self.pool)
             .await?
             .into_iter()
-            .map(|row| domain::RecipeSearchResult::from(row))
+            .map(|row| RecipeSearchResult::from(row))
             .collect();
 
         Ok(recipe_search_candidates)
@@ -32,7 +32,7 @@ impl PostgresAdapter {
 
 #[async_trait]
 impl LocalRepository for PostgresAdapter {
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, LocalRepositoryError> {
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError> {
         Ok(self.do_get_recipe_search_results(name).await?)
     }
 }
@@ -89,7 +89,7 @@ struct RecipeSearchDbRow {
     thumbnail_url: Option<String>,
 }
 
-impl From<RecipeSearchDbRow> for domain::RecipeSearchResult {
+impl From<RecipeSearchDbRow> for RecipeSearchResult {
     fn from(row: RecipeSearchDbRow) -> Self {
         Self {
             origin: RecipeOrigin::Local(row.id),

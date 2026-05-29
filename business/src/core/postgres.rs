@@ -1,4 +1,4 @@
-pub(crate) use sqlx::{FromRow, postgres::PgPool};
+pub(crate) use sqlx::{FromRow, Postgres, Transaction, postgres::PgPool};
 pub(crate) use platform::postgres::sql;
 
 use std::sync::LazyLock;
@@ -21,8 +21,9 @@ pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct Queries {
-    pub base: self::internal::Base,
-    pub recipe: self::internal::Recipe,
+    pub base: internal::Base,
+    pub data_ingestion: internal::DataIngestion,
+    pub recipe: internal::Recipe,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -47,6 +48,13 @@ mod internal {
     #[derive(Deserialize, Debug)]
     pub struct Base {
         pub ping: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct DataIngestion {
+        pub sync_recipes: String,
+        pub sync_tags: String,
+        pub sync_ingredients: String,
     }
 
     #[derive(Deserialize, Debug)]

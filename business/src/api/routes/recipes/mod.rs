@@ -1,4 +1,6 @@
 pub mod dtos;
+pub mod sync;
 pub mod search;
 
-pub use search::recipe_search;
+pub use sync::sync;
+pub use search::search;

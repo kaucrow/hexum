@@ -2,6 +2,56 @@ base:
   ping: |
     SELECT 1 as value
 
+data_ingestion:
+  sync_recipes: |
+    INSERT INTO recipe.recipe (
+    id,
+    external_id,
+    recipe_name,
+    recipe_description,
+    instructions,
+    thumbnail_url,
+    video_url
+    )
+    SELECT * FROM UNNEST(
+        $1::uuid[],      -- &recipe_ids
+        $2::int[],       -- &external_ids
+        $3::varchar[],   -- &names
+        $4::text[],      -- &descriptions
+        $5::text[],      -- &instructions
+        $6::text[],      -- &thumbnails as &[Option<String>]
+        $7::text[]       -- &videos as &[Option<String>]
+    )
+    ON CONFLICT (external_id)
+    DO UPDATE SET
+        recipe_name = EXCLUDED.recipe_name,
+        recipe_description = EXCLUDED.recipe_description,
+        instructions = EXCLUDED.instructions,
+        thumbnail_url = EXCLUDED.thumbnail_url,
+        video_url = EXCLUDED.video_url
+    RETURNING id, external_id
+
+  sync_tags: |
+    INSERT INTO recipe.recipe_tag (id, recipe_id, tag_name)
+    SELECT * FROM UNNEST(
+        $1::uuid[],      -- &tag_ids
+        $2::uuid[],      -- &tag_recipe_ids
+        $3::varchar[]    -- &tag_names
+    )
+    ON CONFLICT (recipe_id, tag_name)
+    DO NOTHING
+
+  sync_ingredients: |
+    INSERT INTO recipe.recipe_ingredient (id, recipe_id, ingredient_name, measure)
+    SELECT * FROM UNNEST(
+        $1::uuid[],      -- &ing_ids
+        $2::uuid[],      -- &ing_recipe_ids (Corrected UUIDs)
+        $3::varchar[],   -- &ing_names
+        $4::varchar[]    -- &ing_measures
+    )
+    ON CONFLICT (recipe_id, ingredient_name)
+    DO UPDATE SET measure = EXCLUDED.measure
+
 recipe:
   search_many_by_name: |
     SELECT

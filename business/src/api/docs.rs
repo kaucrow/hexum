@@ -8,7 +8,8 @@ use super::routes;
         routes::health::health,
 
         // /recipe
-        routes::recipes::search::recipe_search
+        routes::recipes::sync::sync,
+        routes::recipes::search::search,
     ),
     components(
         schemas(
