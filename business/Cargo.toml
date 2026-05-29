@@ -21,5 +21,4 @@ tokio = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 uuid = { workspace = true }
-textdistance = { workspace = true }
 mockall = { workspace = true }

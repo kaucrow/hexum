@@ -53,20 +53,36 @@ data_ingestion:
     DO UPDATE SET measure = EXCLUDED.measure
 
 recipe:
-  search_many_by_name: |
+  get_search_ids: |
+    SELECT id
+    FROM recipe.recipe r
+    WHERE r.recipe_name % $1
+    ORDER BY similarity(r.recipe_name, $1) DESC, id ASC
+
+  get_search_ids_ilike: |
+    SELECT id
+    FROM recipe.recipe r
+    WHERE r.recipe_name ILIKE '%' || $1 || '%'
+    ORDER BY similarity(r.recipe_name, $1) DESC, id ASC
+
+  get_search_results_by_id: |
     SELECT
       r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
       r.recipe_name,
       r.thumbnail_url,
       COALESCE(
-        jsonb_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
-        '[]'::jsonb
+        array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
       ) AS tags
     FROM recipe.recipe r
     LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
-    WHERE r.recipe_name % $1
+    WHERE r.id = ANY($1)
     GROUP BY r.id
-    ORDER BY similarity(r.recipe_name, $1) DESC
+
   get_many_by_id: |
     SELECT
       r.id,

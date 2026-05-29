@@ -16,7 +16,12 @@ pub async fn run_migrations(pool: &PgPool) -> Result<()> {
 }
 
 pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
-    get_queries().expect("Failed to initialize business postgres queries.")
+    get_queries()
+        .map_err(|e| {
+            error!("{:?}", e);
+            e
+        })
+        .expect("Failed to initialize business postgres queries.")
 });
 
 #[derive(Deserialize, Debug)]
@@ -59,7 +64,10 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Recipe {
-        pub search_many_by_name: String,
+        pub get_search_ids: String,
+        pub get_search_ids_ilike: String,
+        pub get_search_results_by_id: String,
+
         pub get_many_by_id: String,
     }
 }

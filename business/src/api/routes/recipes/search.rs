@@ -1,11 +1,7 @@
 use crate::{
-    prelude::*,
-    api::*,
-    features::recipe::{
-        self,
-        RecipeSearchResult,
-        RecipeOrigin
-    },
+    api::*, features::recipe::{
+        self, RecipeSearchResult, SearchResultsPage
+    }, prelude::*
 };
 use super::dtos::*;
 
@@ -24,27 +20,34 @@ pub async fn search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     Query(queries): Query<RecipeSearchQueryParams>,
 ) -> Result<Json<RecipeSearchResponse>, ApiError> {
-    info!("Getting page {} of search for recipe '{}'", queries.page, queries.name);
+    info!("Getting {} recipes from page {} of search for recipe '{}'", queries.limit, queries.page, queries.query);
 
-    let search_result = recipe_service.search_recipe_by_name(&queries.name, queries.page).await?;
+    let search_id: Option<Uuid> = queries.search_id
+        .and_then(|id| Uuid::from_str(&id).ok());
 
-    let response = RecipeSearchResponse::new(
-        search_result.items.into_iter().map(|item| RecipeSearchResultItem::from(item)).collect(),
-        search_result.total_items,
-    );
+    let search_result = recipe_service.search_recipe(
+        &queries.query, queries.page, queries.limit, search_id,
+    ).await?;
 
-    Ok(Json(response))
+    Ok(Json(RecipeSearchResponse::from(search_result)))
+}
+
+impl From<SearchResultsPage> for RecipeSearchResponse {
+    fn from(search_result: SearchResultsPage) -> Self {
+        Self {
+            recipes: search_result.items.into_iter().map(|item| RecipeSearchResultItem::from(item)).collect(),
+            meta: RecipeSearchMeta {
+                total_items: search_result.total_items,
+                search_id: search_result.search_id.to_string(),
+            }
+        }
+    }
 }
 
 impl From<RecipeSearchResult> for RecipeSearchResultItem {
     fn from(search_result: RecipeSearchResult) -> Self {
-        let id = match search_result.origin {
-            RecipeOrigin::Local(id) => id.to_string(),
-            RecipeOrigin::External(ref id) => id.clone(),
-        };
-
         Self {
-            id,
+            id: search_result.id.to_string(),
             origin: search_result.origin.to_string(),
             name: search_result.name,
             tags: search_result.tags,

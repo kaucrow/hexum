@@ -4,16 +4,27 @@ use crate::{
 };
 
 #[derive(Deserialize, IntoParams, ToSchema)]
+#[serde(rename_all = "snake_case")]
 #[into_params(parameter_in = Query)]
 pub struct RecipeSearchQueryParams {
     /// The recipe's name (partial or complete).
-    pub name: String,
+    #[param(example = "spa")]
+    pub query: String,
+
     /// The pagination index.
+    #[param(example = 0, minimum = 1)]
     pub page: usize,
+
+    /// The amount of recipes to fetch.
+    #[param(example = 10)]
+    pub limit: usize,
+
+    /// The search session ID (UUID). Should have a value if the search session exists & be null otherwise.
+    #[param(example = json!(null))]
+    pub search_id: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
-#[serde(rename_all = "camelCase")]
 #[schema(example = json!({
     "recipes": [
         {
@@ -25,7 +36,8 @@ pub struct RecipeSearchQueryParams {
         }
     ],
     "meta": {
-        "totalItems": 100
+        "totalItems": 100,
+        "sessionId": "05639468-710b-44fe-9fc7-372514e95c37",
     }
 }))]
 pub struct RecipeSearchResponse {
@@ -33,23 +45,14 @@ pub struct RecipeSearchResponse {
     pub meta: RecipeSearchMeta,
 }
 
-impl RecipeSearchResponse {
-    pub fn new(recipes: Vec<RecipeSearchResultItem>, total_items: usize) -> Self {
-        Self {
-            recipes,
-            meta: RecipeSearchMeta {
-                total_items,
-            }
-        }
-    }
-}
-
 #[derive(Serialize, ToSchema)]
 pub struct RecipeSearchResultItem {
-    /// UUID for local & String for external
+    /// UUID.
     pub id: String,
-    /// "local" (from DB) or "external" (from API)
+
+    /// "local" (from DB) or "external" (from API).
     pub origin: String,
+
     pub name: String,
     pub tags: Vec<String>,
     pub thumbnail_url: Option<String>,
@@ -58,5 +61,9 @@ pub struct RecipeSearchResultItem {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RecipeSearchMeta {
+    /// Amount of items that match the search.
     pub total_items: usize,
+
+    /// The search session ID (UUID).
+    pub search_id: String,
 }

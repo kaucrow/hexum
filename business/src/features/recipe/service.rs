@@ -1,95 +1,93 @@
 use std::sync::Arc;
 
+use uuid::Uuid;
 use async_trait::async_trait;
-use textdistance::nstr::jaro_winkler;
 
+use crate::prelude::*;
 use super::*;
 
 #[derive(Clone)]
 pub struct Service {
     local_repo: Arc<dyn LocalRepository>,
-    external_repo: Arc<dyn ExternalRepository>,
     cache_repo: Arc<dyn CacheRepository>,
 }
 
 impl Service {
     pub fn new(
         local_repo: Arc<dyn LocalRepository>,
-        external_repo: Arc<dyn ExternalRepository>,
         cache_repo: Arc<dyn CacheRepository>,
     ) -> Self {
-        Self {
-            local_repo,
-            external_repo,
-            cache_repo,
-        }
+        Self { local_repo, cache_repo }
     }
 }
 
 #[async_trait]
 impl UseCase for Service {
-    async fn search_recipe_by_name(&self, name: &str, page: usize) -> Result<SearchResultsPage, UseCaseError> {
-        let index_cache_key = format!("search:name:{}", name);
+    async fn search_recipe(&self,
+        query: &str,
+        page: usize,
+        limit: usize,
+        search_id: Option<Uuid>,
+    ) -> Result<SearchResultsPage, UseCaseError>
+    {
+        let safe_page = if page == 0 { 1 } else { page };
+        let offset = (safe_page - 1) * limit;
 
-        // ─── Get API search results ───
-        let api_search_results: Vec<RecipeSearchResult>;
+        let (search_id, matching_ids) = match search_id {
+            // ─── Brand New Search ───
+            None => {
+                let new_id = Uuid::new_v4();
+                let search_cache_key = format!("search:{}", new_id);
 
-        // ─── Check the cache for the search results ───
-        if let Some(cached_search_results) = self.cache_repo.get_search_results(&index_cache_key)
-            .await
-            .ok()
-            .flatten()
-        {
-            api_search_results = cached_search_results;
-        } else {
-            // Cache miss: Hit the external API
-            api_search_results = self.external_repo.get_recipe_search_results(name).await?;
+                // Get all matching recipe IDs, sorted by similarity to the query
+                let matching_ids = self.local_repo.get_recipe_search_ids(query).await?;
 
-            // Set index & individual recipes concurrently.
-            // Save the search results (valid for 1 hour).
-            let _ = self.cache_repo.set_search_results(&index_cache_key, &api_search_results, 3600).await;
+                if !matching_ids.is_empty() {
+                    // Set the recipe search cache in Redis
+                    self.cache_repo.set_recipe_ids(&search_cache_key, &matching_ids, 300).await?;   // 5 minutes
+                }
+
+                (new_id, matching_ids)
+            }
+
+            // ─── Fetching an existing page jump ───
+            Some(existing_id) => {
+                let search_cache_key = format!("search:{}", existing_id);
+
+                match self.cache_repo.get_recipe_ids(&search_cache_key).await? {
+                    Some(ids) => (existing_id, ids),
+                    None => {
+                        // The search cache expired, set it again
+                        let ids = self.local_repo.get_recipe_search_ids(query).await?;
+                        if !ids.is_empty() {
+                            self.cache_repo.set_recipe_ids(&search_cache_key, &ids, 300).await?;
+                        }
+                        (existing_id, ids)
+                    }
+                }
+            }
+        };
+
+        if matching_ids.is_empty() {
+            return Ok(SearchResultsPage { items: Vec::new(), total_items: 0, search_id: Uuid::new_v4() });
         }
 
-        // ─── Get DB candidates ───
-        let db_search_results = self.local_repo.get_recipe_search_results(name).await?;
+        let total_items = matching_ids.len();
 
-        // ─── Sort the candidates by similarity to the search ───
-        let mut scored_candidates: Vec<(RecipeSearchResult, f64)> = api_search_results
+        // Slice the matching_ids vector based on offset and limit
+        let page_ids: Vec<Uuid> = matching_ids
             .into_iter()
-            .chain(db_search_results.into_iter())
-            .map(|candidate| {
-                // Lowercase the candidate name for accurate comparison
-                let candidate_lower = candidate.name.to_lowercase();
-
-                // Jaro-Winkler returns an f64 between 0.0 and 1.0.
-                let score = jaro_winkler(&candidate_lower, &name);
-
-                (candidate, score)
-            })
+            .skip(offset)
+            .take(limit)
             .collect();
 
-        scored_candidates
-            .sort_by(
-                |a, b|
-                a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal)
-            );
-
-        let total_items = scored_candidates.len();
-
-        // ─── Apply pagination ───
-        let page_size = 10;
-        let start_index = page * page_size;
-
-        let paginated_results: Vec<RecipeSearchResult> = scored_candidates
-            .into_iter()
-            .skip(start_index)
-            .take(page_size)
-            .map(|(candidate, _score)| candidate)
-            .collect();
+        // Get the actual recipe search result data
+        let items = self.local_repo.get_recipe_search_data_by_ids(&page_ids).await?;
 
         Ok(SearchResultsPage {
-            items: paginated_results,
+            items,
             total_items,
+            search_id,
         })
     }
 }
@@ -100,8 +98,8 @@ impl From<LocalRepositoryError> for UseCaseError {
     }
 }
 
-impl From<ExternalRepositoryError> for UseCaseError {
-    fn from(e: ExternalRepositoryError) -> Self {
+impl From<CacheRepositoryError> for UseCaseError {
+    fn from(e: CacheRepositoryError) -> Self {
         Self::Internal(e.to_string())
     }
 }

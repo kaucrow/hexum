@@ -32,13 +32,10 @@ pub async fn init(
 
     // ───── Recipes Service ─────
     let pg_recipe_repo = Arc::new(recipe::PostgresAdapter::new(pool));
-    let mealdb_recipe_repo = Arc::new(recipe::MealdbAdapter::new(
-        config.external_api.url.clone(), config.external_api.key.clone(),
-    ));
     let redis_recipe_repo = Arc::new(recipe::RedisCacheAdapter::new(redis_conn));
 
     let recipe_service = recipe::Service::new(
-        pg_recipe_repo, mealdb_recipe_repo, redis_recipe_repo,
+        pg_recipe_repo, redis_recipe_repo,
     );
 
     start_cron_recipes_sync(data_ingestion_service.clone());

@@ -1,3 +1,4 @@
+use uuid::Uuid;
 use async_trait::async_trait;
 use ::redis::{
     AsyncCommands,
@@ -22,10 +23,10 @@ impl CacheRepository for RedisCacheAdapter {
     //  Search Results Caching
     // ───────────────────────────────────────────────────
 
-    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<RecipeSearchResult>>, CacheRepositoryError> {
+    async fn get_recipe_ids(&self, key: &str) -> Result<Option<Vec<Uuid>>, CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
-        // Fetch the raw payload string from redis
+        // Fetch the raw payload string
         let raw_json: Option<String> = conn.get(key).await?;
 
         // Deserialize the string if a cache hit occurred
@@ -34,15 +35,15 @@ impl CacheRepository for RedisCacheAdapter {
                 let candidates = serde_json::from_str(&json_str)?;
                 Ok(Some(candidates))
             }
-            None => Ok(None), // Pure cache miss
+            None => Ok(None),   // Pure cache miss
         }
     }
 
-    async fn set_search_results(&self, key: &str, search_results: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
+    async fn set_recipe_ids(&self, key: &str, ids: &[Uuid], ttl_secs: u64) -> Result<(), CacheRepositoryError> {
         let mut conn = self.conn.clone();
 
-        // Serialize the candidates
-        let json_str = serde_json::to_string(search_results)?;
+        // Serialize the IDs
+        let json_str = serde_json::to_string(ids)?;
 
         // Set in redis
         let _: () = conn.set_ex(key, json_str, ttl_secs).await?;

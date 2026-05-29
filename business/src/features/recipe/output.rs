@@ -1,8 +1,9 @@
+use uuid::Uuid;
 use async_trait::async_trait;
 use thiserror::Error;
 
 use crate::prelude::*;
-use super::{Recipe, domain};
+use super::*;
 
 // ────────────────────────────────────────────────
 //  Local Repository
@@ -11,35 +12,13 @@ use super::{Recipe, domain};
 #[async_trait]
 pub trait LocalRepository: Send + Sync + 'static {
     // ─── Getters ───
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, LocalRepositoryError>;
+    async fn get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalRepositoryError>;
+    async fn get_recipe_search_data_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
 pub enum LocalRepositoryError {
-    #[error(transparent)]
-    Conflict(#[from] ConflictError),
     #[error("User repository: {0}")]
-    Internal(String),
-}
-
-// ────────────────────────────────────────────────
-//  External Repository
-// ────────────────────────────────────────────────
-#[cfg_attr(test, mockall::automock)]
-#[async_trait]
-pub trait ExternalRepository: Send + Sync + 'static {
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, ExternalRepositoryError>;
-}
-
-#[derive(Error, Debug)]
-pub enum ExternalRepositoryError {
-    #[error(transparent)]
-    Conflict(#[from] ConflictError),
-    #[error("Recipe external repository: {0}")]
-    Network(String),
-    #[error("Recipe external repository: {0}")]
-    Serialization(String),
-    #[error("Recipe external repository: {0}")]
     Internal(String),
 }
 
@@ -50,8 +29,8 @@ pub enum ExternalRepositoryError {
 #[async_trait]
 pub trait CacheRepository: Send + Sync + 'static {
     // ─── Search results caching ───
-    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<domain::RecipeSearchResult>>, CacheRepositoryError>;
-    async fn set_search_results(&self, key: &str, search_results: &[domain::RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
+    async fn get_recipe_ids(&self, key: &str) -> Result<Option<Vec<Uuid>>, CacheRepositoryError>;
+    async fn set_recipe_ids(&self, key: &str, ids: &[Uuid], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
 
     // ─── Individual full recipes caching ───
     async fn get_recipe(&self, id: &str) -> Result<Option<Recipe>, CacheRepositoryError>;

@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 use uuid::Uuid;
-use strum::Display;
+use strum::{Display, EnumString};
 
 use crate::prelude::*;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Recipe {
+    pub id: Uuid,
     pub origin: RecipeOrigin,
     pub name: String,
     pub description: Option<String>,            // No description on external recipes
@@ -18,17 +19,19 @@ pub struct Recipe {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RecipeSearchResult {
+    pub id: Uuid,
     pub origin: RecipeOrigin,
     pub name: String,
     pub tags: Vec<String>,
     pub thumbnail_url: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Display, Debug, Clone)]
+#[derive(Serialize, Deserialize, Display, Debug, Clone, EnumString)]
+#[derive()]
 pub enum RecipeOrigin {
     #[strum(to_string = "local")]
-    Local(Uuid),
+    Local,
 
     #[strum(to_string = "external")]
-    External(String),
+    External,
 }
