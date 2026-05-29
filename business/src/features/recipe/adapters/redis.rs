@@ -55,13 +55,17 @@ impl CacheRepository for RedisCacheAdapter {
     //  Individual Full Recipes Caching
     // ───────────────────────────────────────────────────
 
-    async fn get_recipe(&self, id: &str) -> Result<Option<Recipe>, CacheRepositoryError> {
+    async fn get_recipe(&self, id: &Uuid) -> Result<Option<Recipe>, CacheRepositoryError> {
         let mut conn = self.conn.clone();
+        let key = format!("recipe:{}", id.to_string());
 
-        let raw_json: Option<String> = conn.get(id).await?;
+        let raw_json: Option<String> = conn.get(&key).await?;
 
         match raw_json {
             Some(json_str) => {
+                // Reset the TTL
+                let _: () = conn.expire(key, 1800).await?;
+
                 let recipe = serde_json::from_str(&json_str)?;
                 Ok(Some(recipe))
             }
@@ -69,12 +73,13 @@ impl CacheRepository for RedisCacheAdapter {
         }
     }
 
-    async fn set_recipe(&self, id: &str, recipe: &Recipe, ttl_secs: u64) -> Result<(), CacheRepositoryError> {
+    async fn set_recipe(&self, id: &Uuid, recipe: &Recipe, ttl_secs: u64) -> Result<(), CacheRepositoryError> {
         let mut conn = self.conn.clone();
+        let key = format!("recipe:{}", id.to_string());
 
         let json_str = serde_json::to_string(recipe)?;
 
-        let _: () = conn.set_ex(id, json_str, ttl_secs).await?;
+        let _: () = conn.set_ex(key, json_str, ttl_secs).await?;
 
         Ok(())
     }

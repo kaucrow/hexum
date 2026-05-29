@@ -55,19 +55,3 @@ impl From<RecipeSearchResult> for RecipeSearchResultItem {
         }
     }
 }
-
-impl From<recipe::UseCaseError> for ApiError {
-    fn from(e: recipe::UseCaseError) -> Self {
-        #[allow(unreachable_patterns)]
-        match e {
-            recipe::UseCaseError::Internal(e) => {
-                error!("An internal error occurred: {e}");
-                ApiError::Internal("An internal error occurred".to_string())
-            }
-            _ => {
-                error!("Unexpected domain error: {e}");
-                ApiError::Internal("An internal error occurred".to_string())
-            }
-        }
-    }
-}

@@ -91,6 +91,27 @@ impl UseCase for Service {
         })
     }
 
+    async fn get_recipe_by_id(&self, id: Uuid) -> Result<Option<Recipe>, UseCaseError> {
+        let recipe = if let Some(recipe) = self.cache_repo.get_recipe(&id).await? {
+            // ─── Cache Hit ───
+            // Return the recipe data from cache
+            Some(recipe)
+        } else {
+            // ─── Cache Miss ───
+            // Search for the recipe in DB & return it
+            let recipe = self.local_repo.get_recipe_by_id(&id).await?;
+
+            // If the recipe exists, set the recipe cache
+            if let Some(data) = &recipe {
+                self.cache_repo.set_recipe(&id, data, 1800).await?; // 30 min
+            }
+
+            recipe
+        };
+
+        Ok(recipe)
+    }
+
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError> {
         let tag_matches = self.local_repo.get_tag_search_matches(query, limit).await?;
 

@@ -83,9 +83,13 @@ recipe:
     WHERE r.id = ANY($1)
     GROUP BY r.id
 
-  get_many_by_id: |
+  get_by_id: |
     SELECT
       r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
       r.recipe_name,
       r.recipe_description,
       r.instructions,
@@ -104,7 +108,7 @@ recipe:
     FROM recipe.recipe r
     LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
     LEFT JOIN recipe.recipe_ingredient ri ON r.id = ri.recipe_id
-    WHERE r.id = ANY($1)  -- Should pass in a Vec
+    WHERE r.id = $1
     GROUP BY r.id
 
 tag:

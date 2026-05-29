@@ -10,6 +10,7 @@ use super::routes;
         // /recipes
         routes::recipes::sync::sync,
         routes::recipes::search::search,
+        routes::recipes::get_by_id::get_by_id,
 
         // /tags
         routes::tags::autocomplete::autocomplete,
@@ -24,6 +25,9 @@ use super::routes;
             // /recipes
             routes::recipes::dtos::RecipeSearchQueryParams,
             routes::recipes::dtos::RecipeSearchResponse,
+
+            routes::recipes::dtos::RecipePathParams,
+            routes::recipes::dtos::RecipeResponse,
 
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,

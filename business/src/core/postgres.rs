@@ -69,7 +69,7 @@ mod internal {
         pub get_search_ids_ilike: String,
         pub get_search_results_by_id: String,
 
-        pub get_many_by_id: String,
+        pub get_by_id: String,
     }
 
     #[derive(Deserialize, Debug)]

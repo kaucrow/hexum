@@ -15,6 +15,8 @@ pub trait LocalRepository: Send + Sync + 'static {
     async fn get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalRepositoryError>;
     async fn get_recipe_search_data_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
 
+    async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError>;
+
     async fn get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalRepositoryError>;
 }
 
@@ -35,8 +37,8 @@ pub trait CacheRepository: Send + Sync + 'static {
     async fn set_recipe_ids(&self, key: &str, ids: &[Uuid], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
 
     // ─── Individual full recipes caching ───
-    async fn get_recipe(&self, id: &str) -> Result<Option<Recipe>, CacheRepositoryError>;
-    async fn set_recipe(&self, id: &str, data: &Recipe, ttl_secs: u64) -> Result<(), CacheRepositoryError>;
+    async fn get_recipe(&self, id: &Uuid) -> Result<Option<Recipe>, CacheRepositoryError>;
+    async fn set_recipe(&self, id: &Uuid, data: &Recipe, ttl_secs: u64) -> Result<(), CacheRepositoryError>;
 }
 
 #[derive(Error, Debug)]

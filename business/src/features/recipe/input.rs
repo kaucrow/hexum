@@ -6,9 +6,12 @@ use super::*;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
+    // ─── Getters ───
     async fn search_recipe(
         &self, query: &str, limit: usize, page: usize, search_id: Option<Uuid>,
     ) -> Result<SearchResultsPage, UseCaseError>;
+
+    async fn get_recipe_by_id(&self, id: Uuid) -> Result<Option<Recipe>, UseCaseError>;
 
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError>;
 }
