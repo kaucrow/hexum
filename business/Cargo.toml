@@ -8,6 +8,7 @@ platform = { path = "../platform" }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 axum = { workspace = true }
+axum-extra = { workspace = true }
 chrono = { workspace = true }
 redis = { workspace = true }
 reqwest = { workspace = true }

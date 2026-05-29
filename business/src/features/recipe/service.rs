@@ -24,12 +24,18 @@ impl Service {
 #[async_trait]
 impl UseCase for Service {
     async fn search_recipe(&self,
-        query: &str,
+        query: Option<&str>,
+        tags: Option<&[String]>,
         page: usize,
         limit: usize,
         search_id: Option<Uuid>,
     ) -> Result<SearchResultsPage, UseCaseError>
     {
+        // Validate that at least one search parameter is provided
+        if query.is_none() && tags.is_none() {
+            return Err(UseCaseError::MissingSearchParams);
+        }
+
         let safe_page = if page == 0 { 1 } else { page };
         let offset = (safe_page - 1) * limit;
 
@@ -40,10 +46,10 @@ impl UseCase for Service {
                 let search_cache_key = format!("search:{}", new_id);
 
                 // Get all matching recipe IDs, sorted by similarity to the query
-                let matching_ids = self.local_repo.get_recipe_search_ids(query).await?;
+                let matching_ids = self.local_repo.get_recipe_search_ids(query, tags).await?;
 
                 if !matching_ids.is_empty() {
-                    // Set the recipe search cache in Redis
+                    // Set the recipe search cache
                     self.cache_repo.set_recipe_ids(&search_cache_key, &matching_ids, 300).await?;   // 5 minutes
                 }
 
@@ -58,7 +64,7 @@ impl UseCase for Service {
                     Some(ids) => (existing_id, ids),
                     None => {
                         // The search cache expired, set it again
-                        let ids = self.local_repo.get_recipe_search_ids(query).await?;
+                        let ids = self.local_repo.get_recipe_search_ids(query, tags).await?;
                         if !ids.is_empty() {
                             self.cache_repo.set_recipe_ids(&search_cache_key, &ids, 300).await?;
                         }

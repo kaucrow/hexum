@@ -7,10 +7,11 @@ pub use docs::Docs;
 #[allow(unused_imports)]
 pub(crate) use axum::{
     Json,
-    extract::{State, Query, Path},
+    extract::{State, Path},
     response::{Html, Response, IntoResponse},
     http::StatusCode,
 };
+use axum_extra::extract::Query;
 pub(crate) use utoipa::{IntoParams, ToSchema};
 
 pub(crate) use error::ApiError;

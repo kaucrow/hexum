@@ -68,12 +68,16 @@ pub struct RecipeResponse {
 #[serde(rename_all = "snake_case")]
 #[into_params(parameter_in = Query)]
 pub struct RecipeSearchQueryParams {
-    /// The recipe's name (partial or complete).
+    /// The recipe's name (partial or complete). Optional if tags are provided.
     #[param(example = "spa")]
-    pub query: String,
+    pub query: Option<String>,
+
+    /// Tags to filter by (All must match). Optional if a query is provided.
+    #[param(example = json!(["Italian", "Pasta"]))]
+    pub tags: Option<Vec<String>>,
 
     /// The pagination index.
-    #[param(example = 0, minimum = 1)]
+    #[param(example = 1, minimum = 1)]
     pub page: usize,
 
     /// The max amount of recipes to fetch.

@@ -1,7 +1,9 @@
 use crate::{
-    api::*, features::recipe::{
+    prelude::*,
+    api::*,
+    features::recipe::{
         self, RecipeSearchResult, SearchResultsPage
-    }, prelude::*
+    },
 };
 use super::dtos::*;
 
@@ -20,13 +22,20 @@ pub async fn search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     Query(queries): Query<RecipeSearchQueryParams>,
 ) -> Result<Json<RecipeSearchResponse>, ApiError> {
-    info!("Getting {} recipes from page {} of search for query '{}'", queries.limit, queries.page, queries.query);
+    info!(
+        "Getting {} recipes from page {} | query: {:?} | tags: {:?}",
+        queries.limit, queries.page, queries.query, queries.tags,
+    );
 
     let search_id: Option<Uuid> = queries.search_id
         .and_then(|id| Uuid::from_str(&id).ok());
 
     let search_result = recipe_service.search_recipe(
-        &queries.query, queries.page, queries.limit, search_id,
+        queries.query.as_deref(),
+        queries.tags.as_deref(),
+        queries.page,
+        queries.limit,
+        search_id,
     ).await?;
 
     Ok(Json(RecipeSearchResponse::from(search_result)))

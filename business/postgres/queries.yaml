@@ -53,17 +53,46 @@ data_ingestion:
     DO UPDATE SET measure = EXCLUDED.measure
 
 recipe:
-  get_search_ids: |
+  get_search_ids_by_query: |
     SELECT id
     FROM recipe.recipe r
     WHERE r.recipe_name % $1
     ORDER BY similarity(r.recipe_name, $1) DESC, id ASC
 
-  get_search_ids_ilike: |
+  get_search_ids_by_query_ilike: |
     SELECT id
     FROM recipe.recipe r
     WHERE r.recipe_name ILIKE '%' || $1 || '%'
     ORDER BY similarity(r.recipe_name, $1) DESC, id ASC
+
+  get_search_ids_by_tags: |
+    SELECT r.id
+    FROM recipe.recipe r
+    JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    WHERE LOWER(rt.tag_name) = ANY($1)
+    GROUP BY r.id
+    HAVING COUNT(DISTINCT rt.tag_name) = array_length($1, 1)
+    ORDER BY r.id ASC
+
+  get_search_ids_by_query_and_tags: |
+    SELECT r.id
+    FROM recipe.recipe r
+    JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    WHERE r.recipe_name % $1
+      AND LOWER(rt.tag_name) = ANY($2)
+    GROUP BY r.id
+    HAVING COUNT(DISTINCT rt.tag_name) = array_length($2, 1)
+    ORDER BY similarity(r.recipe_name, $1) DESC, r.id ASC
+
+  get_search_ids_by_query_and_tags_ilike: |
+    SELECT r.id
+    FROM recipe.recipe r
+    JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    WHERE r.recipe_name ILIKE '%' || $1 || '%'
+      AND LOWER(rt.tag_name) = ANY($2)
+    GROUP BY r.id
+    HAVING COUNT(DISTINCT rt.tag_name) = array_length($2, 1)
+    ORDER BY similarity(r.recipe_name, $1) DESC, r.id ASC
 
   get_search_results_by_id: |
     SELECT

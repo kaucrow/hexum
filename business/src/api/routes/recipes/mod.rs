@@ -17,6 +17,10 @@ impl From<recipe::UseCaseError> for ApiError {
     fn from(e: recipe::UseCaseError) -> Self {
         #[allow(unreachable_patterns)]
         match e {
+            recipe::UseCaseError::MissingSearchParams => {
+                warn!("Tried to search recipe without query or tags");
+                ApiError::BadRequest(e.to_string())
+            }
             recipe::UseCaseError::Internal(e) => {
                 error!("An internal error occurred: {e}");
                 ApiError::Internal("An internal error occurred".to_string())

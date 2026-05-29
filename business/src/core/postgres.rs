@@ -65,8 +65,11 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Recipe {
-        pub get_search_ids: String,
-        pub get_search_ids_ilike: String,
+        pub get_search_ids_by_query: String,
+        pub get_search_ids_by_query_ilike: String,
+        pub get_search_ids_by_tags: String,
+        pub get_search_ids_by_query_and_tags: String,
+        pub get_search_ids_by_query_and_tags_ilike: String,
         pub get_search_results_by_id: String,
 
         pub get_by_id: String,

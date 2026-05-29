@@ -1,11 +1,11 @@
+use anyhow::Result;
 use async_trait::async_trait;
 use thiserror::Error;
 use uuid::Uuid;
-use anyhow::Result;
 
-use crate::prelude::*;
-use crate::postgres::*;
 use super::*;
+use crate::postgres::*;
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub struct PostgresAdapter {
@@ -17,15 +17,87 @@ impl PostgresAdapter {
         Self { pool }
     }
 
-    async fn do_get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalError> {
+    async fn do_get_recipe_search_ids(
+        &self,
+        query: Option<&str>,
+        tags: Option<&[String]>,
+    ) -> Result<Vec<Uuid>, LocalError> {
+        match (query, tags) {
+            (Some(q), None) => {
+                // ─── Query-only Search ───
+                let sql_query = if q.chars().count() <= 3 {
+                    &QUERIES.recipe.get_search_ids_by_query_ilike
+                } else {
+                    &QUERIES.recipe.get_search_ids_by_query
+                };
+
+                let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
+                    .bind(q)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.id)
+                    .collect();
+
+                Ok(recipe_search_ids)
+            }
+            (None, Some(t)) => {
+                // ─── Tags-only Search ───
+
+                let t: Vec<String> = t
+                    .into_iter()
+                    .map(|t| t.to_lowercase())
+                    .collect();
+
+                self.do_get_recipe_search_ids_by_tags(&t).await
+            }
+            (Some(q), Some(t)) => {
+                // ─── Combined Query + Tags Search ───
+
+                let t: Vec<String> = t
+                    .into_iter()
+                    .map(|t| t.to_lowercase())
+                    .collect();
+
+                self.do_get_recipe_search_ids_by_query_and_tags(q, &t).await
+            }
+            (None, None) => {
+                // ─── Neither: Return Empty ───
+                Ok(Vec::new())
+            }
+        }
+    }
+
+    async fn do_get_recipe_search_ids_by_tags(
+        &self,
+        tags: &[String],
+    ) -> Result<Vec<Uuid>, LocalError> {
+        let recipe_search_ids =
+            sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(&QUERIES.recipe.get_search_ids_by_tags))
+                .bind(tags)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| row.id)
+                .collect();
+
+        Ok(recipe_search_ids)
+    }
+
+    async fn do_get_recipe_search_ids_by_query_and_tags(
+        &self,
+        query: &str,
+        tags: &[String],
+    ) -> Result<Vec<Uuid>, LocalError> {
         let sql_query = if query.chars().count() <= 3 {
-            &QUERIES.recipe.get_search_ids_ilike
+            &QUERIES.recipe.get_search_ids_by_query_and_tags_ilike
         } else {
-            &QUERIES.recipe.get_search_ids
+            &QUERIES.recipe.get_search_ids_by_query_and_tags
         };
 
         let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
             .bind(query)
+            .bind(tags)
             .fetch_all(&self.pool)
             .await?
             .into_iter()
@@ -37,15 +109,16 @@ impl PostgresAdapter {
 
     async fn do_get_recipe_search_data_by_ids(
         &self,
-        ids: &Vec<Uuid>
+        ids: &Vec<Uuid>,
     ) -> Result<Vec<RecipeSearchResult>, LocalError> {
-        let mut recipe_search_results = sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.get_search_results_by_id))
-            .bind(ids)
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|row| RecipeSearchResult::try_from(row))
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut recipe_search_results =
+            sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.get_search_results_by_id))
+                .bind(ids)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| RecipeSearchResult::try_from(row))
+                .collect::<Result<Vec<_>, _>>()?;
 
         // Sort back into the original order
         recipe_search_results.sort_by_key(|r| ids.iter().position(|&id| id == r.id));
@@ -64,32 +137,39 @@ impl PostgresAdapter {
         Ok(recipe)
     }
 
-    async fn do_get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalError> {
-        let tag_search_results = sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_search_matches))
-            .bind(query)
-            .bind(limit as i64)
-            .fetch_all(&self.pool)
-            .await?
-            .into_iter()
-            .map(|row| row.name)
-            .collect();
+    async fn do_get_tag_search_matches(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, LocalError> {
+        let tag_search_results =
+            sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_search_matches))
+                .bind(query)
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| row.name)
+                .collect();
 
         Ok(tag_search_results)
-
     }
 }
 
 #[async_trait]
 impl LocalRepository for PostgresAdapter {
-    async fn get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_search_ids(query).await?)
+    async fn get_recipe_search_ids<'a>(
+        &self,
+        query: Option<&'a str>,
+        tags: Option<&'a [String]>,
+    ) -> Result<Vec<Uuid>, LocalRepositoryError> {
+        Ok(self.do_get_recipe_search_ids(query, tags).await?)
     }
 
     async fn get_recipe_search_data_by_ids(
         &self,
-        ids: &Vec<Uuid>
-    ) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>
-    {
+        ids: &Vec<Uuid>,
+    ) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError> {
         Ok(self.do_get_recipe_search_data_by_ids(ids).await?)
     }
 
@@ -97,7 +177,11 @@ impl LocalRepository for PostgresAdapter {
         Ok(self.do_get_recipe_by_id(id).await?)
     }
 
-    async fn get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalRepositoryError> {
+    async fn get_tag_search_matches(
+        &self,
+        query: &str,
+        limit: usize,
+    ) -> Result<Vec<String>, LocalRepositoryError> {
         Ok(self.do_get_tag_search_matches(query, limit).await?)
     }
 }

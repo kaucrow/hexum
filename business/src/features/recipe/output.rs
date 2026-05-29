@@ -12,7 +12,7 @@ use super::*;
 #[async_trait]
 pub trait LocalRepository: Send + Sync + 'static {
     // ─── Getters ───
-    async fn get_recipe_search_ids(&self, query: &str) -> Result<Vec<Uuid>, LocalRepositoryError>;
+    async fn get_recipe_search_ids<'a>(&self, query: Option<&'a str>, tags: Option<&'a [String]>) -> Result<Vec<Uuid>, LocalRepositoryError>;
     async fn get_recipe_search_data_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
 
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError>;
