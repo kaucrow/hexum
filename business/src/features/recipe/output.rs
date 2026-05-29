@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use thiserror::Error;
 
 use crate::prelude::*;
-use super::{Recipe, RecipeSearchResult};
+use super::{Recipe, domain};
 
 // ────────────────────────────────────────────────
 //  Local Repository
@@ -11,7 +11,7 @@ use super::{Recipe, RecipeSearchResult};
 #[async_trait]
 pub trait LocalRepository: Send + Sync + 'static {
     // ─── Getters ───
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, LocalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
@@ -28,7 +28,7 @@ pub enum LocalRepositoryError {
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait ExternalRepository: Send + Sync + 'static {
-    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<RecipeSearchResult>, ExternalRepositoryError>;
+    async fn get_recipe_search_results(&self, name: &str) -> Result<Vec<domain::RecipeSearchResult>, ExternalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
@@ -50,8 +50,8 @@ pub enum ExternalRepositoryError {
 #[async_trait]
 pub trait CacheRepository: Send + Sync + 'static {
     // ─── Search results caching ───
-    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<RecipeSearchResult>>, CacheRepositoryError>;
-    async fn set_search_results(&self, key: &str, search_results: &[RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
+    async fn get_search_results(&self, key: &str) -> Result<Option<Vec<domain::RecipeSearchResult>>, CacheRepositoryError>;
+    async fn set_search_results(&self, key: &str, search_results: &[domain::RecipeSearchResult], ttl_secs: u64) -> Result<(), CacheRepositoryError>;
 
     // ─── Individual full recipes caching ───
     async fn get_recipe(&self, id: &str) -> Result<Option<Recipe>, CacheRepositoryError>;

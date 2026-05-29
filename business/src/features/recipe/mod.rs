@@ -1,5 +1,5 @@
-mod domain;
-mod input;
+pub(crate) mod domain;
+pub(crate) mod input;
 mod output;
 mod service;
 mod adapters;

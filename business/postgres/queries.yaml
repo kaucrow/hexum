@@ -11,9 +11,11 @@ recipe:
       COALESCE(
         jsonb_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
         '[]'::jsonb
-      ) AS tags,
+      ) AS tags
     FROM recipe.recipe r
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
     WHERE r.recipe_name % $1
+    GROUP BY r.id
     ORDER BY similarity(r.recipe_name, $1) DESC
   get_many_by_id: |
     SELECT

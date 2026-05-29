@@ -19,21 +19,21 @@ use super::dtos::*;
 pub async fn recipe_search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     Query(queries): Query<RecipeSearchQueryParams>,
-) -> Result<Json<Vec<RecipeSearchResponse>>, ApiError> {
+) -> Result<Json<RecipeSearchResponse>, ApiError> {
     info!("Getting page {} of search for recipe '{}'", queries.page, queries.name);
 
-    let search_results = recipe_service.search_recipe_by_name(&queries.name, queries.page).await?;
+    let search_result = recipe_service.search_recipe_by_name(&queries.name, queries.page).await?;
 
-    let response = search_results
-        .into_iter()
-        .map(|result| RecipeSearchResponse::from(result))
-        .collect();
+    let response = RecipeSearchResponse::new(
+        search_result.items.into_iter().map(|item| RecipeSearchResult::from(item)).collect(),
+        search_result.total_items,
+    );
 
     Ok(Json(response))
 }
 
-impl From<recipe::RecipeSearchResult> for RecipeSearchResponse {
-    fn from(search_result: recipe::RecipeSearchResult) -> Self {
+impl From<recipe::domain::RecipeSearchResult> for RecipeSearchResult {
+    fn from(search_result: recipe::domain::RecipeSearchResult) -> Self {
         let id = match search_result.origin {
             recipe::RecipeOrigin::Local(id) => id.to_string(),
             recipe::RecipeOrigin::External(ref id) => id.clone(),
