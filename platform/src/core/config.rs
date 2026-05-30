@@ -122,7 +122,7 @@ mod internal {
         pub fn url(&self) -> String {
             match self.protocol {
                 FrontendProtocol::Http => format!("http://{}:{}/", self.domain, self.port),
-                FrontendProtocol::Https => format!("https://{}/", self.domain),
+                FrontendProtocol::Https => format!("https://{}/api/", self.domain),
                 FrontendProtocol::Hexum => format!("hexum://",)
             }
         }
