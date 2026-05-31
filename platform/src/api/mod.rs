@@ -27,6 +27,7 @@ pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
     let mut r = Router::new()
         .route("/user/register", post(crate::routes::user::register))
         .route("/user/verify", get(crate::routes::user::verify))
+        .route("/user/verify-ui", get(crate::routes::user::verify_ui))
         .route("/auth/local/login", post(crate::routes::auth::local::login))
         .route("/auth/oauth/google/login", post(crate::routes::auth::oauth::google_login))
         .route("/auth/oauth/github/login", post(crate::routes::auth::oauth::github_login))
@@ -35,7 +36,6 @@ pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
 
     if enable_dev_endpoints {
         r = r
-            .route("/user/verify-ui", get(crate::routes::user::verify_ui))
             .route("/auth/oauth/login-ui", get(crate::routes::auth::oauth::oauth_login_ui))
             .route("/auth/oauth/callback-ui", get(crate::routes::auth::oauth::oauth_callback_ui));
     }

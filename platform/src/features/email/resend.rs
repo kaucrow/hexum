@@ -33,7 +33,7 @@ impl ResendAdapter {
 
         Ok(Self {
             client,
-            frontend_url: config.frontend.url(),
+            frontend_url: config.frontend.url.clone(),
             from_addr: config.email.from.clone(),
         })
     }
@@ -41,7 +41,7 @@ impl ResendAdapter {
 
 impl ResendAdapter {
     async fn do_send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), LocalError> {
-        let url = format!("{}user/verify-ui?token={}", self.frontend_url, token);
+        let url = format!("{}/user/verify-ui?token={}", self.frontend_url, token);
 
         let template = VerificationEmailTemplate { url: &url };
         let html_body = template.render()?;

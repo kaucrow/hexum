@@ -9,15 +9,15 @@ pub struct Config {
     pub debug: bool,
     #[serde(default)]
     pub environment: Environment,
-    pub api: self::internal::ApiConfig,
-    pub frontend: self::internal::FrontendConfig,
+    pub api: internal::ApiConfig,
+    pub frontend: internal::FrontendConfig,
     #[serde(rename = "postgresql")]
-    pub postgres: self::internal::PostgresConfig,
-    pub redis: self::internal::RedisConfig,
-    pub email: self::internal::EmailConfig,
-    pub oauth: self::internal::OAuthConfig,
+    pub postgres: internal::PostgresConfig,
+    pub redis: internal::RedisConfig,
+    pub email: internal::EmailConfig,
+    pub oauth: internal::OAuthConfig,
 
-    pub external_api: self::internal::ExternalApiConfig,
+    pub external_api: internal::ExternalApiConfig,
 }
 
 #[derive(Deserialize, Clone, Debug, Display, Default, PartialEq, EnumString)]
@@ -94,6 +94,7 @@ mod internal {
         pub enable_dev_endpoints: bool,
         pub host: String,
         pub domain: String,
+        pub path_suffix: String,
         pub port: u16,
         #[serde(default)]
         pub protocol: ApiProtocol,
@@ -104,38 +105,15 @@ mod internal {
     impl ApiConfig {
         pub fn url(&self) -> String {
             match self.protocol {
-                ApiProtocol::Http => format!("http://{}:{}/", self.domain, self.port),
-                ApiProtocol::Https => format!("https://{}/", self.domain),
+                ApiProtocol::Http => format!("http://{}{}:{}/", self.domain, self.path_suffix, self.port),
+                ApiProtocol::Https => format!("https://{}{}/", self.domain, self.path_suffix),
             }
         }
     }
 
     #[derive(Deserialize, Clone)]
     pub struct FrontendConfig {
-        pub domain: String,
-        pub port: u16,
-        #[serde(default)]
-        pub protocol: FrontendProtocol,
-    }
-
-    impl FrontendConfig {
-        pub fn url(&self) -> String {
-            match self.protocol {
-                FrontendProtocol::Http => format!("http://{}:{}/", self.domain, self.port),
-                FrontendProtocol::Https => format!("https://{}/api/", self.domain),
-                FrontendProtocol::Hexum => format!("hexum://",)
-            }
-        }
-    }
-
-    #[derive(Deserialize, Clone, Debug, Display, Default)]
-    #[strum(serialize_all = "lowercase")]
-    #[serde(rename_all = "lowercase")]
-    pub enum FrontendProtocol {
-        #[default]
-        Http,
-        Https,
-        Hexum
+        pub url: String,
     }
 
     #[derive(Deserialize, Clone)]
@@ -223,11 +201,11 @@ mod internal {
     }
 
     impl OAuthConfig {
-        pub fn login_ui_url(&self, frontend_url: String) -> String {
+        pub fn login_ui_url(&self, frontend_url: &str) -> String {
             format!("{}{}", frontend_url, self.login_ui_endpoint)
         }
 
-        pub fn redirect_url(&self, frontend_url: String) -> String {
+        pub fn redirect_url(&self, frontend_url: &str) -> String {
             format!("{}{}", frontend_url, self.callback_endpoint)
         }
     }

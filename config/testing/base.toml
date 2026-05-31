@@ -4,6 +4,7 @@ debug = true
 enable_dev_endpoints = true
 host = "0.0.0.0"
 domain = ""
+path_suffix = ""
 port = 8080
 protocol = "http"
 docs_endpoint = "docs"
@@ -12,9 +13,7 @@ docs_endpoint = "docs"
 hexum = "hexum"
 
 [frontend]
-domain = "localhost"
-port = 8080
-protocol = "http"
+url = "http://localhost:8080"
 
 [postgresql]
 pool_max_conn = 5
@@ -36,16 +35,16 @@ from = "noreply@hexum-test.example"
 api_key = "re_testing_mock_key"
 
 [oauth]
-login_ui_endpoint = "auth/oauth/login-ui"
-callback_endpoint = "auth/oauth/callback-ui"
+login_ui_endpoint = "/auth/oauth/login-ui"
+callback_endpoint = "/auth/oauth/callback-ui"
 
 [oauth.google]
-login_endpoint = "auth/oauth/google/login"
+login_endpoint = "/auth/oauth/google/login"
 client_id = ""
 client_secret = ""
 
 [oauth.github]
-login_endpoint = "auth/oauth/github/login"
+login_endpoint = "/auth/oauth/github/login"
 client_id = ""
 client_secret = ""
 

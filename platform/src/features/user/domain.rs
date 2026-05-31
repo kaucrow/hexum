@@ -19,7 +19,7 @@ impl User {
             username: Username::new(username.to_string())?,
             email: EmailAddress::new(email.to_string())?,
             roles: vec![Role::BasicUser],
-            is_active: true,
+            is_active: false,
         })
     }
 

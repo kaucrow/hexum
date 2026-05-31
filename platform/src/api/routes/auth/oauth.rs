@@ -106,7 +106,7 @@ pub async fn oauth_login_ui(
     State(config): State<Arc<Config>>,
 ) -> Result<impl IntoResponse, ApiError> {
     let template = OAuthLoginTemplate {
-        oauth_redirect_url: &config.oauth.redirect_url(config.frontend.url()),
+        oauth_redirect_url: &config.oauth.redirect_url(&config.frontend.url),
         google_client_id: &config.oauth.google.client_id,
         github_client_id: &config.oauth.github.client_id,
     };
@@ -148,9 +148,9 @@ pub async fn oauth_callback_ui(
     State(config): State<Arc<Config>>,
 ) -> Result<impl IntoResponse, ApiError> {
     let template = OAuthCallbackTemplate {
-        login_ui_url: &config.oauth.login_ui_url(config.frontend.url()),
-        google_login_uri: &format!("/{}", config.oauth.google.login_endpoint),
-        github_login_uri: &format!("/{}", config.oauth.github.login_endpoint),
+        login_ui_url: &config.oauth.login_ui_url(&config.frontend.url),
+        google_login_uri: &config.oauth.google.login_endpoint,
+        github_login_uri: &config.oauth.github.login_endpoint,
     };
 
     let html_content = template

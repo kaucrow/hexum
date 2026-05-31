@@ -6,35 +6,47 @@
     <title>Verify Account</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { background-color: #09090b; color: #fafafa; }
+        body {
+            background-color: #1A120E;
+            color: #F1DFD8;
+        }
     </style>
 </head>
 <body class="flex min-h-screen items-center justify-center p-4">
-    <div class="w-full max-w-md rounded-xl border border-zinc-800 bg-zinc-950 p-8 shadow-2xl">
+    <div class="w-full max-w-md rounded-xl border border-[#52443D] bg-[#221A16] p-8 shadow-2xl">
         <div class="flex flex-col space-y-1 text-center">
-            <h1 class="text-2xl font-semibold tracking-tight">Account Verification</h1>
-            <p id="description" class="text-xs uppercase tracking-widest text-zinc-500">Processing Request</p>
+            <h1 class="text-2xl font-semibold tracking-tight text-[#F1DFD8]">NativEat Account Verification</h1>
+            <p id="description" class="text-xs uppercase tracking-widest text-[#A08D85]">Processing Request</p>
         </div>
 
         <div id="status-container" class="flex flex-col items-center justify-center gap-4">
-            <div id="spinner" class="mt-8 h-8 w-8 animate-spin rounded-full border-4 border-zinc-800 border-t-zinc-400"></div>
+            <div id="spinner" class="mt-8 h-8 w-8 animate-spin rounded-full border-4 border-[#52443D] border-t-[#FFB694]"></div>
 
             <div id="result-icon" class="mt-4 hidden text-4xl"></div>
 
             <div class="text-center">
                 <p id="status-text" class="text-sm font-medium"></p>
             </div>
-
-            </div>
+        </div>
     </div>
 
     <script>
         async function verify() {
-            const token = "{{ token }}"; 
+            const token = "{{ token }}";
             const statusText = document.getElementById('status-text');
             const spinner = document.getElementById('spinner');
             const icon = document.getElementById('result-icon');
             const desc = document.getElementById('description');
+
+            function showError(msg) {
+                spinner.classList.add('hidden');
+                icon.classList.remove('hidden');
+                icon.innerText = "unu";
+                icon.className = "mt-4 text-4xl text-[#FFB4AB]";
+                statusText.innerText = msg;
+                statusText.className = "text-sm font-medium text-[#FFB4AB]";
+                desc.innerText = "Verification Error";
+            }
 
             if (!token) {
                 showError("No token found.");
@@ -51,15 +63,16 @@
 
                     if (response.ok) {
                         icon.innerText = "owo";
-                        icon.className = "mt-4 text-4xl text-emerald-500";
+                        icon.className = "mt-4 text-4xl text-[#FFB694]";
                         statusText.innerHTML = "Your account has been verified successfully.<br />You can now log in.";
-                        statusText.className = "text-sm font-medium text-emerald-400";
+                        statusText.className = "text-sm font-medium text-[#F1DFD8]";
                         desc.innerText = "Verification Complete";
                     } else {
                         let msg = data.message || "Verification failed";
                         icon.innerText = "unu";
-                        text.innerText = msg;
-                        text.className = "text-sm font-medium text-red-400";
+                        icon.className = "mt-4 text-4xl text-[#FFB4AB]";
+                        statusText.innerText = msg;
+                        statusText.className = "text-sm font-medium text-[#FFB4AB]";
                         desc.innerText = "Verification Error";
                     }
                 }, 800);

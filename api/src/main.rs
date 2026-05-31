@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
 
     if config.environment == Environment::Production {
         openapi.servers = Some(vec![
-            Server::new("/api")
+            Server::new(config.api.path_suffix.clone())
         ]);
     }
 

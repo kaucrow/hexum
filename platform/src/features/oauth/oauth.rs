@@ -24,7 +24,7 @@ impl OAuthAdapter {
     pub fn new(config: &Config) -> Self {
         Self {
             client: reqwest::Client::new(),
-            redirect_uri: config.oauth.redirect_url(config.frontend.url()),
+            redirect_uri: config.oauth.redirect_url(&config.frontend.url),
             google: OAuthData {
                 client_id: config.oauth.google.client_id.clone(),
                 client_secret: config.oauth.google.client_secret.clone(),
