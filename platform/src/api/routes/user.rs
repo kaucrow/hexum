@@ -1,4 +1,5 @@
 use crate::{
+    Config,
     prelude::*,
     features::user,
     api::*,
@@ -84,6 +85,7 @@ impl From<user::UserError> for ApiError {
 #[template(path = "verify.html")]
 pub struct VerifyTemplate {
     token: String,
+    api_path_suffix: String,
 }
 
 #[utoipa::path(
@@ -107,10 +109,12 @@ pub struct VerifyTemplate {
     tags = ["User"]
 )]
 pub async fn verify_ui(
+    State(config): State<Arc<Config>>,
     Query(queries): Query<VerifyQueryParams>,
 ) -> Result<impl IntoResponse, ApiError> {
     let template = VerifyTemplate {
         token: queries.token,
+        api_path_suffix: config.api.path_suffix.clone(),
     };
 
     let html_content = template

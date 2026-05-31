@@ -33,6 +33,7 @@
     <script>
         async function verify() {
             const token = "{{ token }}";
+            const apiPathSuffix = "{{ api_path_suffix }}"
             const statusText = document.getElementById('status-text');
             const spinner = document.getElementById('spinner');
             const icon = document.getElementById('result-icon');
@@ -54,7 +55,7 @@
             }
 
             try {
-                const response = await fetch(`/user/verify?token=${token}`);
+                const response = await fetch(`${apiPathSuffix}/user/verify?token=${token}`);
                 const data = await response.json();
 
                 setTimeout(() => {
