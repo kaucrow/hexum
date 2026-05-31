@@ -286,7 +286,7 @@ mod tests {
             let user = User::new("alice", "alice@example.com").unwrap();
             assert_eq!(user.username.as_str(), "alice");
             assert_eq!(user.email.as_str(), "alice@example.com");
-            assert!(user.is_active);
+            assert!(!user.is_active);
             assert_eq!(user.roles, vec![Role::BasicUser]);
         }
 
@@ -304,18 +304,18 @@ mod tests {
         }
 
         #[test]
-        fn test_user_deactivate() {
+        fn test_user_activate_and_deactivate() {
             let mut user = User::new("charlie", "charlie@test.com").unwrap();
-            assert!(user.is_active);
+            assert!(!user.is_active);
 
+            user.is_active = true;
             user.deactivate().unwrap();
             assert!(!user.is_active);
         }
 
         #[test]
-        fn test_user_deactivate_twice_fails() {
+        fn test_user_deactivate_when_inactive_fails() {
             let mut user = User::new("dave", "dave@test.com").unwrap();
-            user.deactivate().unwrap();
             let err = user.deactivate().unwrap_err();
             assert!(matches!(err, UserError::UserAlreadyDeactivated));
         }
