@@ -19,7 +19,7 @@ impl User {
             username: Username::new(username.to_string())?,
             email: EmailAddress::new(email.to_string())?,
             roles: vec![Role::BasicUser],
-            is_active: false,
+            is_active: true,
         })
     }
 
@@ -286,7 +286,7 @@ mod tests {
             let user = User::new("alice", "alice@example.com").unwrap();
             assert_eq!(user.username.as_str(), "alice");
             assert_eq!(user.email.as_str(), "alice@example.com");
-            assert!(!user.is_active);
+            assert!(user.is_active);
             assert_eq!(user.roles, vec![Role::BasicUser]);
         }
 
@@ -304,11 +304,9 @@ mod tests {
         }
 
         #[test]
-        fn test_user_activate_and_deactivate() {
+        fn test_user_deactivate() {
             let mut user = User::new("charlie", "charlie@test.com").unwrap();
-            assert!(!user.is_active);
-
-            user.is_active = true;
+            assert!(user.is_active);
             user.deactivate().unwrap();
             assert!(!user.is_active);
         }
@@ -316,7 +314,13 @@ mod tests {
         #[test]
         fn test_user_deactivate_when_inactive_fails() {
             let mut user = User::new("dave", "dave@test.com").unwrap();
+            assert!(user.is_active);
+
+            user.deactivate().unwrap();
+            assert!(!user.is_active);
+
             let err = user.deactivate().unwrap_err();
+            assert!(!user.is_active);
             assert!(matches!(err, UserError::UserAlreadyDeactivated));
         }
 
