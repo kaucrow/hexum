@@ -28,7 +28,11 @@ use axum::{
     http::request::Parts,
 };
 use serde::de::DeserializeOwned;
-use crate::PlatformState;
+use validator::ValidationErrors;
+use crate::{
+    PlatformState,
+    prelude::*,
+};
 
 pub struct ValidatedJson<T>(pub T);
 
@@ -46,10 +50,7 @@ where
             .map_err(|err| ApiError::BadRequest(format!("Malformed JSON payload: {}", err)))?;
 
         // Validate the struct
-        value.validate().map_err(|validation_errors| {
-            let error_msg = format!("Validation failed: {}", validation_errors);
-            ApiError::BadRequest(error_msg)
-        })?;
+        value.validate().map_err(|e| e.into_api_error())?;
 
         Ok(ValidatedJson(value))
     }
@@ -72,11 +73,7 @@ where
             .map_err(|err| ApiError::BadRequest(format!("Malformed query parameters: {}", err)))?;
 
         // Validate the struct
-        value.validate().map_err(|validation_errors| {
-            let error_msg = format!("Validation failed: {}", validation_errors);
-
-            ApiError::BadRequest(error_msg)
-        })?;
+        value.validate().map_err(|e| e.into_api_error())?;
 
         Ok(ValidatedQuery(value))
     }
@@ -98,10 +95,7 @@ where
             .map_err(|err| ApiError::BadRequest(format!("Malformed path parameters: {}", err)))?;
 
         // Validate the struct
-        value.validate().map_err(|validation_errors| {
-            let error_msg = format!("Validation failed: {}", validation_errors);
-            ApiError::BadRequest(error_msg)
-        })?;
+        value.validate().map_err(|e| e.into_api_error())?;
 
         Ok(ValidatedPath(value))
     }
@@ -125,4 +119,30 @@ pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
     }
 
     r.with_state(state)
+}
+
+trait ValidationErrorsExt {
+    fn into_api_error(self) -> ApiError;
+}
+
+impl ValidationErrorsExt for ValidationErrors {
+    fn into_api_error(self) -> ApiError {
+        let mut error_map = HashMap::new();
+
+        for (field, errors) in self.field_errors() {
+            let messages: Vec<String> = errors
+                .iter()
+                .map(|error| {
+                    match &error.message {
+                        Some(msg) => msg.to_string(),
+                        None => format!("Invalid value for rule: {}", error.code),
+                    }
+                })
+                .collect();
+
+            error_map.insert(field.to_string(), messages);
+        }
+
+        ApiError::Validation(error_map)
+    }
 }

@@ -12,7 +12,8 @@ use super::dtos::*;
     params(TagsAutocompleteQueryParams),
     responses(
         (status = 200, description = "Recipe search results", body = TagsAutocompleteResponse),
-        (status = 500, description = "Internal Server Error")
+        (status = 422, description = "Validation Error"),
+        (status = 500, description = "Internal Server Error"),
     ),
     tags = ["Tags"]
 )]

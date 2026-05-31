@@ -7,6 +7,8 @@ pub use sync::sync;
 pub use search::search;
 pub use get_by_id::get_by_id;
 
+use std::collections::HashMap;
+
 use crate::{
     prelude::*,
     api::*,
@@ -19,7 +21,10 @@ impl From<recipe::UseCaseError> for ApiError {
         match e {
             recipe::UseCaseError::MissingSearchParams => {
                 warn!("Tried to search recipe without query or tags");
-                ApiError::BadRequest(e.to_string())
+                let mut errors = HashMap::new();
+                errors.insert("query".to_string(), vec![e.to_string()]);
+                errors.insert("tags".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
             }
             recipe::UseCaseError::Internal(e) => {
                 error!("An internal error occurred: {e}");

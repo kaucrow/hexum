@@ -18,8 +18,9 @@ use super::{
         (status = 200, description = "Login successful", body = LoginResponse, headers(
             ("Set-Cookie" = String, description = "HTTP-only cookies for access_token and refresh_token")
         )),
-        (status = 401, description = "Unauthorized - Invalid username/email or password"),
-        (status = 500, description = "Internal Server Error")
+        (status = 401, description = "Unauthorized. Invalid username/email or password"),
+        (status = 422, description = "Validation Error"),
+        (status = 500, description = "Internal Server Error"),
     ),
     tags = ["Authentication"]
 )]

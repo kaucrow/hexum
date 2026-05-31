@@ -14,7 +14,8 @@ use super::dtos::*;
     params(RecipeSearchQueryParams),
     responses(
         (status = 200, description = "Recipe search results", body = RecipeSearchResponse),
-        (status = 500, description = "Internal Server Error")
+        (status = 422, description = "Validation Error"),
+        (status = 500, description = "Internal Server Error"),
     ),
     tags = ["Recipes"]
 )]

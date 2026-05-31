@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     prelude::*,
     api::*,
@@ -15,6 +17,7 @@ use super::dtos::*;
     responses(
         (status = 200, description = "Recipe details", body = RecipeResponse),
         (status = 404, description = "Recipe not found"),
+        (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error"),
     ),
     tags = ["Recipes"]
@@ -26,7 +29,11 @@ pub async fn get_by_id(
     info!("Getting recipe with ID '{}'", params.id);
 
     let id = Uuid::from_str(&params.id)
-        .map_err(|_| ApiError::BadRequest(format!("Invalid ID format '{}'", params.id)))?;
+        .map_err(|_| {
+            let mut errors = HashMap::new();
+            errors.insert("id".to_string(), vec![format!("Invalid ID format '{}'", params.id)]);
+            ApiError::Validation(errors)
+        })?;
 
     let recipe_result = recipe_service.get_recipe_by_id(id).await?;
 

@@ -13,9 +13,9 @@ use super::dtos::*;
     request_body = RegisterRequest,
     responses(
         (status = 200, description = "Registration successful", body = RegisterResponse),
-        (status = 400, description = "Bad Request - Invalid email format, username format, or password too short"),
-        (status = 409, description = "Conflict - The provided username or email is already in use"),
-        (status = 500, description = "Internal Server Error")
+        (status = 409, description = "The provided username or email is already in use"),
+        (status = 422, description = "Validation Error"),
+        (status = 500, description = "Internal Server Error"),
     ),
     tags = ["User"]
 )]
@@ -66,11 +66,23 @@ pub async fn verify(
 impl From<user::UserError> for ApiError {
     fn from(e: user::UserError) -> Self {
         match e {
-            user::UserError::InvalidUsername
-            | user::UserError::InvalidEmail
-            | user::UserError::InvalidPassword => {
+            user::UserError::InvalidUsername => {
                 warn!("Validation error: {e}");
-                ApiError::BadRequest(e.to_string())
+                let mut errors = HashMap::new();
+                errors.insert("username".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
+            }
+            user::UserError::InvalidEmail => {
+                warn!("Validation error: {e}");
+                let mut errors = HashMap::new();
+                errors.insert("email".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
+            }
+            user::UserError::InvalidPassword => {
+                warn!("Validation error: {e}");
+                let mut errors = HashMap::new();
+                errors.insert("password".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
             }
             user::UserError::UserAlreadyDeactivated
             | user::UserError::InsufficientPermissions => {
@@ -139,7 +151,7 @@ impl From<user::UseCaseError> for ApiError {
             },
             user::UseCaseError::Validation(e) => {
                 warn!("Validation error: {e}");
-                ApiError::BadRequest(e.to_string())
+                ApiError::from(e)
             },
             user::UseCaseError::VerificationTokenInvalid => {
                 warn!("User verification token is invalid. It might have expired.");
