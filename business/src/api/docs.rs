@@ -11,6 +11,7 @@ use super::routes;
         routes::recipes::sync::sync,
         routes::recipes::search::search,
         routes::recipes::get_by_id::get_by_id,
+        routes::recipes::explore::popular,
 
         // /tags
         routes::tags::autocomplete::autocomplete,
@@ -26,8 +27,13 @@ use super::routes;
             routes::recipes::dtos::RecipeSearchQueryParams,
             routes::recipes::dtos::RecipeSearchResponse,
 
+            routes::recipes::dtos::RecipePreviewItem,
+
             routes::recipes::dtos::RecipePathParams,
             routes::recipes::dtos::RecipeResponse,
+
+            routes::recipes::dtos::PopularRecipesQueryParams,
+            routes::recipes::dtos::PopularRecipesResponse,
 
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,

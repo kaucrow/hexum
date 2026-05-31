@@ -2,10 +2,12 @@ pub mod dtos;
 pub mod sync;
 pub mod search;
 pub mod get_by_id;
+pub mod explore;
 
 pub use sync::sync;
 pub use search::search;
 pub use get_by_id::get_by_id;
+pub use explore::popular;
 
 use std::collections::HashMap;
 

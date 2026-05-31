@@ -14,6 +14,7 @@ pub fn router(state: BusinessState) -> Router {
         .route("/recipes/sync", get(routes::recipes::sync))
         .route("/recipes/search", get(routes::recipes::search))
         .route("/recipes/{id}", get(routes::recipes::get_by_id))
+        .route("/recipes/popular", get(routes::recipes::popular))
         .route("/tags/autocomplete", get(routes::tags::autocomplete))
         .with_state(state)
 }

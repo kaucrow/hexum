@@ -18,7 +18,7 @@ pub struct Recipe {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct RecipeSearchResult {
+pub struct RecipePreview {
     pub id: Uuid,
     pub origin: RecipeOrigin,
     pub name: String,

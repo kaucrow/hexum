@@ -112,13 +112,13 @@ pub struct RecipeSearchQueryParams {
     }
 }))]
 pub struct RecipeSearchResponse {
-    pub recipes: Vec<RecipeSearchResultItem>,
+    pub recipes: Vec<RecipePreviewItem>,
     pub meta: RecipeSearchMeta,
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct RecipeSearchResultItem {
-    /// The recipe search result's ID (UUID).
+pub struct RecipePreviewItem {
+    /// The recipe's ID (UUID).
     #[schema(format = "uuid")]
     pub id: String,
 
@@ -139,4 +139,29 @@ pub struct RecipeSearchMeta {
     /// The search session ID (UUID).
     #[schema(format = "uuid")]
     pub search_id: String,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[into_params(parameter_in = Query)]
+pub struct PopularRecipesQueryParams {
+    /// The max amount of recipes to fetch.
+    #[param(example = 10, minimum = 1)]
+    #[validate(range(min = 1, max = 40))]
+    pub limit: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({
+    "recipes": [
+        {
+            "id": "05639468-710b-44fe-9fc7-372514e95c37",
+            "origin": "external",
+            "name": "Spaghetti Carbonara",
+            "tags": ["Pasta", "Italian"],
+            "thumbnailUrl": "https://www.themealdb.com/images/media/meals/llc9is1557421634.jpg",
+        }
+    ],
+}))]
+pub struct PopularRecipesResponse {
+    pub recipes: Vec<RecipePreviewItem>,
 }

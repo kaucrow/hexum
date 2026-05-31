@@ -107,23 +107,36 @@ impl PostgresAdapter {
         Ok(recipe_search_ids)
     }
 
-    async fn do_get_recipe_search_data_by_ids(
+    async fn do_get_recipe_previews_by_ids(
         &self,
         ids: &Vec<Uuid>,
-    ) -> Result<Vec<RecipeSearchResult>, LocalError> {
+    ) -> Result<Vec<RecipePreview>, LocalError> {
         let mut recipe_search_results =
-            sqlx::query_as::<_, RecipeSearchDbRow>(sql(&QUERIES.recipe.get_search_results_by_id))
+            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_id))
                 .bind(ids)
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
-                .map(|row| RecipeSearchResult::try_from(row))
+                .map(|row| RecipePreview::try_from(row))
                 .collect::<Result<Vec<_>, _>>()?;
 
         // Sort back into the original order
         recipe_search_results.sort_by_key(|r| ids.iter().position(|&id| id == r.id));
 
         Ok(recipe_search_results)
+    }
+
+    async fn do_get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
+        let recipes =
+            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_random_previews))
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| RecipePreview::try_from(row))
+                .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(recipes)
     }
 
     async fn do_get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalError> {
@@ -166,11 +179,15 @@ impl LocalRepository for PostgresAdapter {
         Ok(self.do_get_recipe_search_ids(query, tags).await?)
     }
 
-    async fn get_recipe_search_data_by_ids(
+    async fn get_recipe_previews_by_ids(
         &self,
         ids: &Vec<Uuid>,
-    ) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_search_data_by_ids(ids).await?)
+    ) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+        Ok(self.do_get_recipe_previews_by_ids(ids).await?)
+    }
+
+    async fn get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+        Ok(self.do_get_random_recipe_previews(limit).await?)
     }
 
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError> {
@@ -243,7 +260,7 @@ struct RecipeSearchIdDbRow {
 }
 
 #[derive(FromRow)]
-struct RecipeSearchDbRow {
+struct RecipePreviewDbRow {
     id: Uuid,
     origin: String,
     recipe_name: String,
@@ -251,9 +268,9 @@ struct RecipeSearchDbRow {
     thumbnail_url: Option<String>,
 }
 
-impl TryFrom<RecipeSearchDbRow> for domain::RecipeSearchResult {
+impl TryFrom<RecipePreviewDbRow> for domain::RecipePreview {
     type Error = LocalError;
-    fn try_from(row: RecipeSearchDbRow) -> Result<Self, Self::Error> {
+    fn try_from(row: RecipePreviewDbRow) -> Result<Self, Self::Error> {
         let origin: RecipeOrigin = row.origin.parse()?;
 
         Ok(Self {

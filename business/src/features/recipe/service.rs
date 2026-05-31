@@ -88,7 +88,7 @@ impl UseCase for Service {
             .collect();
 
         // Get the actual recipe search result data
-        let items = self.local_repo.get_recipe_search_data_by_ids(&page_ids).await?;
+        let items = self.local_repo.get_recipe_previews_by_ids(&page_ids).await?;
 
         Ok(SearchResultsPage {
             items,
@@ -115,7 +115,42 @@ impl UseCase for Service {
             recipe
         };
 
+        if let Some(ref r) = recipe {
+            let recipe_id = r.id;
+
+            let cache_repo = self.cache_repo.clone(); 
+
+            tokio::spawn(async move {
+                if let Err(e) = cache_repo.track_recipe_views(&recipe_id).await {
+                    error!("Failed to update recipe view count: {:?}", e);
+                }
+            });
+        }
+
         Ok(recipe)
+    }
+
+    async fn get_popular_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError> {
+        let cache_popular_recipes = self.cache_repo
+            .get_yesterday_most_viewed_recipe_ids(limit).await?;
+
+        if let Some(recipe_ids) = cache_popular_recipes {
+            // ─── Popular Recipes Found in Cache ───
+            // Hydrate full records from DB matching the recipes' IDs
+            let mut recipes = self.local_repo
+                .get_recipe_previews_by_ids(&recipe_ids).await?;
+
+            // Sort back into the original order
+            recipes.sort_by_key(|r| recipe_ids.iter().position(|&id| id == r.id));
+
+            Ok(recipes)
+        } else {
+            // ─── Fallback ───
+            // If cache is empty (first day running or no traffic yesterday), get random recipes
+            let random_recipes = self.local_repo.get_random_recipe_previews(limit).await?;
+
+            Ok(random_recipes)
+        }
     }
 
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError> {

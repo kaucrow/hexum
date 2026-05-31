@@ -18,11 +18,13 @@ pub trait UseCase: Send + Sync + 'static {
 
     async fn get_recipe_by_id(&self, id: Uuid) -> Result<Option<Recipe>, UseCaseError>;
 
+    async fn get_popular_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
+
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError>;
 }
 
 pub struct SearchResultsPage {
-    pub items: Vec<RecipeSearchResult>,
+    pub items: Vec<RecipePreview>,
     pub total_items: usize,
     pub search_id: Uuid,
 }

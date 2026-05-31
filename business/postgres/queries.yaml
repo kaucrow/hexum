@@ -94,7 +94,7 @@ recipe:
     HAVING COUNT(DISTINCT rt.tag_name) = array_length($2, 1)
     ORDER BY similarity(r.recipe_name, $1) DESC, r.id ASC
 
-  get_search_results_by_id: |
+  get_previews_by_id: |
     SELECT
       r.id,
       CASE
@@ -111,6 +111,25 @@ recipe:
     LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
     WHERE r.id = ANY($1)
     GROUP BY r.id
+
+  get_random_previews: |
+    SELECT
+      r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
+      ) AS tags
+    FROM recipe.recipe r
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    GROUP BY r.id
+    ORDER BY RANDOM()
+    LIMIT $1
 
   get_by_id: |
     SELECT

@@ -2,7 +2,7 @@ use crate::{
     prelude::*,
     api::*,
     features::recipe::{
-        self, RecipeSearchResult, SearchResultsPage
+        self, RecipePreview, SearchResultsPage
     },
 };
 use super::dtos::*;
@@ -45,7 +45,7 @@ pub async fn search(
 impl From<SearchResultsPage> for RecipeSearchResponse {
     fn from(search_result: SearchResultsPage) -> Self {
         Self {
-            recipes: search_result.items.into_iter().map(|item| RecipeSearchResultItem::from(item)).collect(),
+            recipes: search_result.items.into_iter().map(|item| RecipePreviewItem::from(item)).collect(),
             meta: RecipeSearchMeta {
                 total_items: search_result.total_items,
                 search_id: search_result.search_id.to_string(),
@@ -54,8 +54,8 @@ impl From<SearchResultsPage> for RecipeSearchResponse {
     }
 }
 
-impl From<RecipeSearchResult> for RecipeSearchResultItem {
-    fn from(search_result: RecipeSearchResult) -> Self {
+impl From<RecipePreview> for RecipePreviewItem {
+    fn from(search_result: RecipePreview) -> Self {
         Self {
             id: search_result.id.to_string(),
             origin: search_result.origin.to_string(),

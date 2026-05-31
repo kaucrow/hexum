@@ -13,7 +13,10 @@ use super::*;
 pub trait LocalRepository: Send + Sync + 'static {
     // ─── Getters ───
     async fn get_recipe_search_ids<'a>(&self, query: Option<&'a str>, tags: Option<&'a [String]>) -> Result<Vec<Uuid>, LocalRepositoryError>;
-    async fn get_recipe_search_data_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipeSearchResult>, LocalRepositoryError>;
+
+    async fn get_recipe_previews_by_ids(&self, ids: &Vec<Uuid>) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
+
+    async fn get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
 
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError>;
 
@@ -39,6 +42,10 @@ pub trait CacheRepository: Send + Sync + 'static {
     // ─── Individual full recipes caching ───
     async fn get_recipe(&self, id: &Uuid) -> Result<Option<Recipe>, CacheRepositoryError>;
     async fn set_recipe(&self, id: &Uuid, data: &Recipe, ttl_secs: u64) -> Result<(), CacheRepositoryError>;
+
+    // ─── Recipe views caching ───
+    async fn get_yesterday_most_viewed_recipe_ids(&self, limit: usize) -> Result<Option<Vec<Uuid>>, CacheRepositoryError>;
+    async fn track_recipe_views(&self, recipe_id: &Uuid) -> Result<(), CacheRepositoryError>;
 }
 
 #[derive(Error, Debug)]
