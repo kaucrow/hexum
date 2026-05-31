@@ -21,7 +21,7 @@ use super::dtos::*;
 )]
 pub async fn register(
     State(user_service): State<Arc<dyn user::UseCase>>,
-    Json(payload): Json<RegisterRequest>,
+    ValidatedJson(payload): ValidatedJson<RegisterRequest>,
 ) -> Result<Json<RegisterResponse>, ApiError> {
     info!("User registration request with username `{}` & email `{}`", &payload.username, &payload.email);
 

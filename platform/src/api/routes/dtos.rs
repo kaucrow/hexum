@@ -1,13 +1,21 @@
-use crate::prelude::*;
+use crate::{
+    prelude::*,
+    api::*,
+};
 use utoipa::{ToSchema, IntoParams};
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
     #[schema(example = "johndoe")]
+    #[validate(length(max = 200))]
     pub username: String,
+
     #[schema(example = "MyP@ssword123")]
+    #[validate(length(max = 200))]
     pub password: String,
+
     #[schema(example = "johndoe@gmail.com")]
+    #[validate(email)]
     pub email: String
 }
 

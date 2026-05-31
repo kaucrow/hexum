@@ -27,7 +27,7 @@ pub async fn login(
     State(config): State<Arc<Config>>,
     State(auth_service): State<Arc<dyn auth::UseCase>>,
     jar: CookieJar,
-    Json(payload): Json<LoginRequest>,
+    ValidatedJson(payload): ValidatedJson<LoginRequest>,
 ) -> Result<(CookieJar, Json<LoginResponse>), ApiError> {
     info!("Login attempt for user `{}`", &payload.identity);
 

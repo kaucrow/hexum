@@ -21,7 +21,7 @@ use super::dtos::*;
 )]
 pub async fn get_by_id(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
-    Path(params): Path<RecipePathParams>,
+    ValidatedPath(params): ValidatedPath<RecipePathParams>,
 ) -> Result<Json<RecipeResponse>, ApiError> {
     info!("Getting recipe with ID '{}'", params.id);
 

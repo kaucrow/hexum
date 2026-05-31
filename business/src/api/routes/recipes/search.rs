@@ -20,7 +20,7 @@ use super::dtos::*;
 )]
 pub async fn search(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
-    Query(queries): Query<RecipeSearchQueryParams>,
+    ValidatedQuery(queries): ValidatedQuery<RecipeSearchQueryParams>,
 ) -> Result<Json<RecipeSearchResponse>, ApiError> {
     info!(
         "Getting {} recipes from page {} | query: {:?} | tags: {:?}",

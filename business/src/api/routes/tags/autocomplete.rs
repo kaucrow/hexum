@@ -18,7 +18,7 @@ use super::dtos::*;
 )]
 pub async fn autocomplete(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
-    Query(queries): Query<TagsAutocompleteQueryParams>,
+    ValidatedQuery(queries): ValidatedQuery<TagsAutocompleteQueryParams>,
 ) -> Result<Json<TagsAutocompleteResponse>, ApiError> {
     info!("Getting tag matches for query '{}'", queries.query);
 

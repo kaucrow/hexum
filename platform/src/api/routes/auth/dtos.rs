@@ -1,13 +1,17 @@
-use crate::prelude::*;
-use utoipa::ToSchema;
+use crate::{
+    prelude::*,
+    api::*,
+};
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 pub struct LoginRequest {
     #[schema(example = "alicesmith")]
+    #[validate(length(max = 200))]
     /// Username or Email Address
     pub identity: String,
 
     #[schema(example = "supersecret123")]
+    #[validate(length(max = 200))]
     pub password: String,
 }
 

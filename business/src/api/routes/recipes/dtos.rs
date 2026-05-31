@@ -7,12 +7,13 @@ use std::collections::BTreeMap;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
 #[serde(rename_all = "snake_case")]
 #[into_params(parameter_in = Path)]
 pub struct RecipePathParams {
     /// The Recipe's ID (UUID).
     #[schema(format = "uuid", example = "05639468-710b-44fe-9fc7-372514e95c37")]
+    #[validate(length(equal = 36))]
     pub id: String,
 }
 
@@ -64,28 +65,33 @@ pub struct RecipeResponse {
     pub video_url: Option<String>,
 }
 
-#[derive(Deserialize, IntoParams, ToSchema)]
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
 #[serde(rename_all = "snake_case")]
 #[into_params(parameter_in = Query)]
 pub struct RecipeSearchQueryParams {
     /// The recipe's name (partial or complete). Optional if tags are provided.
     #[param(example = "spa")]
+    #[validate(length(max = 200))]
     pub query: Option<String>,
 
     /// Tags to filter by (All must match). Optional if a query is provided.
     #[param(example = json!(["Italian", "Pasta"]))]
+    #[validate(length(max = 40))]
     pub tags: Option<Vec<String>>,
 
     /// The pagination index.
     #[param(example = 1, minimum = 1)]
+    #[validate(range(min = 1))]
     pub page: usize,
 
     /// The max amount of recipes to fetch.
-    #[param(example = 10)]
+    #[param(example = 10, minimum = 1)]
+    #[validate(range(min = 1, max = 40))]
     pub limit: usize,
 
     /// The search session ID (UUID). Should have a value if the search session exists & be null otherwise.
     #[param(format = "uuid", example = json!(null))]
+    #[validate(length(equal = 36))]
     pub search_id: Option<String>,
 }
 
@@ -93,7 +99,7 @@ pub struct RecipeSearchQueryParams {
 #[schema(example = json!({
     "recipes": [
         {
-            "id": "52771",
+            "id": "05639468-710b-44fe-9fc7-372514e95c37",
             "origin": "external",
             "name": "Spaghetti Carbonara",
             "tags": ["Pasta", "Italian"],
