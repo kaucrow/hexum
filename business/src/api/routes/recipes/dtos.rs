@@ -3,7 +3,7 @@ use crate::{
     api::*,
 };
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use serde::Serialize;
 use utoipa::ToSchema;
 
@@ -189,4 +189,34 @@ pub struct LatestRecipesQueryParams {
 }))]
 pub struct LatestRecipesResponse {
     pub recipes: Vec<RecipePreviewItem>,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[serde(rename_all = "snake_case")]
+#[into_params(parameter_in = Query)]
+pub struct TopTagsQueryParams {
+    /// The max amount of tags to fetch.
+    #[param(example = 10, minimum = 1, maximum = 20)]
+    #[validate(range(min = 1, max = 20))]
+    pub tags_limit: usize,
+
+    /// The max amount of recipes to fetch per tag.
+    #[param(example = 10, minimum = 1, maximum = 20)]
+    #[validate(range(min = 1, max = 20))]
+    pub recipes_limit: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({
+    "recipes": [
+        { "Italian": [
+            { "id": "05639468-710b-44fe-9fc7-372514e95c37", "origin": "external", "name": "Spaghetti Carbonara", "tags": ["Pasta", "Italian"], "thumbnailUrl": null }
+        ]},
+        { "Dinner": [
+            { "id": "05639468-710b-44fe-9fc7-372514e95c38", "origin": "external", "name": "Chicken Curry", "tags": ["Dinner", "Indian"], "thumbnailUrl": null }
+        ]}
+    ]
+}))]
+pub struct TopTagsResponse {
+    pub recipes: Vec<HashMap<String, Vec<RecipePreviewItem>>>,
 }

@@ -7,7 +7,7 @@ pub mod explore;
 pub use sync::sync;
 pub use search::search;
 pub use get_by_id::get_by_id;
-pub use explore::{popular, latest};
+pub use explore::{popular, latest, top_tags};
 
 use std::collections::HashMap;
 

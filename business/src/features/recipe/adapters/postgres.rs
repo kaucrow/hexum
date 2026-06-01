@@ -180,6 +180,33 @@ impl PostgresAdapter {
 
         Ok(tag_search_results)
     }
+
+    async fn do_get_top_tag_names(&self, limit: usize) -> Result<Vec<String>, LocalError> {
+        let names =
+            sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_top_tag_names))
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| row.name)
+                .collect();
+
+        Ok(names)
+    }
+
+    async fn do_get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
+        let recipes =
+            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_tag_name))
+                .bind(tag_name)
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| RecipePreview::try_from(row))
+                .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(recipes)
+    }
 }
 
 #[async_trait]
@@ -217,6 +244,14 @@ impl LocalRepository for PostgresAdapter {
         limit: usize,
     ) -> Result<Vec<String>, LocalRepositoryError> {
         Ok(self.do_get_tag_search_matches(query, limit).await?)
+    }
+
+    async fn get_top_tag_names(&self, limit: usize) -> Result<Vec<String>, LocalRepositoryError> {
+        Ok(self.do_get_top_tag_names(limit).await?)
+    }
+
+    async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+        Ok(self.do_get_recipe_previews_by_tag_name(tag_name, limit).await?)
     }
 }
 
@@ -304,3 +339,4 @@ impl TryFrom<RecipePreviewDbRow> for domain::RecipePreview {
 struct TagDbRow {
     name: String,
 }
+

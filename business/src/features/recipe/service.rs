@@ -164,6 +164,18 @@ impl UseCase for Service {
 
         Ok(tag_matches)
     }
+
+    async fn get_top_tags_recipes(&self, tags_limit: usize, recipes_limit: usize) -> Result<Vec<TagRecipes>, UseCaseError> {
+        let tag_names = self.local_repo.get_top_tag_names(tags_limit).await?;
+
+        let mut tag_groups = Vec::with_capacity(tag_names.len());
+        for tag_name in tag_names {
+            let recipes = self.local_repo.get_recipe_previews_by_tag_name(&tag_name, recipes_limit).await?;
+            tag_groups.push(TagRecipes { tag_name, recipes });
+        }
+
+        Ok(tag_groups)
+    }
 }
 
 impl From<LocalRepositoryError> for UseCaseError {

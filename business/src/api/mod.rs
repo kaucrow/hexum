@@ -16,6 +16,7 @@ pub fn router(state: BusinessState) -> Router {
         .route("/recipes/{id}", get(routes::recipes::get_by_id))
         .route("/recipes/popular", get(routes::recipes::popular))
         .route("/recipes/latest", get(routes::recipes::latest))
+        .route("/recipes/top-tags", get(routes::recipes::top_tags))
         .route("/tags/autocomplete", get(routes::tags::autocomplete))
         .with_state(state)
 }

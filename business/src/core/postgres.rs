@@ -77,11 +77,14 @@ mod internal {
 
         pub get_latest_previews: String,
 
+        pub get_previews_by_tag_name: String,
+
         pub get_by_id: String,
     }
 
     #[derive(Deserialize, Debug)]
     pub struct Tag {
         pub get_search_matches: String,
+        pub get_top_tag_names: String,
     }
 }

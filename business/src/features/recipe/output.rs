@@ -23,6 +23,10 @@ pub trait LocalRepository: Send + Sync + 'static {
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError>;
 
     async fn get_tag_search_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, LocalRepositoryError>;
+
+    async fn get_top_tag_names(&self, limit: usize) -> Result<Vec<String>, LocalRepositoryError>;
+
+    async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
 }
 
 #[derive(Error, Debug)]

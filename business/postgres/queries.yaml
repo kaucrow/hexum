@@ -150,6 +150,27 @@ recipe:
     ORDER BY r.created_at DESC
     LIMIT $1
 
+  get_previews_by_tag_name: |
+    SELECT
+      r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        array_agg(DISTINCT rt2.tag_name) FILTER (WHERE rt2.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
+      ) AS tags
+    FROM recipe.recipe r
+    JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    LEFT JOIN recipe.recipe_tag rt2 ON r.id = rt2.recipe_id
+    WHERE LOWER(rt.tag_name) = LOWER($1)
+    GROUP BY r.id
+    ORDER BY r.created_at DESC
+    LIMIT $2
+
   get_by_id: |
     SELECT
       r.id,
@@ -185,3 +206,10 @@ tag:
     WHERE t.tag_name ILIKE $1 || '%'
     ORDER BY similarity(t.tag_name, $1) DESC, t.tag_name ASC
     LIMIT $2
+
+  get_top_tag_names: |
+    SELECT TRIM(rt.tag_name) AS name
+    FROM recipe.recipe_tag rt
+    GROUP BY TRIM(rt.tag_name)
+    ORDER BY COUNT(DISTINCT rt.recipe_id) DESC
+    LIMIT $1

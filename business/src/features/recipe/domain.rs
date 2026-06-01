@@ -26,6 +26,12 @@ pub struct RecipePreview {
     pub thumbnail_url: Option<String>,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct TagRecipes {
+    pub tag_name: String,
+    pub recipes: Vec<RecipePreview>,
+}
+
 #[derive(Serialize, Deserialize, Display, Debug, Clone, EnumString)]
 #[derive()]
 pub enum RecipeOrigin {
