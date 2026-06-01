@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS recipe.recipe (
     instructions TEXT NOT NULL,
     thumbnail_url TEXT,
     video_url TEXT,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    created_by UUID REFERENCES platform.user(id)
 );
 
 CREATE TABLE IF NOT EXISTS recipe.recipe_tag (

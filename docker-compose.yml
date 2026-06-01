@@ -20,6 +20,7 @@ services:
       - internal-network  # For internal communication
     volumes:
       - ./config/production:/app/config/production:ro
+      - uploads:/app/uploads
     logging:
       driver: "json-file"
       options:
@@ -67,6 +68,8 @@ services:
 
 volumes:
   pgdata:
+    driver: local
+  uploads:
     driver: local
 
 networks:

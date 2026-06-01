@@ -80,6 +80,10 @@ mod internal {
         pub get_previews_by_tag_name: String,
 
         pub get_by_id: String,
+
+        pub create_recipe: String,
+        pub batch_insert_tags: String,
+        pub batch_insert_ingredients: String,
     }
 
     #[derive(Deserialize, Debug)]

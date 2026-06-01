@@ -3,11 +3,13 @@ pub mod sync;
 pub mod search;
 pub mod get_by_id;
 pub mod explore;
+pub mod create;
 
 pub use sync::sync;
 pub use search::search;
 pub use get_by_id::get_by_id;
 pub use explore::{popular, latest, top_tags};
+pub use create::create;
 
 use std::collections::HashMap;
 
@@ -26,6 +28,18 @@ impl From<recipe::UseCaseError> for ApiError {
                 let mut errors = HashMap::new();
                 errors.insert("query".to_string(), vec![e.to_string()]);
                 errors.insert("tags".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
+            }
+            recipe::UseCaseError::EmptyName => {
+                warn!("Tried to create a recipe with an empty name");
+                let mut errors = HashMap::new();
+                errors.insert("name".to_string(), vec![e.to_string()]);
+                ApiError::Validation(errors)
+            }
+            recipe::UseCaseError::EmptyInstructions => {
+                warn!("Tried to create a recipe with empty instructions");
+                let mut errors = HashMap::new();
+                errors.insert("instructions".to_string(), vec![e.to_string()]);
                 ApiError::Validation(errors)
             }
             recipe::UseCaseError::Internal(e) => {

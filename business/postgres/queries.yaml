@@ -183,6 +183,7 @@ recipe:
       r.instructions,
       r.thumbnail_url,
       r.video_url,
+      r.created_by,
       -- Maps tags to a Vec --
       COALESCE(
         jsonb_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
@@ -198,6 +199,18 @@ recipe:
     LEFT JOIN recipe.recipe_ingredient ri ON r.id = ri.recipe_id
     WHERE r.id = $1
     GROUP BY r.id
+
+  create_recipe: |
+    INSERT INTO recipe.recipe (id, recipe_name, recipe_description, instructions, thumbnail_url, created_by)
+    VALUES ($1, $2, $3, $4, $5, $6)
+
+  batch_insert_tags: |
+    INSERT INTO recipe.recipe_tag (id, recipe_id, tag_name)
+    SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::varchar[])
+
+  batch_insert_ingredients: |
+    INSERT INTO recipe.recipe_ingredient (id, recipe_id, ingredient_name, measure)
+    SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::varchar[], $4::varchar[])
 
 tag:
   get_search_matches: |

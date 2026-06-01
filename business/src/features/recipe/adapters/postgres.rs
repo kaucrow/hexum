@@ -207,6 +207,65 @@ impl PostgresAdapter {
 
         Ok(recipes)
     }
+
+    async fn do_create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalError> {
+        let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
+
+        // 1. Insert the main recipe row
+        sqlx::query(sql(&QUERIES.recipe.create_recipe))
+            .bind(data.id)
+            .bind(&data.name)
+            .bind(&data.description)
+            .bind(&data.instructions)
+            .bind(&data.thumbnail_url as &Option<String>)
+            .bind(data.created_by)
+            .execute(&mut *tx)
+            .await?;
+
+        // 2. Batch insert tags
+        if !data.tags.is_empty() {
+            let tag_ids: Vec<Uuid> = (0..data.tags.len()).map(|_| Uuid::new_v4()).collect();
+            let tag_recipe_ids = vec![data.id; data.tags.len()];
+
+            sqlx::query(sql(&QUERIES.recipe.batch_insert_tags))
+                .bind(&tag_ids)
+                .bind(&tag_recipe_ids)
+                .bind(&data.tags)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        // 3. Batch insert ingredients
+        if !data.ingredients.is_empty() {
+            let ing_ids: Vec<Uuid> = (0..data.ingredients.len()).map(|_| Uuid::new_v4()).collect();
+            let ing_recipe_ids = vec![data.id; data.ingredients.len()];
+            let ing_names: Vec<String> = data.ingredients.keys().cloned().collect();
+            let ing_measures: Vec<String> = data.ingredients.values().cloned().collect();
+
+            sqlx::query(sql(&QUERIES.recipe.batch_insert_ingredients))
+                .bind(&ing_ids)
+                .bind(&ing_recipe_ids)
+                .bind(&ing_names)
+                .bind(&ing_measures)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        tx.commit().await?;
+
+        Ok(Recipe {
+            id: data.id,
+            origin: RecipeOrigin::Local,
+            name: data.name,
+            description: data.description,
+            tags: data.tags,
+            ingredients: data.ingredients,
+            instructions: data.instructions,
+            thumbnail_url: data.thumbnail_url,
+            video_url: None,
+            created_by: Some(data.created_by),
+        })
+    }
 }
 
 #[async_trait]
@@ -253,6 +312,10 @@ impl LocalRepository for PostgresAdapter {
     async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
         Ok(self.do_get_recipe_previews_by_tag_name(tag_name, limit).await?)
     }
+
+    async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError> {
+        Ok(self.do_create_recipe(data).await?)
+    }
 }
 
 #[derive(Error, Debug)]
@@ -286,6 +349,7 @@ struct RecipeDbRow {
     video_url: Option<String>,
     tags: sqlx::types::Json<Vec<String>>,
     ingredients: sqlx::types::Json<BTreeMap<String, String>>,
+    created_by: Option<Uuid>,
 }
 
 impl TryFrom<RecipeDbRow> for Recipe {
@@ -302,6 +366,7 @@ impl TryFrom<RecipeDbRow> for Recipe {
             video_url: row.video_url,
             tags: row.tags.0,
             ingredients: row.ingredients.0,
+            created_by: row.created_by,
         })
     }
 }
@@ -339,4 +404,3 @@ impl TryFrom<RecipePreviewDbRow> for domain::RecipePreview {
 struct TagDbRow {
     name: String,
 }
-

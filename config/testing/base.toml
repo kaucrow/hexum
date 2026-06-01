@@ -29,6 +29,9 @@ port = 6379
 passwd = "redis"
 number = "0"
 
+[storage]
+upload_dir = "/tmp"
+
 [email]
 provider = "resend"
 from = "noreply@hexum-test.example"

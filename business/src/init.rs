@@ -1,8 +1,10 @@
 use chrono::{Local, NaiveTime, Duration};
 use tokio::time::sleep;
-use crate::features::data_ingestion;
 
-use platform::Config;
+use platform::{
+    Config,
+    features::auth,
+};
 
 use crate::{
     BusinessState,
@@ -13,12 +15,13 @@ use crate::{
 pub async fn init(
     pool: sqlx::PgPool,
     redis_conn: redis::aio::ConnectionManager,
+    auth_service: Arc<dyn auth::UseCase>,
     config: Arc<Config>,
 ) -> Result<BusinessState, anyhow::Error>
 {
     // ───── Base Service ─────
     let pg_base_adapter = Arc::new(base::PostgresAdapter::new(pool.clone()));
-    let base_service = base::Service::new(pg_base_adapter);
+    let base_service = Arc::new(base::Service::new(pg_base_adapter));
 
     // ───── Data Ingestion Service ─────
     let pg_data_ingestion_repo = Arc::new(data_ingestion::PostgresAdapter::new(pool.clone()));
@@ -34,16 +37,18 @@ pub async fn init(
     let pg_recipe_repo = Arc::new(recipe::PostgresAdapter::new(pool));
     let redis_recipe_repo = Arc::new(recipe::RedisCacheAdapter::new(redis_conn));
 
-    let recipe_service = recipe::Service::new(
+    let recipe_service = Arc::new(recipe::Service::new(
         pg_recipe_repo, redis_recipe_repo,
-    );
+    ));
 
     start_cron_recipes_sync(data_ingestion_service.clone());
 
     Ok(BusinessState {
-        base: Arc::new(base_service),
+        config,
+        auth: auth_service,
+        base: base_service,
         data_ingestion: data_ingestion_service,
-        recipe: Arc::new(recipe_service),
+        recipe: recipe_service,
     })
 }
 

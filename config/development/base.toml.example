@@ -28,6 +28,9 @@ port = 6379
 passwd = ""
 number = "0"
 
+[storage]
+upload_dir = "/tmp"
+
 [email]
 provider = "smtp"
 from = "noreply@kaucrow.com"

@@ -1,6 +1,7 @@
 use crate::{
     prelude::*,
     api::*,
+    features::recipe::{Recipe, RecipeOrigin},
 };
 
 use std::collections::{BTreeMap, HashMap};
@@ -219,4 +220,101 @@ pub struct TopTagsQueryParams {
 }))]
 pub struct TopTagsResponse {
     pub recipes: Vec<HashMap<String, Vec<RecipePreviewItem>>>,
+}
+
+#[derive(Serialize, Deserialize, ToSchema)]
+#[schema(example = json!({
+    "name": "Spaghetti Carbonara",
+    "description": "A classic Italian pasta dish",
+    "instructions": "Cook pasta, fry pancetta, mix with eggs and cheese off the heat.",
+    "tags": ["Pasta", "Italian"],
+    "ingredients": {
+        "Spaghetti": "200g",
+        "Pancetta": "100g",
+        "Egg Yolks": "3 large",
+    }
+}))]
+pub struct CreateRecipeRequest {
+    /// The recipe name.
+    #[schema(example = "Spaghetti Carbonara")]
+    pub name: String,
+
+    /// Optional description of the recipe.
+    #[schema(example = "A classic Italian pasta dish")]
+    pub description: Option<String>,
+
+    /// Step-by-step cooking instructions.
+    #[schema(example = "Cook pasta, fry pancetta, mix with eggs and cheese off the heat.")]
+    pub instructions: String,
+
+    /// JSON array of tag strings, e.g. `["Pasta", "Italian"]`.
+    #[schema(example = "[\"Pasta\", \"Italian\"]")]
+    pub tags: Option<String>,
+
+    /// JSON object of ingredients mapped to their measures, e.g. `{"Spaghetti": "200g"}`.
+    #[schema(example = "{\"Spaghetti\": \"200g\", \"Pancetta\": \"100g\", \"Egg Yolks\": \"3 large\"}")]
+    pub ingredients: Option<String>,
+
+    /// Optional recipe image file (jpeg, png, gif, webp).
+    #[schema(format = Binary)]
+    pub image: Option<Vec<u8>>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct CreateRecipeResponse {
+    /// The created recipe's ID (UUID).
+    #[schema(format = "uuid")]
+    pub id: String,
+
+    /// Source origin system ("local").
+    #[schema(example = "local")]
+    pub origin: String,
+
+    /// Full title of the dish.
+    pub name: String,
+
+    /// Optional summary text.
+    pub description: Option<String>,
+
+    /// Categories associated with this dish.
+    pub tags: Vec<String>,
+
+    /// Map of ingredient names mapped to their respective required measurements.
+    pub ingredients: BTreeMap<String, String>,
+
+    /// Step-by-step cooking directions.
+    pub instructions: String,
+
+    /// URL to the uploaded image, if any.
+    pub thumbnail_url: Option<String>,
+
+    /// Optional link to a video tutorial (always null for locally created recipes).
+    pub video_url: Option<String>,
+
+    /// The ID of the user who created this recipe.
+    #[schema(format = "uuid")]
+    pub created_by: String,
+}
+
+impl From<Recipe> for CreateRecipeResponse {
+    fn from(recipe: Recipe) -> Self {
+        let origin = match recipe.origin {
+            RecipeOrigin::Local => "local",
+            RecipeOrigin::External => "external",
+        };
+
+        Self {
+            id: recipe.id.to_string(),
+            origin: origin.to_string(),
+            name: recipe.name,
+            description: recipe.description,
+            tags: recipe.tags,
+            ingredients: recipe.ingredients,
+            instructions: recipe.instructions,
+            thumbnail_url: recipe.thumbnail_url,
+            video_url: recipe.video_url,
+            created_by: recipe.created_by.map(|id| id.to_string()).unwrap_or_default(),
+        }
+    }
 }

@@ -24,10 +24,12 @@ async fn main() -> Result<()> {
     let redis_conn = init_redis_conn(&config).await?;
 
     let platform_state = platform::init(pool.clone(), redis_conn.clone(), config.clone()).await?;
-    let business_state = business::init(pool, redis_conn, config.clone()).await?;
+    let business_state = business::init(
+        pool, redis_conn, platform_state.auth.clone(), config.clone()
+    ).await?;
 
     let platform_router = platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state);
+    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
 
     let mut openapi = MasterDocs::openapi();
 
@@ -43,7 +45,7 @@ async fn main() -> Result<()> {
     let docs_auth_layer = docs::get_auth_layer(config.clone());
 
     let docs_router: Router<()> = Router::new()
-        .merge(Scalar::with_url("/", openapi)) 
+        .merge(Scalar::with_url("/", openapi))
         .layer(docs_auth_layer);
 
     let app = Router::new()

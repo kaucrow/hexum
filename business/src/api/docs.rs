@@ -8,6 +8,7 @@ use super::routes;
         routes::health::health,
 
         // /recipes
+        routes::recipes::create::create,
         routes::recipes::sync::sync,
         routes::recipes::search::search,
         routes::recipes::get_by_id::get_by_id,
@@ -26,6 +27,9 @@ use super::routes;
             routes::dtos::BusinessHealthResponse,
 
             // /recipes
+            routes::recipes::dtos::CreateRecipeRequest,
+            routes::recipes::dtos::CreateRecipeResponse,
+
             routes::recipes::dtos::RecipeSearchQueryParams,
             routes::recipes::dtos::RecipeSearchResponse,
 
@@ -48,5 +52,23 @@ use super::routes;
             routes::tags::dtos::TagsAutocompleteResponse,
         )
     ),
+    modifiers(&SecurityAddon),
 )]
 pub struct Docs;
+
+use utoipa::openapi::security::{SecurityScheme, ApiKey, ApiKeyValue};
+
+struct SecurityAddon;
+
+impl utoipa::Modify for SecurityAddon {
+    fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
+        if let Some(components) = openapi.components.as_mut() {
+            components.add_security_scheme(
+                "cookie_auth",
+                SecurityScheme::ApiKey(
+                    ApiKey::Cookie(ApiKeyValue::new("access_token")),
+                ),
+            );
+        }
+    }
+}

@@ -1,3 +1,4 @@
+use std::collections::BTreeMap;
 use uuid::Uuid;
 use async_trait::async_trait;
 use thiserror::Error;
@@ -25,6 +26,9 @@ pub trait UseCase: Send + Sync + 'static {
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError>;
 
     async fn get_top_tags_recipes(&self, tags_limit: usize, recipes_limit: usize) -> Result<Vec<TagRecipes>, UseCaseError>;
+
+    // ─── Command ───
+    async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError>;
 }
 
 pub struct SearchResultsPage {
@@ -33,11 +37,29 @@ pub struct SearchResultsPage {
     pub search_id: Uuid,
 }
 
+pub struct CreateRecipeInput {
+    pub name: String,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub ingredients: BTreeMap<String, String>,
+    pub instructions: String,
+    pub thumbnail_url: Option<String>,
+    pub created_by: Uuid,
+}
+
 #[derive(Error, Debug)]
 pub enum UseCaseError {
     /// Neither a search query nor tags were provided.
     #[error("At least one of 'query' or 'tags' must be provided.")]
     MissingSearchParams,
+
+    /// Recipe name is empty.
+    #[error("Recipe name cannot be empty.")]
+    EmptyName,
+
+    /// Recipe instructions are empty.
+    #[error("Recipe instructions cannot be empty.")]
+    EmptyInstructions,
 
     /// Unexpected internal error.
     #[error("Recipe service: {0}.")]

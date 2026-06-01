@@ -1,6 +1,6 @@
 mod error;
 mod docs;
-mod extractors;
+pub mod extractors;
 pub(crate) mod routes;
 
 pub use docs::Docs;
@@ -11,10 +11,12 @@ pub use axum::{
     extract::{State, Query, Path},
     response::{Html, Response, IntoResponse},
     http::StatusCode,
+    body::Bytes,
 };
 #[allow(dead_code)]
 pub use utoipa::{ToSchema, IntoParams};
-pub use axum_extra::extract::cookie::CookieJar;
+#[allow(dead_code)]
+pub use axum_extra::extract::{CookieJar, Multipart};
 pub use validator::Validate;
 pub use askama::Template;
 

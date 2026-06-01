@@ -14,6 +14,7 @@ pub struct Config {
     #[serde(rename = "postgresql")]
     pub postgres: internal::PostgresConfig,
     pub redis: internal::RedisConfig,
+    pub storage: internal::StorageConfig,
     pub email: internal::EmailConfig,
     pub oauth: internal::OAuthConfig,
 
@@ -154,6 +155,11 @@ mod internal {
                 )
             }
         }
+    }
+
+    #[derive(Deserialize, Clone)]
+    pub struct StorageConfig {
+        pub upload_dir: String,
     }
 
     #[derive(Deserialize, Clone)]

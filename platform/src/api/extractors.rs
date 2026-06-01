@@ -1,30 +1,29 @@
-use std::sync::Arc;
-
-use axum::{
-    extract::FromRequestParts,
-    http::{request::Parts, StatusCode},
-};
-use axum_extra::extract::cookie::CookieJar;
-
 use crate::{
     prelude::*,
-    PlatformState,
+    api::*,
     features::{user, auth},
 };
 
 #[allow(dead_code)]
 pub struct AuthenticatedUser(pub user::User);
 
-impl FromRequestParts<PlatformState> for AuthenticatedUser {
+/// Generic extractor that works with any state type `T` that implements
+/// `FromRef<Arc<dyn auth::UseCase>>`. Both `PlatformState` and `BusinessState`
+/// satisfy this bound via their `#[derive(FromRef)]` macros.
+impl<T> FromRequestParts<T> for AuthenticatedUser
+where
+    T: Send + Sync,
+    Arc<dyn auth::UseCase>: axum::extract::FromRef<T>,
+{
     type Rejection = StatusCode;
 
     async fn from_request_parts(
         parts: &mut Parts,
-        state: &PlatformState,
+        state: &T,
     ) -> Result<Self, Self::Rejection> {
         info!("Session verification request received");
 
-        // Pull dependencies from PlatformState
+        // Pull the auth service from the generic state via FromRef
         let auth_service: Arc<dyn auth::UseCase> = axum::extract::FromRef::from_ref(state);
 
         // Grab the CookieJar from the incoming headers

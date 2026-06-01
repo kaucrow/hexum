@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-use uuid::Uuid;
 use async_trait::async_trait;
 
 use crate::prelude::*;
@@ -175,6 +172,33 @@ impl UseCase for Service {
         }
 
         Ok(tag_groups)
+    }
+
+    async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError> {
+        // ─── Validation ───
+        if input.name.trim().is_empty() {
+            return Err(UseCaseError::EmptyName);
+        }
+        if input.instructions.trim().is_empty() {
+            return Err(UseCaseError::EmptyInstructions);
+        }
+
+        let recipe_id = Uuid::new_v4();
+
+        let data = CreateRecipeData {
+            id: recipe_id,
+            name: input.name,
+            description: input.description,
+            tags: input.tags,
+            ingredients: input.ingredients,
+            instructions: input.instructions,
+            thumbnail_url: input.thumbnail_url,
+            created_by: input.created_by,
+        };
+
+        let recipe = self.local_repo.create_recipe(data).await?;
+
+        Ok(recipe)
     }
 }
 

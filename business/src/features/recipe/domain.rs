@@ -15,6 +15,7 @@ pub struct Recipe {
     pub instructions: String,
     pub thumbnail_url: Option<String>,
     pub video_url: Option<String>,
+    pub created_by: Option<Uuid>,               // The user who created this recipe, if any
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
