@@ -165,3 +165,28 @@ pub struct PopularRecipesQueryParams {
 pub struct PopularRecipesResponse {
     pub recipes: Vec<RecipePreviewItem>,
 }
+
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[into_params(parameter_in = Query)]
+pub struct LatestRecipesQueryParams {
+    /// The max amount of recipes to fetch.
+    #[param(example = 10, minimum = 1)]
+    #[validate(range(min = 1, max = 40))]
+    pub limit: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({
+    "recipes": [
+        {
+            "id": "05639468-710b-44fe-9fc7-372514e95c37",
+            "origin": "external",
+            "name": "Spaghetti Carbonara",
+            "tags": ["Pasta", "Italian"],
+            "thumbnailUrl": "https://www.themealdb.com/images/media/meals/llc9is1557421634.jpg",
+        }
+    ],
+}))]
+pub struct LatestRecipesResponse {
+    pub recipes: Vec<RecipePreviewItem>,
+}

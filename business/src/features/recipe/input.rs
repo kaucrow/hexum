@@ -20,6 +20,8 @@ pub trait UseCase: Send + Sync + 'static {
 
     async fn get_popular_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
 
+    async fn get_latest_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
+
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError>;
 }
 

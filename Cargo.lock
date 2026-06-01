@@ -397,6 +397,7 @@ dependencies = [
  "config",
  "mockall",
  "platform",
+ "rand 0.10.1",
  "redis",
  "reqwest",
  "serde",

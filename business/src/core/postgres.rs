@@ -75,6 +75,8 @@ mod internal {
 
         pub get_random_previews: String,
 
+        pub get_latest_previews: String,
+
         pub get_by_id: String,
     }
 

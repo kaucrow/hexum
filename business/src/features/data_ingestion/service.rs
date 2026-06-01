@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
+use rand::seq::SliceRandom;
 
 use super::*;
 
@@ -22,11 +23,16 @@ impl Service {
 #[async_trait]
 impl UseCase for Service {
     async fn sync_data(&self) -> Result<(), UseCaseError> {
+        let mut all_recipes = Vec::new();
+
         for c in 'a'..='z' {
             let recipes = self.external_repo.get_recipes_by_first_letter(c).await?;
-
-            self.local_repo.sync_recipes(recipes).await?;
+            all_recipes.extend(recipes);
         }
+
+        all_recipes.shuffle(&mut rand::rng());
+
+        self.local_repo.sync_recipes(all_recipes).await?;
 
         Ok(())
     }

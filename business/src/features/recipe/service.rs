@@ -137,13 +137,13 @@ impl UseCase for Service {
         if let Some(recipe_ids) = cache_popular_recipes {
             // ─── Popular Recipes Found in Cache ───
             // Hydrate full records from DB matching the recipes' IDs
-            let mut recipes = self.local_repo
+            let mut popular_recipes = self.local_repo
                 .get_recipe_previews_by_ids(&recipe_ids).await?;
 
             // Sort back into the original order
-            recipes.sort_by_key(|r| recipe_ids.iter().position(|&id| id == r.id));
+            popular_recipes.sort_by_key(|r| recipe_ids.iter().position(|&id| id == r.id));
 
-            Ok(recipes)
+            Ok(popular_recipes)
         } else {
             // ─── Fallback ───
             // If cache is empty (first day running or no traffic yesterday), get random recipes
@@ -151,6 +151,12 @@ impl UseCase for Service {
 
             Ok(random_recipes)
         }
+    }
+
+    async fn get_latest_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError> {
+        let latest_recipes = self.local_repo.get_latest_recipe_previews(limit).await?;
+
+        Ok(latest_recipes)
     }
 
     async fn get_search_tag_matches(&self, query: &str, limit: usize) -> Result<Vec<String>, UseCaseError> {

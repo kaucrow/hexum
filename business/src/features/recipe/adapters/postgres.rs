@@ -139,6 +139,19 @@ impl PostgresAdapter {
         Ok(recipes)
     }
 
+    async fn do_get_latest_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
+        let recipes =
+            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_latest_previews))
+                .bind(limit as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| RecipePreview::try_from(row))
+                .collect::<Result<Vec<_>, _>>()?;
+
+        Ok(recipes)
+    }
+
     async fn do_get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalError> {
         let recipe = sqlx::query_as::<_, RecipeDbRow>(sql(&QUERIES.recipe.get_by_id))
             .bind(id)
@@ -188,6 +201,10 @@ impl LocalRepository for PostgresAdapter {
 
     async fn get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
         Ok(self.do_get_random_recipe_previews(limit).await?)
+    }
+
+    async fn get_latest_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+        Ok(self.do_get_latest_recipe_previews(limit).await?)
     }
 
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError> {

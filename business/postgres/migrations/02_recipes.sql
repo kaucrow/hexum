@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS recipe.recipe (
     recipe_description TEXT,
     instructions TEXT NOT NULL,
     thumbnail_url TEXT,
-    video_url TEXT
+    video_url TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS recipe.recipe_tag (

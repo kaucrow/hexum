@@ -12,6 +12,7 @@ use super::routes;
         routes::recipes::search::search,
         routes::recipes::get_by_id::get_by_id,
         routes::recipes::explore::popular,
+        routes::recipes::explore::latest,
 
         // /tags
         routes::tags::autocomplete::autocomplete,
@@ -34,6 +35,9 @@ use super::routes;
 
             routes::recipes::dtos::PopularRecipesQueryParams,
             routes::recipes::dtos::PopularRecipesResponse,
+
+            routes::recipes::dtos::LatestRecipesQueryParams,
+            routes::recipes::dtos::LatestRecipesResponse,
 
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,
