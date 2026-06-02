@@ -1,6 +1,6 @@
 pub use std::{
     sync::Arc,
-    collections::BTreeMap,
+    collections::{HashMap, BTreeMap},
     str::FromStr,
     path::PathBuf,
 };

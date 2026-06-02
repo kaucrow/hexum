@@ -30,6 +30,7 @@ pub(crate) struct Queries {
     pub data_ingestion: internal::DataIngestion,
     pub recipe: internal::Recipe,
     pub tag: internal::Tag,
+    pub group: internal::Group,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -81,7 +82,7 @@ mod internal {
 
         pub get_by_id: String,
 
-        pub create_recipe: String,
+        pub create: String,
         pub batch_insert_tags: String,
         pub batch_insert_ingredients: String,
     }
@@ -90,5 +91,18 @@ mod internal {
     pub struct Tag {
         pub get_search_matches: String,
         pub get_top_tag_names: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Group {
+        pub get_with_latest_recipes_by_user_id: String,
+        pub get_recipes_by_group_id: String,
+
+        pub get_by_id: String,
+
+        pub create: String,
+
+        pub add_recipe: String,
+        pub delete_recipe: String,
     }
 }

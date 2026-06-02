@@ -34,11 +34,18 @@ pub async fn init(
     ));
 
     // ───── Recipes Service ─────
-    let pg_recipe_repo = Arc::new(recipe::PostgresAdapter::new(pool));
-    let redis_recipe_repo = Arc::new(recipe::RedisCacheAdapter::new(redis_conn));
+    let pg_recipes_repo = Arc::new(recipe::PostgresAdapter::new(pool.clone()));
+    let redis_recipes_repo = Arc::new(recipe::RedisCacheAdapter::new(redis_conn));
 
-    let recipe_service = Arc::new(recipe::Service::new(
-        pg_recipe_repo, redis_recipe_repo,
+    let recipes_service = Arc::new(recipe::Service::new(
+        pg_recipes_repo, redis_recipes_repo,
+    ));
+
+    // ───── Groups Service ─────
+    let pg_groups_repo = Arc::new(group::PostgresAdapter::new(pool));
+
+    let groups_service = Arc::new(group::Service::new(
+        pg_groups_repo
     ));
 
     start_cron_recipes_sync(data_ingestion_service.clone());
@@ -48,7 +55,8 @@ pub async fn init(
         auth: auth_service,
         base: base_service,
         data_ingestion: data_ingestion_service,
-        recipe: recipe_service,
+        recipe: recipes_service,
+        group: groups_service,
     })
 }
 

@@ -211,8 +211,8 @@ impl PostgresAdapter {
     async fn do_create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalError> {
         let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
 
-        // 1. Insert the main recipe row
-        sqlx::query(sql(&QUERIES.recipe.create_recipe))
+        // Insert the main recipe row
+        sqlx::query(sql(&QUERIES.recipe.create))
             .bind(data.id)
             .bind(&data.name)
             .bind(&data.description)
@@ -222,7 +222,7 @@ impl PostgresAdapter {
             .execute(&mut *tx)
             .await?;
 
-        // 2. Batch insert tags
+        // Batch insert tags
         if !data.tags.is_empty() {
             let tag_ids: Vec<Uuid> = (0..data.tags.len()).map(|_| Uuid::new_v4()).collect();
             let tag_recipe_ids = vec![data.id; data.tags.len()];
@@ -235,7 +235,7 @@ impl PostgresAdapter {
                 .await?;
         }
 
-        // 3. Batch insert ingredients
+        // Batch insert ingredients
         if !data.ingredients.is_empty() {
             let ing_ids: Vec<Uuid> = (0..data.ingredients.len()).map(|_| Uuid::new_v4()).collect();
             let ing_recipe_ids = vec![data.id; data.ingredients.len()];

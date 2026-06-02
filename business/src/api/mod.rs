@@ -5,7 +5,7 @@ pub use docs::Docs;
 
 pub use platform::api::*;
 
-use axum::{Router, routing::{get, post}};
+use axum::{Router, routing::{get, post, delete}};
 use tower_http::services::ServeDir;
 use crate::BusinessState;
 
@@ -20,6 +20,11 @@ pub fn router(state: BusinessState, upload_dir: String) -> Router {
         .route("/recipes/latest", get(routes::recipes::latest))
         .route("/recipes/top-tags", get(routes::recipes::top_tags))
         .route("/tags/autocomplete", get(routes::tags::autocomplete))
+        .route("/groups", get(routes::groups::get_groups))
+        .route("/groups", post(routes::groups::create))
+        .route("/groups/{group_id}/recipes", get(routes::groups::get_recipes))
+        .route("/groups/{group_id}/recipes/{recipe_id}", post(routes::groups::add_recipe))
+        .route("/groups/{group_id}/recipes/{recipe_id}", delete(routes::groups::remove_recipe))
         .nest_service("/uploads", ServeDir::new(&upload_dir))
         .with_state(state)
 }

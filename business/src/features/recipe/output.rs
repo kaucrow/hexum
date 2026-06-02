@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use uuid::Uuid;
 use async_trait::async_trait;
 use thiserror::Error;
@@ -29,7 +28,7 @@ pub trait LocalRepository: Send + Sync + 'static {
 
     async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
 
-    // ─── Command ───
+    // ─── Commands ───
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError>;
 }
 

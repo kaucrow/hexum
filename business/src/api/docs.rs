@@ -18,6 +18,13 @@ use super::routes;
 
         // /tags
         routes::tags::autocomplete::autocomplete,
+
+        // /groups
+        routes::groups::get_groups::get_groups,
+        routes::groups::get_recipes::get_recipes,
+        routes::groups::create::create,
+        routes::groups::add_recipe::add_recipe,
+        routes::groups::remove_recipe::remove_recipe,
     ),
     components(
         schemas(
@@ -50,6 +57,19 @@ use super::routes;
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,
             routes::tags::dtos::TagsAutocompleteResponse,
+
+            // /groups
+            routes::groups::dtos::UserGroupsQueryParams,
+            routes::groups::dtos::UserGroupsResponse,
+            routes::groups::dtos::RecipesGroupItem,
+
+            routes::groups::dtos::GroupRecipesQueryParams,
+            routes::groups::dtos::GroupRecipesResponse,
+
+            routes::groups::dtos::GroupIdPathParams,
+            routes::groups::dtos::GroupRecipePathParams,
+
+            routes::groups::dtos::CreateGroupRequest,
         )
     ),
     modifiers(&SecurityAddon),

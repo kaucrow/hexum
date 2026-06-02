@@ -200,7 +200,7 @@ recipe:
     WHERE r.id = $1
     GROUP BY r.id
 
-  create_recipe: |
+  create: |
     INSERT INTO recipe.recipe (id, recipe_name, recipe_description, instructions, thumbnail_url, created_by)
     VALUES ($1, $2, $3, $4, $5, $6)
 
@@ -226,3 +226,74 @@ tag:
     GROUP BY TRIM(rt.tag_name)
     ORDER BY COUNT(DISTINCT rt.recipe_id) DESC
     LIMIT $1
+
+group:
+  get_by_id: |
+    SELECT id, group_name, group_description, created_by
+    FROM recipe.group
+    WHERE id = $1
+
+  get_with_latest_recipes_by_user_id: |
+    SELECT
+      g.id AS group_id,
+      g.group_name,
+      recipes_json.recipes
+    FROM recipe.group g
+    LEFT JOIN LATERAL (
+      SELECT json_agg(json_build_object(
+        'id', r.id,
+        'recipe_name', r.recipe_name,
+        'thumbnail_url', r.thumbnail_url,
+        'origin', CASE WHEN r.external_id IS NULL THEN 'local' ELSE 'external' END,
+        'tags', COALESCE(tags_json.tags, ARRAY[]::varchar[])
+      )) AS recipes
+      FROM recipe.group_recipe gr
+      JOIN recipe.recipe r ON r.id = gr.recipe_id
+      LEFT JOIN LATERAL (
+        SELECT array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL) AS tags
+        FROM recipe.recipe_tag rt
+        WHERE rt.recipe_id = r.id
+      ) tags_json ON true
+      WHERE gr.group_id = g.id
+      -- LIMIT RECIPES PER GROUP --
+      ORDER BY r.created_at DESC
+      LIMIT $3
+    ) recipes_json ON true
+    WHERE g.created_by = $1
+    ORDER BY g.id ASC
+    -- LIMIT TOTAL GROUPS (For pagination: Page 1 = OFFSET 0, Page 2 = OFFSET 5) --
+    LIMIT $2
+
+  get_recipes_by_group_id: |
+    SELECT
+      r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
+      ) AS tags
+    FROM recipe.recipe r
+    JOIN recipe.group_recipe gr ON r.id = gr.recipe_id
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    WHERE gr.group_id = $1
+    GROUP BY r.id
+    ORDER BY r.created_at DESC
+    -- PAGINATION --
+    LIMIT $2 OFFSET $3
+
+  create: |
+    INSERT INTO recipe.group (id, group_name, group_description, created_by)
+    VALUES ($1, $2, $3, $4)
+
+  add_recipe: |
+    INSERT INTO recipe.group_recipe (group_id, recipe_id)
+    VALUES ($1, $2)
+
+  delete_recipe: |
+    DELETE FROM recipe.group_recipe
+    WHERE group_id = $1 AND recipe_id = $2
