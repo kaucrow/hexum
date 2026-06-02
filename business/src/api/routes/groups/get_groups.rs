@@ -37,7 +37,7 @@ pub async fn get_groups(
     );
 
     let groups = state.group
-        .get_user_recipe_groups(user_id, queries.groups_limit, queries.recipes_limit)
+        .get_user_recipe_groups(&user_id, queries.groups_limit, queries.recipes_limit)
         .await?;
 
     Ok(Json(UserGroupsResponse::from(groups)))

@@ -20,9 +20,12 @@ use super::routes;
         routes::tags::autocomplete::autocomplete,
 
         // /groups
+        routes::groups::get_group::get_group,
         routes::groups::get_groups::get_groups,
+        routes::groups::list_groups::list_groups,
         routes::groups::get_recipes::get_recipes,
         routes::groups::create::create,
+        routes::groups::delete::delete,
         routes::groups::add_recipe::add_recipe,
         routes::groups::remove_recipe::remove_recipe,
     ),
@@ -63,6 +66,8 @@ use super::routes;
             routes::groups::dtos::UserGroupsResponse,
             routes::groups::dtos::RecipesGroupItem,
 
+            routes::groups::dtos::GetGroupQueryParams,
+
             routes::groups::dtos::GroupRecipesQueryParams,
             routes::groups::dtos::GroupRecipesResponse,
 
@@ -70,6 +75,14 @@ use super::routes;
             routes::groups::dtos::GroupRecipePathParams,
 
             routes::groups::dtos::CreateGroupRequest,
+            routes::groups::dtos::CreateGroupResponse,
+
+            routes::groups::dtos::DeleteGroupPathParams,
+            routes::groups::dtos::DeleteGroupResponse,
+
+            routes::groups::dtos::UserGroupItem,
+
+            routes::groups::dtos::UserGroupsListResponse,
         )
     ),
     modifiers(&SecurityAddon),

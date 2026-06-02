@@ -99,8 +99,10 @@ mod internal {
         pub get_recipes_by_group_id: String,
 
         pub get_by_id: String,
+        pub get_by_user_id: String,
 
         pub create: String,
+        pub delete: String,
 
         pub add_recipe: String,
         pub delete_recipe: String,

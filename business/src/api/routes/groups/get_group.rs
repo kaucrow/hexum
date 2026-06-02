@@ -9,12 +9,12 @@ use crate::{
 use super::dtos::*;
 
 #[utoipa::path(
-    post,
-    path = "/groups/{group_id}/recipes/{recipe_id}",
-    description = "Adds a recipe to a group. Only the group owner can perform this action.",
-    params(GroupRecipePathParams),
+    get,
+    path = "/groups/{group_id}",
+    description = "Gets a single recipe group by ID with its recipes. Only the group owner can access this.",
+    params(GroupIdPathParams, GetGroupQueryParams),
     responses(
-        (status = 200, description = "Recipe added to group successfully"),
+        (status = 200, description = "The recipe group", body = RecipesGroupItem),
         (status = 401, description = "Unauthorized"),
         (status = 404, description = "Group not found"),
         (status = 422, description = "Validation Error"),
@@ -25,11 +25,12 @@ use super::dtos::*;
     ),
     tags = ["Groups"]
 )]
-pub async fn add_recipe(
+pub async fn get_group(
     auth: AuthenticatedUser,
     State(state): State<BusinessState>,
-    ValidatedPath(params): ValidatedPath<GroupRecipePathParams>,
-) -> Result<StatusCode, ApiError> {
+    ValidatedPath(params): ValidatedPath<GroupIdPathParams>,
+    ValidatedQuery(queries): ValidatedQuery<GetGroupQueryParams>,
+) -> Result<Json<RecipesGroupItem>, ApiError> {
     let user_id = auth.0.id;
 
     let group_id = Uuid::from_str(&params.group_id)
@@ -39,21 +40,15 @@ pub async fn add_recipe(
             ApiError::Validation(errors)
         })?;
 
-    let recipe_id = Uuid::from_str(&params.recipe_id)
-        .map_err(|_| {
-            let mut errors = HashMap::new();
-            errors.insert("recipe_id".to_string(), vec![format!("Invalid UUID format '{}'", params.recipe_id)]);
-            ApiError::Validation(errors)
-        })?;
-
     info!(
-        "Adding recipe '{}' to group '{}' for user '{}'",
-        recipe_id, group_id, user_id,
+        "Getting group '{}' with up to {} recipes for user '{}'",
+        group_id, queries.recipes_limit, user_id,
     );
 
-    state.group
-        .add_recipe_to_group(&user_id, &group_id, &recipe_id)
-        .await?;
+    let group = state.group
+        .get_recipes_group(&group_id, &user_id, queries.recipes_limit)
+        .await?
+        .ok_or(ApiError::NotFound(format!("Group with ID '{}' was not found.", group_id)))?;
 
-    Ok(StatusCode::OK)
+    Ok(Json(RecipesGroupItem::from(group)))
 }

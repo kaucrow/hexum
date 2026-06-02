@@ -5,7 +5,6 @@ pub use docs::Docs;
 
 pub use platform::api::*;
 
-use axum::{Router, routing::{get, post, delete}};
 use tower_http::services::ServeDir;
 use crate::BusinessState;
 
@@ -22,6 +21,9 @@ pub fn router(state: BusinessState, upload_dir: String) -> Router {
         .route("/tags/autocomplete", get(routes::tags::autocomplete))
         .route("/groups", get(routes::groups::get_groups))
         .route("/groups", post(routes::groups::create))
+        .route("/groups/list", get(routes::groups::list_groups))
+        .route("/groups/{group_id}", get(routes::groups::get_group))
+        .route("/groups/{group_id}", delete(routes::groups::delete))
         .route("/groups/{group_id}/recipes", get(routes::groups::get_recipes))
         .route("/groups/{group_id}/recipes/{recipe_id}", post(routes::groups::add_recipe))
         .route("/groups/{group_id}/recipes/{recipe_id}", delete(routes::groups::remove_recipe))

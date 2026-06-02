@@ -59,6 +59,16 @@ pub struct GroupRecipesQueryParams {
     pub offset: usize,
 }
 
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[serde(rename_all = "snake_case")]
+#[into_params(parameter_in = Query)]
+pub struct GetGroupQueryParams {
+    /// The max amount of recipes to fetch in the group.
+    #[param(example = 5, minimum = 1, maximum = 20)]
+    #[validate(range(min = 1, max = 20))]
+    pub recipes_limit: usize,
+}
+
 #[derive(Serialize, ToSchema)]
 pub struct RecipesGroupItem {
     /// The group's ID (UUID).
@@ -116,11 +126,67 @@ pub struct GroupRecipesResponse {
 pub struct CreateGroupRequest {
     /// The group name.
     #[schema(example = "Favorites")]
-    #[validate(length(min = 1, max = 255))]
+    #[validate(length(min = 1, max = 200))]
     pub name: String,
 
     /// Optional description of the group.
     #[schema(example = "My favorite recipes")]
     #[validate(length(max = 1000))]
     pub description: Option<String>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({
+    "id": "05639468-710b-44fe-9fc7-372514e95c37",
+}))]
+pub struct CreateGroupResponse {
+    /// The Created Recipe's ID (UUID).
+    #[schema(format = "uuid")]
+    pub id: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct UserGroupItem {
+    /// The group's ID (UUID).
+    #[schema(format = "uuid")]
+    pub group_id: String,
+
+    /// The group's name.
+    pub group_name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[schema(example = json!({
+    "groups": [
+        {
+            "group_id": "05639468-710b-44fe-9fc7-372514e95c37",
+            "group_name": "Favorites",
+        },
+        {
+            "group_id": "d2a3c6f0-8e4b-11ec-a8a3-0242ac120002",
+            "group_name": "Meal Prep",
+        }
+    ]
+}))]
+pub struct UserGroupsListResponse {
+    pub groups: Vec<UserGroupItem>,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[serde(rename_all = "snake_case")]
+pub struct DeleteGroupPathParams {
+    /// The Recipe's ID (UUID).
+    #[schema(format = "uuid")]
+    #[validate(length(equal = 36))]
+    pub id: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[schema(example = json!({
+    "id": "05639468-710b-44fe-9fc7-372514e95c37",
+}))]
+pub struct DeleteGroupResponse {
+    #[schema(format = "uuid")]
+    pub id: String,
 }

@@ -7,7 +7,8 @@ pub use docs::Docs;
 
 #[allow(dead_code)]
 pub use axum::{
-    Json,
+    Json, Router,
+    routing::{get, post, delete, put},
     extract::{State, Query, Path},
     response::{Html, Response, IntoResponse},
     http::StatusCode,
@@ -23,8 +24,6 @@ pub use askama::Template;
 pub use error::ApiError;
 
 use axum::{
-    Router,
-    routing::{get, post},
     body::Body,
     extract::{Request, FromRequest, FromRequestParts},
     http::request::Parts,

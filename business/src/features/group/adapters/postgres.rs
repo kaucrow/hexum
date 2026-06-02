@@ -16,7 +16,7 @@ impl PostgresAdapter {
         Self { pool }
     }
 
-    async fn do_get_group_by_id(&self, group_id: Uuid) -> Result<Option<Group>, LocalError> {
+    async fn do_get_group_by_id(&self, group_id: &Uuid) -> Result<Option<Group>, LocalError> {
         let group = sqlx::query_as::<_, GroupDbRow>(sql(&QUERIES.group.get_by_id))
             .bind(group_id)
             .fetch_optional(&self.pool)
@@ -26,8 +26,20 @@ impl PostgresAdapter {
         Ok(group)
     }
 
+    async fn do_get_user_groups(&self, user_id: &Uuid) -> Result<Vec<Group>, LocalError> {
+        let groups = sqlx::query_as::<_, GroupDbRow>(sql(&QUERIES.group.get_by_user_id))
+            .bind(user_id)
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|row| Group::from(row))
+            .collect();
+
+        Ok(groups)
+    }
+
     async fn do_get_user_recipe_groups(&self,
-        user_id: Uuid,
+        user_id: &Uuid,
         groups_limit: usize,
         recipes_limit: usize
     ) -> Result<Vec<RecipesGroup>, LocalError> {
@@ -47,7 +59,7 @@ impl PostgresAdapter {
 
     async fn do_get_group_recipes(
         &self,
-        group_id: Uuid,
+        group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
     ) -> Result<Vec<RecipePreview>, LocalError> {
@@ -65,19 +77,31 @@ impl PostgresAdapter {
         Ok(recipe_groups)
     }
 
-    async fn do_create_group(&self, group: Group) -> Result<(), LocalError> {
-        sqlx::query(sql(&QUERIES.group.create))
+    async fn do_create_group(&self, group: Group) -> Result<Uuid, LocalError> {
+        let created_group_id = sqlx::query_as::<_, GroupOperationDbRow>(sql(&QUERIES.group.create))
             .bind(group.id)
             .bind(group.name)
             .bind(group.description)
             .bind(group.created_by_id)
-            .execute(&self.pool)
-            .await?;
+            .fetch_one(&self.pool)
+            .await?
+            .id;
 
-        Ok(())
+        Ok(created_group_id)
     }
 
-    async fn do_add_recipe(&self, group_id: Uuid, recipe_id: Uuid) -> Result<(), LocalError> {
+    async fn do_delete_group(&self, group_id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, LocalError> {
+        let deleted_group =
+            sqlx::query_as::<_, GroupOperationDbRow>(sql(&QUERIES.group.delete))
+                .bind(group_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?;
+
+        Ok(deleted_group.map(|row| row.id))
+    }
+
+    async fn do_add_recipe(&self, group_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalError> {
         sqlx::query(sql(&QUERIES.group.add_recipe))
             .bind(group_id)
             .bind(recipe_id)
@@ -87,7 +111,7 @@ impl PostgresAdapter {
         Ok(())
     }
 
-    async fn do_delete_recipe(&self, group_id: Uuid, recipe_id: Uuid) -> Result<(), LocalError> {
+    async fn do_delete_recipe(&self, group_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalError> {
         sqlx::query(sql(&QUERIES.group.delete_recipe))
             .bind(group_id)
             .bind(recipe_id)
@@ -100,13 +124,20 @@ impl PostgresAdapter {
 
 #[async_trait]
 impl LocalRepository for PostgresAdapter {
-    async fn get_group_by_id(&self, id: Uuid) -> Result<Option<Group>, LocalRepositoryError> {
+    async fn get_group_by_id(&self, id: &Uuid) -> Result<Option<Group>, LocalRepositoryError> {
         Ok(self.do_get_group_by_id(id).await?)
+    }
+
+    async fn get_user_groups(
+        &self,
+        user_id: &Uuid,
+    ) -> Result<Vec<Group>, LocalRepositoryError> {
+        Ok(self.do_get_user_groups(user_id).await?)
     }
 
     async fn get_user_recipe_groups(
         &self,
-        user_id: Uuid,
+        user_id: &Uuid,
         groups_limit: usize,
         recipes_limit: usize
     ) -> Result<Vec<RecipesGroup>, LocalRepositoryError> {
@@ -115,22 +146,26 @@ impl LocalRepository for PostgresAdapter {
 
     async fn get_group_recipes(
         &self,
-        group_id: Uuid,
+        group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
     ) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
         Ok(self.do_get_group_recipes(group_id, recipes_limit, offset).await?)
     }
 
-    async fn create_group(&self, group: Group) -> Result<(), LocalRepositoryError> {
+    async fn create_group(&self, group: Group) -> Result<Uuid, LocalRepositoryError> {
         Ok(self.do_create_group(group).await?)
     }
 
-    async fn add_recipe(&self, group_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError> {
+    async fn delete_group(&self, group_id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, LocalRepositoryError> {
+        Ok(self.do_delete_group(group_id, user_id).await?)
+    }
+
+    async fn add_recipe(&self, group_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalRepositoryError> {
         Ok(self.do_add_recipe(group_id, recipe_id).await?)
     }
 
-    async fn delete_recipe(&self, group_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError> {
+    async fn delete_recipe(&self, group_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalRepositoryError> {
         Ok(self.do_delete_recipe(group_id, recipe_id).await?)
     }
 }
@@ -219,4 +254,9 @@ impl TryFrom<RecipePreviewDbRow> for RecipePreview {
             thumbnail_url: row.thumbnail_url,
         })
     }
+}
+
+#[derive(FromRow)]
+struct GroupOperationDbRow {
+    id: Uuid,
 }

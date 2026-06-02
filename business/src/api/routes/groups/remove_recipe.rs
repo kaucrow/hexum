@@ -52,7 +52,7 @@ pub async fn remove_recipe(
     );
 
     state.group
-        .delete_recipe_from_group(user_id, group_id, recipe_id)
+        .delete_recipe_from_group(&user_id, &group_id, &recipe_id)
         .await?;
 
     Ok(StatusCode::OK)

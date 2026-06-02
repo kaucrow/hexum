@@ -7,8 +7,8 @@ CREATE TABLE IF NOT EXISTS recipe.group (
 );
 
 CREATE TABLE IF NOT EXISTS recipe.group_recipe (
-    group_id UUID REFERENCES recipe.group(id),
-    recipe_id UUID REFERENCES recipe.recipe(id),
+    group_id UUID REFERENCES recipe.group(id) ON DELETE CASCADE,
+    recipe_id UUID REFERENCES recipe.recipe(id) ON DELETE CASCADE,
     PRIMARY KEY (group_id, recipe_id)
 );
 

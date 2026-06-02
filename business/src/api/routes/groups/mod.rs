@@ -1,15 +1,21 @@
 pub mod dtos;
+pub mod get_group;
 pub mod get_groups;
 pub mod get_recipes;
 pub mod create;
+pub mod delete;
 pub mod add_recipe;
 pub mod remove_recipe;
+pub mod list_groups;
 
+pub use get_group::get_group;
 pub use get_groups::get_groups;
 pub use get_recipes::get_recipes;
 pub use create::create;
+pub use delete::delete;
 pub use add_recipe::add_recipe;
 pub use remove_recipe::remove_recipe;
+pub use list_groups::list_groups;
 
 use crate::{
     prelude::*,

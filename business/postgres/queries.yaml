@@ -286,9 +286,35 @@ group:
     -- PAGINATION --
     LIMIT $2 OFFSET $3
 
+  get_by_user_id: |
+    SELECT id, group_name, group_description, created_by
+    FROM recipe.group
+    WHERE created_by = $1
+    ORDER BY group_name DESC
+
   create: |
     INSERT INTO recipe.group (id, group_name, group_description, created_by)
     VALUES ($1, $2, $3, $4)
+    RETURNING id
+
+  delete: |
+    WITH target_group AS (
+      DELETE FROM recipe.group
+      WHERE id = $1 AND created_by = $2
+      RETURNING id
+    ),
+    recipes_to_delete AS (
+      SELECT gr.recipe_id
+      FROM recipe.group_recipe gr
+      JOIN recipe.recipe r ON gr.recipe_id = r.id
+      WHERE gr.group_id = (SELECT id FROM target_group)
+        AND r.created_by = $2
+    ),
+    delete_recipes AS (
+        DELETE FROM recipe.recipe
+        WHERE id IN (SELECT recipe_id FROM recipes_to_delete)
+    )
+    SELECT id AS deleted_group_id FROM target_group
 
   add_recipe: |
     INSERT INTO recipe.group_recipe (group_id, recipe_id)
