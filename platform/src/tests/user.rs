@@ -28,11 +28,11 @@ async fn test_register_user_success() {
     security.expect_hash_password()
         .returning(|s: &user::Password| Ok(format!("hashed:{}", s.as_str())));
     security.expect_generate_verification_token()
-        .returning(|| "verify-token-123".to_string());
+        .returning(|| "042739".to_string());
 
     let mut email = email::MockPort::new();
     email.expect_send_verification_email()
-        .returning(|_, _| Ok(()));
+        .returning(|_, _, _| Ok(()));
 
     let mut verification = verification::MockPort::new();
     verification.expect_store_verification_token()
@@ -117,11 +117,11 @@ async fn test_register_user_email_failure_deletes_user() {
     security.expect_hash_password()
         .returning(|s: &user::Password| Ok(format!("hashed:{}", s.as_str())));
     security.expect_generate_verification_token()
-        .returning(|| "verify-token-123".to_string());
+        .returning(|| "042739".to_string());
 
     let mut email = email::MockPort::new();
     email.expect_send_verification_email()
-        .returning(|_, _| {
+        .returning(|_, _, _| {
             Err(email::PortError::Internal("email failed".into()))
         });
 
@@ -190,5 +190,88 @@ async fn test_verify_user_account_invalid_token() {
     );
 
     let result = service.verify_user_account("bad-token").await;
+    assert!(result.is_err());
+}
+
+#[tokio::test]
+async fn test_register_user_code_in_use_retry_succeeds() {
+    let mut user_repo = user::MockRepository::new();
+    user_repo.expect_add_new_user()
+        .returning(|_| Ok(()));
+    user_repo.expect_add_authenticator()
+        .returning(|_| Ok(()));
+
+    let mut security = security::MockPort::new();
+    security.expect_hash_password()
+        .returning(|s: &user::Password| Ok(format!("hashed:{}", s.as_str())));
+    let mut seq = mockall::Sequence::new();
+    security.expect_generate_verification_token()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|| "123456".to_string());
+    security.expect_generate_verification_token()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|| "789012".to_string());
+
+    let mut email = email::MockPort::new();
+    email.expect_send_verification_email()
+        .returning(|_, _, _| Ok(()));
+
+    let mut verification = verification::MockPort::new();
+    verification.expect_store_verification_token()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_, _, _| Err(verification::PortError::CodeInUse));
+    verification.expect_store_verification_token()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|_, _, _| Ok(()));
+
+    let service = user::Service::new(
+        Arc::new(user_repo),
+        Arc::new(verification),
+        Arc::new(security),
+        Arc::new(email),
+    );
+
+    let user_id = Uuid::new_v4();
+    let user = make_test_user(user_id);
+    let result = service.register_user(user, "MyP@ssword123").await;
+    assert!(result.is_ok());
+}
+
+#[tokio::test]
+async fn test_register_user_code_in_use_max_retries_fails() {
+    let mut user_repo = user::MockRepository::new();
+    user_repo.expect_add_new_user()
+        .returning(|_| Ok(()));
+    user_repo.expect_add_authenticator()
+        .returning(|_| Ok(()));
+    user_repo.expect_delete_user_by_id()
+        .returning(|_| Ok(()));
+
+    let mut security = security::MockPort::new();
+    security.expect_hash_password()
+        .returning(|s: &user::Password| Ok(format!("hashed:{}", s.as_str())));
+    security.expect_generate_verification_token()
+        .times(5)
+        .returning(|| "000000".to_string());
+
+    let mut verification = verification::MockPort::new();
+    verification.expect_store_verification_token()
+        .times(5)
+        .returning(|_, _, _| Err(verification::PortError::CodeInUse));
+
+    let service = user::Service::new(
+        Arc::new(user_repo),
+        Arc::new(verification),
+        Arc::new(security),
+        Arc::new(email::MockPort::new()),
+    );
+
+    let user_id = Uuid::new_v4();
+    let user = make_test_user(user_id);
+    let result = service.register_user(user, "MyP@ssword123").await;
     assert!(result.is_err());
 }

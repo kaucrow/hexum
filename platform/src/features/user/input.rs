@@ -1,12 +1,14 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
+use crate::prelude::*;
 use super::{User, UserError, ConflictError};
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
+    async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, UseCaseError>;
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError>;
-    async fn verify_user_account(&self, token: &str) -> Result<(), UseCaseError>;
+    async fn verify_user_account(&self, code: &str) -> Result<(), UseCaseError>;
 }
 
 #[derive(Error, Debug)]

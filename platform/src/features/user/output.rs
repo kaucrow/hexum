@@ -7,16 +7,16 @@ use super::{User, EmailAddress, UserAuthenticator, AuthProvider};
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait Repository: Send + Sync + 'static {
-    // --- Getters ---
-    async fn get_user_by_id(&self, id: &Uuid) -> Option<User>;
-    async fn get_user_by_username(&self, username: &str) -> Option<User>;
-    async fn get_user_by_email(&self, email: &EmailAddress) -> Option<User>;
+    // ─── Getters ───
+    async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, RepositoryError>;
+    async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, RepositoryError>;
+    async fn get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>, RepositoryError>;
 
-    // --- User modification ---
+    // ─── User modification ───
     async fn add_new_user(&self, user: User) -> Result<(), RepositoryError>;
     async fn delete_user_by_id(&self, id: &Uuid) -> Result<(), RepositoryError>;
 
-    // --- Authentication ---
+    // ─── Authentication ───
     async fn get_authenticator(
         &self,
         user_id: &Uuid,

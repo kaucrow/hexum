@@ -1,8 +1,8 @@
+pub mod dtos;
 pub mod local;
 pub mod oauth;
 pub mod refresh;
 pub mod logout;
-pub mod dtos;
 
 pub use refresh::refresh_session;
 pub use logout::logout;

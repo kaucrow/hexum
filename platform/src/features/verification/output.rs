@@ -16,6 +16,9 @@ pub enum PortError {
     #[error("The verification token is invalid or expired.")]
     VerificationTokenInvalid,
 
+    #[error("The verification code is already in use. Please try again.")]
+    CodeInUse,
+
     #[error("Verification: {0}")]
     Internal(String),
 }

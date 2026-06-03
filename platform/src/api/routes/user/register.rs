@@ -1,5 +1,4 @@
 use crate::{
-    Config,
     prelude::*,
     features::user,
     api::*,
@@ -31,34 +30,35 @@ pub async fn register(
     info!("Registration successful for user with username `{}` & email `{}`", &payload.username, &payload.email);
 
     let response = RegisterResponse {
-        message: "Registration successful. A verification link has been sent to your email. Please click it to activate your account.".to_string()
+        message: "Registration successful. A 6-digit verification code has been sent to your email. Please check your inbox and enter the code to activate your account.".to_string()
     };
     Ok(Json(response))
 }
 
 #[utoipa::path(
-    get,
+    post,
     path = "/user/verify",
-    description = "Validates the email verification token & activates the user account.",
-    params(VerifyQueryParams),
+    description = "Verifies the user account using a 6-digit code sent via email.",
+    request_body = VerifyRequest,
     responses(
-        (status = 200, description = "Account verified successfully"),
-        (status = 400, description = "Invalid or expired token"),
+        (status = 200, description = "Account verified successfully", body = VerifyResponse),
+        (status = 400, description = "Invalid or expired code"),
+        (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["User"]
 )]
 pub async fn verify(
     State(user_service): State<Arc<dyn user::UseCase>>,
-    Query(queries): Query<VerifyQueryParams>,
-) -> Result<Json<RegisterResponse>, ApiError> {
-    info!("Verifying account with token: {}", &queries.token);
+    ValidatedJson(payload): ValidatedJson<VerifyRequest>,
+) -> Result<Json<VerifyResponse>, ApiError> {
+    info!("Verifying account with code: {}", &payload.code);
 
-    user_service.verify_user_account(&queries.token).await?;
+    user_service.verify_user_account(&payload.code).await?;
 
-    info!("Account successfully verified for token: {}", &queries.token);
+    info!("Account successfully verified for code");
 
-    Ok(Json(RegisterResponse {
+    Ok(Json(VerifyResponse {
         message: "Account verification successful. You can now log in.".to_string(),
     }))
 }
@@ -91,49 +91,6 @@ impl From<user::UserError> for ApiError {
             }
         }
     }
-}
-
-#[derive(Template)]
-#[template(path = "verify.html")]
-pub struct VerifyTemplate {
-    token: String,
-    api_path_suffix: String,
-}
-
-#[utoipa::path(
-    get,
-    path = "/user/verify-ui",
-    description = "**[DEVELOPMENT ENDPOINT]** Renders an email verification UI for testing purposes.",
-    params(
-        ("token" = String, Query, description = "The verification token sent via email")
-    ),
-    responses(
-        (
-            status = 200,
-            description = "Successfully rendered the verification HTML page",
-            body = String,
-            content_type = "text/html"
-        ),
-        (status = 400, description = "Missing or invalid query parameters"),
-        (status = 401, description = "Verification token invalid/expired"),
-        (status = 500, description = "Internal Server Error: Template rendering failed")
-    ),
-    tags = ["User"]
-)]
-pub async fn verify_ui(
-    State(config): State<Arc<Config>>,
-    Query(queries): Query<VerifyQueryParams>,
-) -> Result<impl IntoResponse, ApiError> {
-    let template = VerifyTemplate {
-        token: queries.token,
-        api_path_suffix: config.api.path_suffix.clone(),
-    };
-
-    let html_content = template
-        .render()
-        .map_err(|e| ApiError::Internal(e.to_string()))?;
-
-    Ok(Html(html_content))
 }
 
 impl From<user::UseCaseError> for ApiError {

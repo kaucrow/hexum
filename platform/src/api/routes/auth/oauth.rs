@@ -90,7 +90,7 @@ pub struct OAuthLoginTemplate<'a> {
 #[utoipa::path(
     get,
     path = "/auth/oauth/login-ui",
-    description = "**[DEV ENDPOINT]** Returns a simple HTML page to test OAuth.",
+    description = "**[DEVELOPMENT ENDPOINT]** Returns a simple HTML page to test OAuth.",
     responses(
         (
             status = 200,

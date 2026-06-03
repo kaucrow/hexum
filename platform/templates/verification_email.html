@@ -6,19 +6,19 @@
             <td align="center" valign="middle" style="padding: 20px;">
                 <div style="max-width: 400px; width: 100%; background-color: #221a16; border: 1px solid #52443d; border-radius: 12px; padding: 40px; text-align: center; color: #f1dfd8;">
 
-                    <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #f1dfd8;">Verify NativEat Account</h1>
+                    <h1 style="font-size: 24px; font-weight: 600; margin-bottom: 8px; color: #f1dfd8;">{{ action_name }}</h1>
 
                     <p style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: #a08d85; margin-bottom: 32px;">Action Required</p>
 
                     <div style="margin-bottom: 32px;">
-                        <p style="font-size: 14px; color: #d7c2ba;">Click the button below to verify your email address uwu</p>
+                        <p style="font-size: 14px; color: #d7c2ba;">Enter the code below {{ description }}:</p>
                     </div>
 
-                    <a href="{{url}}" style="display: inline-block; background-color: #ffb694; color: #542105; padding: 12px 24px; border-radius: 6px; font-weight: 600; text-decoration: none; font-size: 14px;">
-                        Verify Email Address
-                    </a>
+                    <div style="background-color: #1a120e; border: 1px solid #52443d; border-radius: 8px; padding: 20px; margin-bottom: 32px;">
+                        <span style="font-size: 36px; font-weight: 700; letter-spacing: 12px; color: #ffb694; font-family: monospace;">{{ code }}</span>
+                    </div>
 
-                    <p style="margin-top: 32px; font-size: 12px; color: #a08d85; line-height: 1.4;">
+                    <p style="font-size: 12px; color: #a08d85; line-height: 1.4;">
                         If you didn't request this, you can safely ignore this email.
                     </p>
                 </div>

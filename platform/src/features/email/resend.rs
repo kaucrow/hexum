@@ -15,7 +15,9 @@ use super::*;
 #[derive(Template)]
 #[template(path = "verification_email.html")]
 struct VerificationEmailTemplate<'a> {
-    url: &'a str,
+    code: &'a str,
+    action_name: &'static str,
+    description: &'static str,
 }
 
 #[derive(Clone)]
@@ -40,15 +42,17 @@ impl ResendAdapter {
 }
 
 impl ResendAdapter {
-    async fn do_send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), LocalError> {
-        let url = format!("{}/user/verify-ui?token={}", self.frontend_url, token);
-
-        let template = VerificationEmailTemplate { url: &url };
+    async fn do_send_verification_email(&self, to: &user::EmailAddress, code: &str, context: VerificationContext) -> Result<(), LocalError> {
+        let template = VerificationEmailTemplate {
+            code,
+            action_name: context.action_name(),
+            description: context.description(),
+        };
         let html_body = template.render()?;
 
         let from = &self.from_addr;
         let to = [to.as_str()];
-        let subject = "Verify your account";
+        let subject = context.subject();
 
         let email = CreateEmailBaseOptions::new(from, to, subject)
             .with_html(&html_body);
@@ -61,8 +65,8 @@ impl ResendAdapter {
 
 #[async_trait]
 impl Port for ResendAdapter {
-    async fn send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), PortError> {
-        Ok(self.do_send_verification_email(to, token).await?)
+    async fn send_verification_email(&self, to: &user::EmailAddress, code: &str, context: VerificationContext) -> Result<(), PortError> {
+        Ok(self.do_send_verification_email(to, code, context).await?)
     }
 }
 

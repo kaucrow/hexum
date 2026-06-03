@@ -30,7 +30,7 @@ pub async fn login(
     jar: CookieJar,
     ValidatedJson(payload): ValidatedJson<LoginRequest>,
 ) -> Result<(CookieJar, Json<LoginResponse>), ApiError> {
-    info!("Login attempt for user `{}`", &payload.identity);
+    info!("Login attempt for user '{}'", &payload.identity);
 
     let tokens = auth_service
         .login_user(&payload.identity, &payload.password)
@@ -40,7 +40,7 @@ pub async fn login(
     let access_cookie = build_cookie("access_token", tokens.access_token, "/", &config.api.protocol);
     let refresh_cookie = build_cookie("refresh_token", tokens.refresh_token, "/auth/refresh-session", &config.api.protocol);
 
-    info!("Login successful for user `{}`", &payload.identity);
+    info!("Login successful for user '{}'", &payload.identity);
 
     let response = LoginResponse { message: "Login successful".to_string() };
     Ok((jar.add(access_cookie).add(refresh_cookie), Json(response)))

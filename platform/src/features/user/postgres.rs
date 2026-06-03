@@ -18,6 +18,39 @@ impl PostgresAdapter {
         Self { pool }
     }
 
+    async fn do_get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, LocalError> {
+        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_id))
+            .bind(id)
+            .fetch_optional(&self.pool)
+            .await?
+            .map(|row| User::try_from(row))
+            .transpose()?;
+
+        Ok(user)
+    }
+
+    async fn do_get_user_by_username(&self, username: &str) -> Result<Option<User>, LocalError> {
+        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
+            .bind(username)
+            .fetch_optional(&self.pool)
+            .await?
+            .map(|row| User::try_from(row))
+            .transpose()?;
+
+        Ok(user)
+    }
+
+    async fn do_get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>, LocalError> {
+        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
+            .bind(email.as_str())
+            .fetch_optional(&self.pool)
+            .await?
+            .map(|row| User::try_from(row))
+            .transpose()?;
+
+        Ok(user)
+    }
+
     async fn do_add_new_user(&self, user: User) -> Result<(), LocalError> {
         let user_by_username = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
             .bind(user.username.as_str())
@@ -117,76 +150,16 @@ impl PostgresAdapter {
 
 #[async_trait]
 impl Repository for PostgresAdapter {
-    async fn get_user_by_id(&self, id: &Uuid) -> Option<User> {
-        let record = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_id))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .ok()??;
-
-        let parsed_roles: Vec<Role> = record.roles
-            .into_iter()
-            .filter_map(|r| Role::from_str(&r).ok())
-            .collect();
-
-        let username_vo = Username::new(record.username).ok()?;
-        let email_vo = EmailAddress::new(record.email).ok()?;
-
-        Some(User {
-            id: record.id,
-            username: username_vo,
-            email: email_vo,
-            roles: parsed_roles,
-            is_active: record.is_active,
-        })
+    async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, RepositoryError> {
+        Ok(self.do_get_user_by_id(id).await?)
     }
 
-    async fn get_user_by_username(&self, username: &str) -> Option<User> {
-        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
-            .bind(username)
-            .fetch_optional(&self.pool)
-            .await
-            .ok()??;
-
-        let parsed_roles: Vec<Role> = user.roles
-            .into_iter()
-            .filter_map(|r| Role::from_str(&r).ok())
-            .collect();
-
-        let username_vo = Username::new(user.username).ok()?;
-        let email_vo = EmailAddress::new(user.email).ok()?;
-
-        Some(User {
-            id: user.id,
-            username: username_vo,
-            email: email_vo,
-            roles: parsed_roles,
-            is_active: user.is_active,
-        })
+    async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, RepositoryError> {
+        Ok(self.do_get_user_by_username(username).await?)
     }
 
-    async fn get_user_by_email(&self, email: &EmailAddress) -> Option<User> {
-        let user_db_row = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
-            .bind(email.as_str())
-            .fetch_optional(&self.pool)
-            .await
-            .ok()??;
-
-        let parsed_roles: Vec<Role> = user_db_row.roles
-            .into_iter()
-            .filter_map(|r| Role::from_str(&r).ok())
-            .collect();
-
-        let username_vo = Username::new(user_db_row.username).ok()?;
-        let email_vo = EmailAddress::new(user_db_row.email).ok()?;
-
-        Some(User {
-            id: user_db_row.id,
-            username: username_vo,
-            email: email_vo,
-            roles: parsed_roles,
-            is_active: user_db_row.is_active,
-        })
+    async fn get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>, RepositoryError> {
+        Ok(self.do_get_user_by_email(email).await?)
     }
 
     async fn add_new_user(&self, user: User) -> Result<(), RepositoryError> {
@@ -222,6 +195,8 @@ pub enum LocalError {
     #[error("{0}")]
     Logic(RepositoryError),
     #[error(transparent)]
+    UserError(#[from] UserError),
+    #[error(transparent)]
     Sqlx(#[from] sqlx::Error),
 }
 
@@ -229,6 +204,7 @@ impl From<LocalError> for RepositoryError {
     fn from(e: LocalError) -> Self {
         match e {
             LocalError::Logic(e) => e,
+            LocalError::UserError(e) => RepositoryError::Internal(e.to_string()),
             LocalError::Sqlx(e) => RepositoryError::Internal(e.to_string()),
         }
     }
@@ -241,6 +217,27 @@ pub struct UserDbRow {
     pub email: String,
     pub roles: Vec<String>,
     pub is_active: bool,
+}
+
+impl TryFrom<UserDbRow> for User {
+    type Error = LocalError;
+    fn try_from(row: UserDbRow) -> Result<Self, Self::Error> {
+        let username = Username::new(row.username)?;
+        let email = EmailAddress::new(row.email)?;
+
+        let roles: Vec<Role> = row.roles
+            .into_iter()
+            .filter_map(|r| Role::from_str(&r).ok())
+            .collect();
+
+        Ok(Self {
+            id: row.id,
+            username,
+            email,
+            roles,
+            is_active: row.is_active,
+        })
+    }
 }
 
 #[derive(sqlx::FromRow)]

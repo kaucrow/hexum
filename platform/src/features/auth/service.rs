@@ -36,7 +36,7 @@ impl Service {
         let email = user::EmailAddress::new(email_str)
             .map_err(|e| UseCaseError::Internal(e.to_string()))?;
 
-        let user = match self.user_repo.get_user_by_email(&email).await {
+        let user = match self.user_repo.get_user_by_email(&email).await? {
             Some(existing_user) => {
                 if !existing_user.is_active {
                     return Err(UseCaseError::UserInactive);
@@ -103,7 +103,7 @@ impl Service {
 #[async_trait]
 impl UseCase for Service {
     async fn login_user(&self, identity: &str, passwd: &str) -> Result<AuthTokens, UseCaseError> {
-        let user = if let Some(u) = self.user_repo.get_user_by_username(identity).await {
+        let user = if let Some(u) = self.user_repo.get_user_by_username(identity).await? {
             u
         } else {
             // If the identity is not a username, try parsing is as email.
@@ -111,7 +111,7 @@ impl UseCase for Service {
             let email = user::EmailAddress::new(identity.to_string())
                 .or(Err(UseCaseError::UserNotFound))?;
 
-            self.user_repo.get_user_by_email(&email).await
+            self.user_repo.get_user_by_email(&email).await?
                 .ok_or(UseCaseError::UserNotFound)?
         };
 
@@ -173,7 +173,7 @@ impl UseCase for Service {
     async fn verify_user(&self, access_token: &str) -> Result<user::User, UseCaseError> {
         let user_id = self.security.verify_access_token(access_token)?;
 
-        match self.user_repo.get_user_by_id(&user_id).await {
+        match self.user_repo.get_user_by_id(&user_id).await? {
             Some(user) => {
                 if !user.is_active {
                     return Err(UseCaseError::UserInactive)
@@ -194,7 +194,7 @@ impl UseCase for Service {
 
         // Fetch user
         let user = self.user_repo.get_user_by_id(&user_id)
-            .await
+            .await?
             .ok_or(UseCaseError::UserNotFound)?;
 
         if !user.is_active {

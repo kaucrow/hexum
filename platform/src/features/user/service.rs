@@ -3,6 +3,7 @@ use std::sync::Arc;
 use async_trait::async_trait;
 
 use crate::{
+    prelude::*,
     features::{security, email, verification},
 };
 use super::*;
@@ -28,6 +29,12 @@ impl Service {
 
 #[async_trait]
 impl UseCase for Service {
+    async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, UseCaseError> {
+        let user = self.user_repo.get_user_by_id(id).await?;
+
+        Ok(user)
+    }
+
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError> {
         let user_id = user.id.clone();
         let user_email = user.email.clone();
@@ -39,11 +46,38 @@ impl UseCase for Service {
         self.user_repo.add_new_user(user).await?;
         self.user_repo.add_authenticator(auth).await?;
 
-        let verification_token = self.security.generate_verification_token();
+        // Retry with a fresh code if the generated one is already in use (max 5 attempts)
+        let verification_code = {
+            let mut attempts = 0;
+            let max_attempts = 5;
+            loop {
+                attempts += 1;
+                let code = self.security.generate_verification_token();
+                match self.verification.store_verification_token(&user_id, &code, 1800).await {
+                    Ok(()) => break code,
+                    Err(verification::PortError::CodeInUse) if attempts < max_attempts => {
+                        // Code is already in use. Retry with a new code
+                        continue;
+                    }
+                    Err(verification::PortError::CodeInUse) => {
+                        self.user_repo.delete_user_by_id(&user_id).await?;
+                        return Err(UseCaseError::Internal(
+                            "Failed to generate a unique verification code after multiple attempts".into(),
+                        ));
+                    }
+                    Err(e) => {
+                        self.user_repo.delete_user_by_id(&user_id).await?;
+                        return Err(UseCaseError::Internal(e.to_string()));
+                    }
+                }
+            }
+        };
 
-        self.verification.store_verification_token(&user_id, &verification_token, 1800).await?;
-
-        let email_result = self.email.send_verification_email(&user_email, &verification_token).await;
+        let email_result = self.email.send_verification_email(
+            &user_email,
+            &verification_code,
+            email::VerificationContext::AccountRegistration,
+        ).await;
 
         if let Err(e) = email_result {
             self.user_repo.delete_user_by_id(&user_id).await?;
@@ -53,8 +87,8 @@ impl UseCase for Service {
         Ok(())
     }
 
-    async fn verify_user_account(&self, token: &str) -> Result<(), UseCaseError> {
-        let user_id = self.verification.consume_verification_token(token).await?;
+    async fn verify_user_account(&self, code: &str) -> Result<(), UseCaseError> {
+        let user_id = self.verification.consume_verification_token(code).await?;
         self.user_repo.verify_local_auth_by_user_id(&user_id).await?;
 
         Ok(())
@@ -91,6 +125,7 @@ impl From<verification::PortError> for UseCaseError {
     fn from(e: verification::PortError) -> Self {
         match e {
             verification::PortError::VerificationTokenInvalid => UseCaseError::VerificationTokenInvalid,
+            verification::PortError::CodeInUse => UseCaseError::Internal(e.to_string()),
             verification::PortError::Internal(s) => UseCaseError::Internal(s),
         }
     }

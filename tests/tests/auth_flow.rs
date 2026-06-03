@@ -1,5 +1,4 @@
 use serde_json::json;
-use uuid::Uuid;
 use integration_tests::{spawn_test_app, TestApp};
 
 /// End-to-end test covering the full authentication lifecycle:
@@ -10,14 +9,19 @@ async fn full_auth_lifecycle() {
     let username = TestApp::unique_username();
     let email = TestApp::unique_email();
 
-    // ── Seed an unverified user & store verification token in Redis ──
+    // ── Seed an unverified user & store verification code in Redis ──
     let user_id = app.seed_unverified_user_with_password(&username, &email).await;
 
-    let token = Uuid::new_v4().to_string();
-    app.store_verification_token(&user_id, &token).await;
+    let code = "042739";
+    app.store_verification_token(&user_id, code).await;
 
     // ── Verify ───────────────────────────────────────────────
-    let verify_resp = app.get(&format!("/user/verify?token={token}")).await;
+    let verify_resp = app
+        .post_json(
+            "/user/verify",
+            &json!({ "code": code }),
+        )
+        .await;
     assert!(
         verify_resp.status().is_success(),
         "Verification failed: {}",
@@ -51,7 +55,7 @@ async fn full_auth_lifecycle() {
         "Expected at least 2 Set-Cookie headers (access_token + refresh_token)"
     );
 
-    // ─── Refresh session ──────────────────────────────────────
+    // ── Refresh session ──────────────────────────────────────
     let refresh_resp = app.post_json("/auth/refresh-session", &json!({})).await;
     assert!(
         refresh_resp.status().is_success(),

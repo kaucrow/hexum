@@ -20,6 +20,7 @@ pub use utoipa::{ToSchema, IntoParams};
 pub use axum_extra::extract::{CookieJar, Multipart};
 pub use validator::Validate;
 pub use askama::Template;
+pub use extractors::AuthenticatedUser;
 
 pub use error::ApiError;
 
@@ -102,26 +103,6 @@ where
     }
 }
 
-pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
-    let mut r = Router::new()
-        .route("/user/register", post(crate::routes::user::register))
-        .route("/user/verify", get(crate::routes::user::verify))
-        .route("/user/verify-ui", get(crate::routes::user::verify_ui))
-        .route("/auth/local/login", post(crate::routes::auth::local::login))
-        .route("/auth/oauth/google/login", post(crate::routes::auth::oauth::google_login))
-        .route("/auth/oauth/github/login", post(crate::routes::auth::oauth::github_login))
-        .route("/auth/refresh-session", post(crate::routes::auth::refresh_session))
-        .route("/auth/logout", post(crate::routes::auth::logout));
-
-    if enable_dev_endpoints {
-        r = r
-            .route("/auth/oauth/login-ui", get(crate::routes::auth::oauth::oauth_login_ui))
-            .route("/auth/oauth/callback-ui", get(crate::routes::auth::oauth::oauth_callback_ui));
-    }
-
-    r.with_state(state)
-}
-
 trait ValidationErrorsExt {
     fn into_api_error(self) -> ApiError;
 }
@@ -146,4 +127,24 @@ impl ValidationErrorsExt for ValidationErrors {
 
         ApiError::Validation(error_map)
     }
+}
+
+pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
+    let mut r = Router::new()
+        .route("/user", get(routes::user::get_user_data))
+        .route("/user/register", post(routes::user::register))
+        .route("/user/verify", post(routes::user::verify))
+        .route("/auth/local/login", post(routes::auth::local::login))
+        .route("/auth/oauth/google/login", post(routes::auth::oauth::google_login))
+        .route("/auth/oauth/github/login", post(routes::auth::oauth::github_login))
+        .route("/auth/refresh-session", post(routes::auth::refresh_session))
+        .route("/auth/logout", post(routes::auth::logout));
+
+    if enable_dev_endpoints {
+        r = r
+            .route("/auth/oauth/login-ui", get(crate::routes::auth::oauth::oauth_login_ui))
+            .route("/auth/oauth/callback-ui", get(crate::routes::auth::oauth::oauth_callback_ui));
+    }
+
+    r.with_state(state)
 }

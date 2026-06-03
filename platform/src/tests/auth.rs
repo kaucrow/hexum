@@ -42,7 +42,7 @@ fn setup_successful_login(
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -82,7 +82,7 @@ async fn test_login_user_by_username_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -129,9 +129,9 @@ async fn test_login_user_by_email_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -171,9 +171,9 @@ async fn test_login_user_by_email_success() {
 async fn test_login_user_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -197,7 +197,7 @@ async fn test_login_user_inactive() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -221,7 +221,7 @@ async fn test_login_user_not_verified() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -254,7 +254,7 @@ async fn test_login_user_invalid_password() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -329,9 +329,9 @@ async fn test_login_with_punctuation_mixed_password_success() {
 async fn test_login_with_empty_identity_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -354,7 +354,7 @@ async fn test_verify_user_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut security = security::MockPort::new();
     security.expect_verify_access_token()
@@ -384,7 +384,7 @@ async fn test_verify_user_inactive() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut security = security::MockPort::new();
     security.expect_verify_access_token()
@@ -408,7 +408,7 @@ async fn test_verify_user_inactive() {
 async fn test_verify_user_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
 
     let mut security = security::MockPort::new();
     security.expect_verify_access_token()
@@ -439,7 +439,7 @@ async fn test_refresh_session_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut session = session::MockPort::new();
     session.expect_consume_session()
@@ -495,7 +495,7 @@ async fn test_refresh_session_inactive_user() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut session = session::MockPort::new();
     session.expect_consume_session()

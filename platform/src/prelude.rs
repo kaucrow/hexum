@@ -2,6 +2,7 @@ pub use std::{
     sync::Arc,
     collections::HashMap,
 };
+pub use uuid::Uuid;
 pub use tracing::{info, warn, error};
 pub use serde::{Serialize, Deserialize};
 pub use anyhow::{Result, Context};

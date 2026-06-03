@@ -15,7 +15,10 @@ use pasetors::{
     local,
 };
 use chrono::{Utc, Duration};
-use rand::distr::{Alphanumeric, SampleString};
+use rand::{
+    RngExt,
+    distr::{Alphanumeric, SampleString},
+};
 use thiserror::Error;
 use uuid::Uuid;
 use anyhow::Result;
@@ -115,9 +118,10 @@ impl Port for PasetoAdapter {
         Alphanumeric.sample_string(&mut rand::rng(), 64)
     }
 
-    // Generate a 64-characters long verification token
+    // Generate a 6-digit verification code (zero-padded, e.g. "042739")
     fn generate_verification_token(&self) -> String {
-        Alphanumeric.sample_string(&mut rand::rng(), 64)
+        let code: u32 = rand::rng().random_range(0..1_000_000);
+        format!("{code:06}")
     }
 }
 
