@@ -17,157 +17,110 @@ impl PostgresAdapter {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
-    async fn do_get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, LocalError> {
-        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_id))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?
-            .map(|row| User::try_from(row))
-            .transpose()?;
-
-        Ok(user)
-    }
-
-    async fn do_get_user_by_username(&self, username: &str) -> Result<Option<User>, LocalError> {
-        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
-            .bind(username)
-            .fetch_optional(&self.pool)
-            .await?
-            .map(|row| User::try_from(row))
-            .transpose()?;
-
-        Ok(user)
-    }
-
-    async fn do_get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>, LocalError> {
-        let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
-            .bind(email.as_str())
-            .fetch_optional(&self.pool)
-            .await?
-            .map(|row| User::try_from(row))
-            .transpose()?;
-
-        Ok(user)
-    }
-
-    async fn do_add_new_user(&self, user: User) -> Result<(), LocalError> {
-        let user_by_username = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
-            .bind(user.username.as_str())
-            .fetch_optional(&self.pool)
-            .await?;
-
-        if user_by_username.is_some() {
-            return Err(LocalError::Logic(
-                RepositoryError::Conflict(ConflictError::UsernameInUse)
-            ));
-        }
-
-        let user_by_email = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
-            .bind(user.email.as_str())
-            .fetch_optional(&self.pool)
-            .await?;
-
-        if user_by_email.is_some() {
-            return Err(LocalError::Logic(
-                RepositoryError::Conflict(ConflictError::EmailInUse)
-            ));
-        }
-
-        let roles_strings: Vec<String> = user.roles
-            .iter()
-            .map(|r| r.to_string())
-            .collect();
-
-        sqlx::query(sql(&QUERIES.user.insert))
-            .bind(user.id)
-            .bind(user.username.as_str())
-            .bind(user.email.as_str())
-            .bind(roles_strings)
-            .bind(user.is_active)
-            .execute(&self.pool)
-            .await?;
-
-        Ok(())
-    }
-
-    async fn do_get_authenticator(
-        &self,
-        user_id: &Uuid,
-        auth_provider: AuthProvider,
-    ) -> Result<Option<UserAuthenticator>, LocalError> {
-        let user_authenticator = sqlx::query_as::<_, UserAuthenticatorDbRow>(
-            sql(&QUERIES.user_authenticator.get_by_user_id_and_provider)
-        )
-        .bind(user_id)
-        .bind(auth_provider.to_string())
-        .fetch_optional(&self.pool)
-        .await?
-        .map(|row| UserAuthenticator {
-            id: row.id,
-            user_id: row.user_id,
-            provider: auth_provider,
-            provider_id: row.provider_id,
-            hashed_passwd: row.passwd,
-            is_verified: row.is_verified,
-        });
-
-        Ok(user_authenticator)
-    }
-
-    async fn do_add_authenticator(&self, user_authenticator: UserAuthenticator) -> Result<(), LocalError> {
-        sqlx::query(sql(&QUERIES.user_authenticator.insert))
-            .bind(user_authenticator.id)
-            .bind(user_authenticator.user_id)
-            .bind(user_authenticator.provider.to_string())
-            .bind(user_authenticator.provider_id)
-            .bind(user_authenticator.hashed_passwd)
-            .bind(user_authenticator.is_verified)
-            .execute(&self.pool)
-            .await?;
-
-        Ok(())
-    }
-
-    async fn do_verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), LocalError> {
-        sqlx::query(sql(&QUERIES.user_authenticator.verify_local_by_user_id))
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-
-        Ok(())
-    }
-
-    async fn do_delete_user_by_id(&self, id: &Uuid) -> Result<(), LocalError> {
-        sqlx::query(sql(&QUERIES.user.delete_by_id))
-            .bind(id)
-            .execute(&self.pool)
-            .await?;
-
-       Ok(())
-    }
 }
 
 #[async_trait]
 impl Repository for PostgresAdapter {
     async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, RepositoryError> {
-        Ok(self.do_get_user_by_id(id).await?)
+        let res: Result<_, LocalError> = async {
+            let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_id))
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| User::try_from(row))
+                .transpose()?;
+
+            Ok(user)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_user_by_username(&self, username: &str) -> Result<Option<User>, RepositoryError> {
-        Ok(self.do_get_user_by_username(username).await?)
+        let res: Result<_, LocalError> = async {
+            let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
+                .bind(username)
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| User::try_from(row))
+                .transpose()?;
+
+            Ok(user)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_user_by_email(&self, email: &EmailAddress) -> Result<Option<User>, RepositoryError> {
-        Ok(self.do_get_user_by_email(email).await?)
+        let res: Result<_, LocalError> = async {
+            let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
+                .bind(email.as_str())
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| User::try_from(row))
+                .transpose()?;
+
+            Ok(user)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn add_new_user(&self, user: User) -> Result<(), RepositoryError> {
-        Ok(self.do_add_new_user(user).await?)
+        let res: Result<_, LocalError> = async {
+            let user_by_username = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
+                .bind(user.username.as_str())
+                .fetch_optional(&self.pool)
+                .await?;
+
+            if user_by_username.is_some() {
+                return Err(LocalError::Logic(
+                    RepositoryError::Conflict(ConflictError::UsernameInUse)
+                ));
+            }
+
+            let user_by_email = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_email))
+                .bind(user.email.as_str())
+                .fetch_optional(&self.pool)
+                .await?;
+
+            if user_by_email.is_some() {
+                return Err(LocalError::Logic(
+                    RepositoryError::Conflict(ConflictError::EmailInUse)
+                ));
+            }
+
+            let roles_strings: Vec<String> = user.roles
+                .iter()
+                .map(|r| r.to_string())
+                .collect();
+
+            sqlx::query(sql(&QUERIES.user.insert))
+                .bind(user.id)
+                .bind(user.username.as_str())
+                .bind(user.email.as_str())
+                .bind(roles_strings)
+                .bind(user.is_active)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn delete_user_by_id(&self, id: &Uuid) -> Result<(), RepositoryError> {
-        Ok(self.do_delete_user_by_id(id).await?)
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.user.delete_by_id))
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_authenticator(
@@ -175,18 +128,61 @@ impl Repository for PostgresAdapter {
         user_id: &Uuid,
         auth_provider: AuthProvider,
     ) -> Result<Option<UserAuthenticator>, RepositoryError> {
-        Ok(self.do_get_authenticator(user_id, auth_provider).await?)
-    }
+        let res: Result<_, LocalError> = async {
+            let user_authenticator = sqlx::query_as::<_, UserAuthenticatorDbRow>(
+                sql(&QUERIES.user_authenticator.get_by_user_id_and_provider)
+            )
+            .bind(user_id)
+            .bind(auth_provider.to_string())
+            .fetch_optional(&self.pool)
+            .await?
+            .map(|row| UserAuthenticator {
+                id: row.id,
+                user_id: row.user_id,
+                provider: auth_provider,
+                provider_id: row.provider_id,
+                hashed_passwd: row.passwd,
+                is_verified: row.is_verified,
+            });
 
-    async fn verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), RepositoryError> {
-        Ok(self.do_verify_local_auth_by_user_id(id).await?)
+            Ok(user_authenticator)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn add_authenticator(
         &self,
         user_authenticator: UserAuthenticator
     ) -> Result<(), RepositoryError> {
-        Ok(self.do_add_authenticator(user_authenticator).await?)
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.user_authenticator.insert))
+                .bind(user_authenticator.id)
+                .bind(user_authenticator.user_id)
+                .bind(user_authenticator.provider.to_string())
+                .bind(user_authenticator.provider_id)
+                .bind(user_authenticator.hashed_passwd)
+                .bind(user_authenticator.is_verified)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), RepositoryError> {
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.user_authenticator.verify_local_by_user_id))
+            .bind(id)
+            .execute(&self.pool)
+            .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
     }
 }
 

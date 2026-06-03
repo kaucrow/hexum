@@ -17,9 +17,7 @@ use super::dtos::*;
         (status = 401, description = "Unauthorized"),
         (status = 500, description = "Internal server error"),
     ),
-    security(
-        ("cookie_auth" = [])
-    ),
+    security(("cookie_auth" = [])),
     tags = ["Recipes"]
 )]
 pub async fn create(

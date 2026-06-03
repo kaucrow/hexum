@@ -13,20 +13,20 @@ impl PostgresAdapter {
     pub fn new(pool: PgPool) -> Self {
         Self { pool }
     }
-
-    async fn do_ping_db(&self) -> Result<(), LocalError> {
-        let _ = sqlx::query_as::<_, PingDbRow>(sql(&QUERIES.base.ping))
-            .fetch_one(&self.pool)
-            .await?;
-
-        Ok(())
-    }
 }
 
 #[async_trait]
 impl Port for PostgresAdapter {
     async fn ping_db(&self) -> Result<(), PortError> {
-        Ok(self.do_ping_db().await?)
+        let res: Result<_, LocalError> = async {
+            let _ = sqlx::query_as::<_, PingDbRow>(sql(&QUERIES.base.ping))
+                .fetch_one(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
     }
 }
 

@@ -22,9 +22,7 @@ use super::super::recipes::dtos::RecipePreviewItem;
         (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error"),
     ),
-    security(
-        ("cookie_auth" = [])
-    ),
+    security(("cookie_auth" = [])),
     tags = ["Groups"]
 )]
 pub async fn get_recipes(

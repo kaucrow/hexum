@@ -17,9 +17,7 @@ use super::dtos::*;
         (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error"),
     ),
-    security(
-        ("cookie_auth" = [])
-    ),
+    security(("cookie_auth" = [])),
     tags = ["Groups"]
 )]
 pub async fn list_groups(

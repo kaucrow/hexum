@@ -17,58 +17,7 @@ impl PostgresAdapter {
         Self { pool }
     }
 
-    async fn do_get_recipe_search_ids(
-        &self,
-        query: Option<&str>,
-        tags: Option<&[String]>,
-    ) -> Result<Vec<Uuid>, LocalError> {
-        match (query, tags) {
-            (Some(q), None) => {
-                // ─── Query-only Search ───
-                let sql_query = if q.chars().count() <= 3 {
-                    &QUERIES.recipe.get_search_ids_by_query_ilike
-                } else {
-                    &QUERIES.recipe.get_search_ids_by_query
-                };
-
-                let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
-                    .bind(q)
-                    .fetch_all(&self.pool)
-                    .await?
-                    .into_iter()
-                    .map(|row| row.id)
-                    .collect();
-
-                Ok(recipe_search_ids)
-            }
-            (None, Some(t)) => {
-                // ─── Tags-only Search ───
-
-                let t: Vec<String> = t
-                    .into_iter()
-                    .map(|t| t.to_lowercase())
-                    .collect();
-
-                self.do_get_recipe_search_ids_by_tags(&t).await
-            }
-            (Some(q), Some(t)) => {
-                // ─── Combined Query + Tags Search ───
-
-                let t: Vec<String> = t
-                    .into_iter()
-                    .map(|t| t.to_lowercase())
-                    .collect();
-
-                self.do_get_recipe_search_ids_by_query_and_tags(q, &t).await
-            }
-            (None, None) => {
-                // ─── Neither: Return Empty ───
-                Ok(Vec::new())
-            }
-        }
-    }
-
-    async fn do_get_recipe_search_ids_by_tags(
+    async fn get_recipe_search_ids_by_tags(
         &self,
         tags: &[String],
     ) -> Result<Vec<Uuid>, LocalError> {
@@ -84,7 +33,7 @@ impl PostgresAdapter {
         Ok(recipe_search_ids)
     }
 
-    async fn do_get_recipe_search_ids_by_query_and_tags(
+    async fn get_recipe_search_ids_by_query_and_tags(
         &self,
         query: &str,
         tags: &[String],
@@ -106,166 +55,6 @@ impl PostgresAdapter {
 
         Ok(recipe_search_ids)
     }
-
-    async fn do_get_recipe_previews_by_ids(
-        &self,
-        ids: &Vec<Uuid>,
-    ) -> Result<Vec<RecipePreview>, LocalError> {
-        let mut recipe_search_results =
-            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_id))
-                .bind(ids)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| RecipePreview::try_from(row))
-                .collect::<Result<Vec<_>, _>>()?;
-
-        // Sort back into the original order
-        recipe_search_results.sort_by_key(|r| ids.iter().position(|&id| id == r.id));
-
-        Ok(recipe_search_results)
-    }
-
-    async fn do_get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
-        let recipes =
-            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_random_previews))
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| RecipePreview::try_from(row))
-                .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(recipes)
-    }
-
-    async fn do_get_latest_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
-        let recipes =
-            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_latest_previews))
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| RecipePreview::try_from(row))
-                .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(recipes)
-    }
-
-    async fn do_get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalError> {
-        let recipe = sqlx::query_as::<_, RecipeDbRow>(sql(&QUERIES.recipe.get_by_id))
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await?
-            .map(|row| Recipe::try_from(row))
-            .transpose()?;
-
-        Ok(recipe)
-    }
-
-    async fn do_get_tag_search_matches(
-        &self,
-        query: &str,
-        limit: usize,
-    ) -> Result<Vec<String>, LocalError> {
-        let tag_search_results =
-            sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_search_matches))
-                .bind(query)
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| row.name)
-                .collect();
-
-        Ok(tag_search_results)
-    }
-
-    async fn do_get_top_tag_names(&self, limit: usize) -> Result<Vec<String>, LocalError> {
-        let names =
-            sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_top_tag_names))
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| row.name)
-                .collect();
-
-        Ok(names)
-    }
-
-    async fn do_get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalError> {
-        let recipes =
-            sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_tag_name))
-                .bind(tag_name)
-                .bind(limit as i64)
-                .fetch_all(&self.pool)
-                .await?
-                .into_iter()
-                .map(|row| RecipePreview::try_from(row))
-                .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(recipes)
-    }
-
-    async fn do_create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalError> {
-        let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
-
-        // Insert the main recipe row
-        sqlx::query(sql(&QUERIES.recipe.create))
-            .bind(data.id)
-            .bind(&data.name)
-            .bind(&data.description)
-            .bind(&data.instructions)
-            .bind(&data.thumbnail_url as &Option<String>)
-            .bind(data.created_by)
-            .execute(&mut *tx)
-            .await?;
-
-        // Batch insert tags
-        if !data.tags.is_empty() {
-            let tag_ids: Vec<Uuid> = (0..data.tags.len()).map(|_| Uuid::new_v4()).collect();
-            let tag_recipe_ids = vec![data.id; data.tags.len()];
-
-            sqlx::query(sql(&QUERIES.recipe.batch_insert_tags))
-                .bind(&tag_ids)
-                .bind(&tag_recipe_ids)
-                .bind(&data.tags)
-                .execute(&mut *tx)
-                .await?;
-        }
-
-        // Batch insert ingredients
-        if !data.ingredients.is_empty() {
-            let ing_ids: Vec<Uuid> = (0..data.ingredients.len()).map(|_| Uuid::new_v4()).collect();
-            let ing_recipe_ids = vec![data.id; data.ingredients.len()];
-            let ing_names: Vec<String> = data.ingredients.keys().cloned().collect();
-            let ing_measures: Vec<String> = data.ingredients.values().cloned().collect();
-
-            sqlx::query(sql(&QUERIES.recipe.batch_insert_ingredients))
-                .bind(&ing_ids)
-                .bind(&ing_recipe_ids)
-                .bind(&ing_names)
-                .bind(&ing_measures)
-                .execute(&mut *tx)
-                .await?;
-        }
-
-        tx.commit().await?;
-
-        Ok(Recipe {
-            id: data.id,
-            origin: RecipeOrigin::Local,
-            name: data.name,
-            description: data.description,
-            tags: data.tags,
-            ingredients: data.ingredients,
-            instructions: data.instructions,
-            thumbnail_url: data.thumbnail_url,
-            video_url: None,
-            created_by: Some(data.created_by),
-        })
-    }
 }
 
 #[async_trait]
@@ -275,26 +64,126 @@ impl LocalRepository for PostgresAdapter {
         query: Option<&'a str>,
         tags: Option<&'a [String]>,
     ) -> Result<Vec<Uuid>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_search_ids(query, tags).await?)
+        let res: Result<_, LocalError> = async {
+            match (query, tags) {
+                (Some(q), None) => {
+                    // ─── Query-only Search ───
+                    let sql_query = if q.chars().count() <= 3 {
+                        &QUERIES.recipe.get_search_ids_by_query_ilike
+                    } else {
+                        &QUERIES.recipe.get_search_ids_by_query
+                    };
+
+                    let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
+                        .bind(q)
+                        .fetch_all(&self.pool)
+                        .await?
+                        .into_iter()
+                        .map(|row| row.id)
+                        .collect();
+
+                    Ok(recipe_search_ids)
+                }
+                (None, Some(t)) => {
+                    // ─── Tags-only Search ───
+
+                    let t: Vec<String> = t
+                        .into_iter()
+                        .map(|t| t.to_lowercase())
+                        .collect();
+
+                    self.get_recipe_search_ids_by_tags(&t).await
+                }
+                (Some(q), Some(t)) => {
+                    // ─── Combined Query + Tags Search ───
+
+                    let t: Vec<String> = t
+                        .into_iter()
+                        .map(|t| t.to_lowercase())
+                        .collect();
+
+                    self.get_recipe_search_ids_by_query_and_tags(q, &t).await
+                }
+                (None, None) => {
+                    // ─── Neither: Return Empty ───
+                    Ok(Vec::new())
+                }
+            }
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_recipe_previews_by_ids(
         &self,
         ids: &Vec<Uuid>,
     ) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_previews_by_ids(ids).await?)
+        let res: Result<_, LocalError> = async {
+            let mut recipe_search_results =
+                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_id))
+                    .bind(ids)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| RecipePreview::try_from(row))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+            // Sort back into the original order
+            recipe_search_results.sort_by_key(|r| ids.iter().position(|&id| id == r.id));
+
+            Ok(recipe_search_results)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_random_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
-        Ok(self.do_get_random_recipe_previews(limit).await?)
+        let res: Result<_, LocalError> = async {
+            let recipes =
+                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_random_previews))
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| RecipePreview::try_from(row))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(recipes)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_latest_recipe_previews(&self, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
-        Ok(self.do_get_latest_recipe_previews(limit).await?)
+        let res: Result<_, LocalError> = async {
+            let recipes =
+                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_latest_previews))
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| RecipePreview::try_from(row))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(recipes)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_by_id(id).await?)
+        let res: Result<_, LocalError> = async {
+            let recipe = sqlx::query_as::<_, RecipeDbRow>(sql(&QUERIES.recipe.get_by_id))
+                .bind(id)
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| Recipe::try_from(row))
+                .transpose()?;
+
+            Ok(recipe)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_tag_search_matches(
@@ -302,19 +191,119 @@ impl LocalRepository for PostgresAdapter {
         query: &str,
         limit: usize,
     ) -> Result<Vec<String>, LocalRepositoryError> {
-        Ok(self.do_get_tag_search_matches(query, limit).await?)
+        let res: Result<_, LocalError> = async {
+            let tag_search_results =
+                sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_search_matches))
+                    .bind(query)
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.name)
+                    .collect();
+
+            Ok(tag_search_results)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_top_tag_names(&self, limit: usize) -> Result<Vec<String>, LocalRepositoryError> {
-        Ok(self.do_get_top_tag_names(limit).await?)
+        let res: Result<_, LocalError> = async {
+            let names =
+                sqlx::query_as::<_, TagDbRow>(sql(&QUERIES.tag.get_top_tag_names))
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| row.name)
+                    .collect();
+
+            Ok(names)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
-        Ok(self.do_get_recipe_previews_by_tag_name(tag_name, limit).await?)
+        let res: Result<_, LocalError> = async {
+            let recipes =
+                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_previews_by_tag_name))
+                    .bind(tag_name)
+                    .bind(limit as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| RecipePreview::try_from(row))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(recipes)
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError> {
-        Ok(self.do_create_recipe(data).await?)
+        let res: Result<_, LocalError> = async {
+            let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
+
+            // Insert the main recipe row
+            sqlx::query(sql(&QUERIES.recipe.create))
+                .bind(data.id)
+                .bind(&data.name)
+                .bind(&data.description)
+                .bind(&data.instructions)
+                .bind(&data.thumbnail_url as &Option<String>)
+                .bind(data.created_by)
+                .execute(&mut *tx)
+                .await?;
+
+            // Batch insert tags
+            if !data.tags.is_empty() {
+                let tag_ids: Vec<Uuid> = (0..data.tags.len()).map(|_| Uuid::new_v4()).collect();
+                let tag_recipe_ids = vec![data.id; data.tags.len()];
+
+                sqlx::query(sql(&QUERIES.recipe.batch_insert_tags))
+                    .bind(&tag_ids)
+                    .bind(&tag_recipe_ids)
+                    .bind(&data.tags)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+
+            // Batch insert ingredients
+            if !data.ingredients.is_empty() {
+                let ing_ids: Vec<Uuid> = (0..data.ingredients.len()).map(|_| Uuid::new_v4()).collect();
+                let ing_recipe_ids = vec![data.id; data.ingredients.len()];
+                let ing_names: Vec<String> = data.ingredients.keys().cloned().collect();
+                let ing_measures: Vec<String> = data.ingredients.values().cloned().collect();
+
+                sqlx::query(sql(&QUERIES.recipe.batch_insert_ingredients))
+                    .bind(&ing_ids)
+                    .bind(&ing_recipe_ids)
+                    .bind(&ing_names)
+                    .bind(&ing_measures)
+                    .execute(&mut *tx)
+                    .await?;
+            }
+
+            tx.commit().await?;
+
+            Ok(Recipe {
+                id: data.id,
+                origin: RecipeOrigin::Local,
+                name: data.name,
+                description: data.description,
+                tags: data.tags,
+                ingredients: data.ingredients,
+                instructions: data.instructions,
+                thumbnail_url: data.thumbnail_url,
+                video_url: None,
+                created_by: Some(data.created_by),
+            })
+        }.await;
+
+        res.map_err(Into::into)
     }
 }
 

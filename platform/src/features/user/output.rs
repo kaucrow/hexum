@@ -23,12 +23,12 @@ pub trait Repository: Send + Sync + 'static {
         auth_provider: AuthProvider,
     ) -> Result<Option<UserAuthenticator>, RepositoryError>;
 
-    async fn verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), RepositoryError>;
-
     async fn add_authenticator(
         &self,
         user_authenticator: UserAuthenticator
     ) -> Result<(), RepositoryError>;
+
+    async fn verify_local_auth_by_user_id(&self, id: &Uuid) -> Result<(), RepositoryError>;
 }
 
 #[derive(Error, Debug, Clone, PartialEq)]
