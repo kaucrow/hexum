@@ -13,6 +13,7 @@ use super::routes;
         routes::user::data::get_user_data,
         routes::user::change_email::change_email,
         routes::user::change_email::verify_email_change,
+        routes::user::delete::delete,
 
         // /auth
         routes::auth::local::login,
@@ -36,6 +37,7 @@ use super::routes;
             routes::user::dtos::VerifyEmailChangeRequest,
             routes::user::dtos::VerifyEmailChangeResponse,
             routes::user::dtos::UserDataResponse,
+            routes::user::dtos::UserDeletionResponse,
 
             // /auth
             routes::auth::dtos::LoginRequest,

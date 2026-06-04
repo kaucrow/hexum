@@ -4,10 +4,7 @@ use crate::{
     features::auth,
     api::*,
 };
-use super::{
-    build_cookie,
-    dtos::*,
-};
+use super::dtos::*;
 
 #[utoipa::path(
     post,
@@ -42,6 +39,6 @@ pub async fn login(
 
     info!("Login successful for user '{}'", &payload.identity);
 
-    let response = LoginResponse { message: "Login successful".to_string() };
+    let response = LoginResponse { message: "Login successful.".to_string() };
     Ok((jar.add(access_cookie).add(refresh_cookie), Json(response)))
 }

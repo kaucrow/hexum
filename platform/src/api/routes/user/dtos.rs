@@ -98,3 +98,11 @@ pub struct UserDataResponse {
     /// The user's "is_active" flag. False if the user has been suspended.
     pub is_active: bool,
 }
+
+// ─── User Deletion DTOs ───
+
+#[derive(Serialize, ToSchema)]
+pub struct UserDeletionResponse {
+    #[schema(example = "User deleted successfully.")]
+    pub message: String,
+}

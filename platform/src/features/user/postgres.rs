@@ -110,14 +110,15 @@ impl Repository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
-    async fn delete_user_by_id(&self, id: &Uuid) -> Result<(), RepositoryError> {
+    async fn delete_user_by_id(&self, id: &Uuid) -> Result<Option<Uuid>, RepositoryError> {
         let res: Result<_, LocalError> = async {
-            sqlx::query(sql(&QUERIES.user.delete_by_id))
+            let deleted_user_id = sqlx::query_as::<_, UserDeletionDbRow>(sql(&QUERIES.user.delete_by_id))
                 .bind(id)
-                .execute(&self.pool)
-                .await?;
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| row.id);
 
-            Ok(())
+            Ok(deleted_user_id)
         }.await;
 
         res.map_err(Into::into)
@@ -220,7 +221,7 @@ impl From<LocalError> for RepositoryError {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(FromRow)]
 pub struct UserDbRow {
     pub id: Uuid,
     pub username: String,
@@ -250,7 +251,7 @@ impl TryFrom<UserDbRow> for User {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(FromRow)]
 #[allow(dead_code)]
 pub struct UserAuthenticatorDbRow {
     pub id: Uuid,
@@ -259,4 +260,9 @@ pub struct UserAuthenticatorDbRow {
     pub provider_id: Option<String>,
     pub passwd: Option<String>,
     pub is_verified: Option<bool>,
+}
+
+#[derive(FromRow)]
+pub struct UserDeletionDbRow {
+    pub id: Uuid,
 }

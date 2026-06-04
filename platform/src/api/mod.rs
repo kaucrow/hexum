@@ -23,17 +23,21 @@ pub use askama::Template;
 
 pub use error::ApiError;
 pub use extractors::{AuthenticatedUser, RequireRole, role};
+pub use crate::features::user::AuthProvider;
 
 use axum::{
     body::Body,
     extract::{Request, FromRequest, FromRequestParts},
     http::request::Parts,
 };
+use axum_extra::extract::cookie::{Cookie, SameSite};
+use time::Duration;
 use serde::de::DeserializeOwned;
 use validator::ValidationErrors;
 use crate::{
     PlatformState,
     prelude::*,
+    config::ApiProtocol,
 };
 
 pub struct ValidatedJson<T>(pub T);
@@ -129,9 +133,43 @@ impl ValidationErrorsExt for ValidationErrors {
     }
 }
 
+// Helper function to build cookies
+pub fn build_cookie<'a>(name: &'a str, value: String, path: &'a str, protocol: &ApiProtocol) -> Cookie<'a> {
+    let mut cookie = Cookie::build((name, value))
+        .http_only(true)
+        .same_site(SameSite::Strict)
+        .path(path);
+
+    if matches!(protocol, ApiProtocol::Http) {
+        cookie = cookie.secure(false);
+    } else {
+        cookie = cookie.secure(true);
+    }
+
+    cookie.build()
+}
+
+// Helper function to build removal cookies
+pub fn build_removal_cookie<'a>(name: &'a str, path: &'a str, protocol: &ApiProtocol) -> Cookie<'a> {
+    let mut cookie = Cookie::build((name, ""))
+        .http_only(true)
+        .same_site(SameSite::Strict)
+        .path(path)
+        .max_age(Duration::ZERO);
+
+    if matches!(protocol, ApiProtocol::Http) {
+        cookie = cookie.secure(false);
+    } else {
+        cookie = cookie.secure(true);
+    }
+
+    cookie.build()
+}
+
 pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
     let mut r = Router::new()
         .route("/user", get(routes::user::get_user_data))
+        .route("/user", delete(routes::user::delete))
         .route("/user/register", post(routes::user::register))
         .route("/user/verify-account", post(routes::user::verify_account))
         .route("/user/change-email", post(routes::user::change_email))

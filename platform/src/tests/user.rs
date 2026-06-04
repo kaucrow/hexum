@@ -111,7 +111,7 @@ async fn test_register_user_email_failure_deletes_user() {
         .returning(|_| Ok(()));
     user_repo.expect_delete_user_by_id()
         .withf(|_id: &Uuid| true)
-        .returning(|_| Ok(()));
+        .returning(|_| Ok(Some(Uuid::new_v4())));
 
     let mut security = security::MockPort::new();
     security.expect_hash_password()
@@ -251,7 +251,7 @@ async fn test_register_user_code_in_use_max_retries_fails() {
     user_repo.expect_add_authenticator()
         .returning(|_| Ok(()));
     user_repo.expect_delete_user_by_id()
-        .returning(|_| Ok(()));
+        .returning(|_| Ok(Some(Uuid::new_v4())));
 
     let mut security = security::MockPort::new();
     security.expect_hash_password()

@@ -12,6 +12,7 @@ use super::dtos::*;
     request_body = ChangeEmailRequest,
     responses(
         (status = 200, description = "Verification email sent", body = ChangeEmailResponse),
+        (status = 400, description = "Not logged in via username/email"),
         (status = 401, description = "Unauthorized"),
         (status = 409, description = "The new email is already in use"),
         (status = 422, description = "Validation Error"),
@@ -26,6 +27,12 @@ pub async fn change_email(
     ValidatedJson(payload): ValidatedJson<ChangeEmailRequest>,
 ) -> Result<Json<ChangeEmailResponse>, ApiError> {
     let user_id = &auth.user_id;
+
+    if !(auth.provider != AuthProvider::Local) {
+        return Err(ApiError::BadRequest(
+            "You must be logged in via username/email to request an email change".to_string()
+        ));
+    }
 
     info!("Email change request for user ID '{}'", user_id);
 

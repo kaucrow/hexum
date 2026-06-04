@@ -159,7 +159,7 @@ impl UserAuthenticator {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Display, EnumString)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Display, EnumString)]
 #[serde(rename_all = "lowercase")]
 pub enum AuthProvider {
     Local,

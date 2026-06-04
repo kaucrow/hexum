@@ -4,10 +4,7 @@ use crate::{
     features::auth,
     api::*,
 };
-use super::{
-    build_cookie,
-    dtos::*,
-};
+use super::dtos::*;
 
 #[utoipa::path(
     post,

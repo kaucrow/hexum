@@ -14,7 +14,7 @@ pub trait Repository: Send + Sync + 'static {
 
     // ─── User modification ───
     async fn add_new_user(&self, user: User) -> Result<(), RepositoryError>;
-    async fn delete_user_by_id(&self, id: &Uuid) -> Result<(), RepositoryError>;
+    async fn delete_user_by_id(&self, id: &Uuid) -> Result<Option<Uuid>, RepositoryError>;
     async fn update_user_email(&self, user_id: &Uuid, new_email: &EmailAddress) -> Result<(), RepositoryError>;
 
     // ─── Authentication ───

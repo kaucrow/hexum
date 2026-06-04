@@ -17,13 +17,13 @@ pub struct LoginRequest {
 
 #[derive(Serialize, ToSchema)]
 pub struct LoginResponse {
-    #[schema(example = "Login successful")]
+    #[schema(example = "Login successful.")]
     pub message: String,
 }
 
 #[derive(Serialize, ToSchema)]
 pub struct LogoutResponse {
-    #[schema(example = "Logout successful")]
+    #[schema(example = "Logout successful.")]
     pub message: String,
 }
 

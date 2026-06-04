@@ -98,6 +98,12 @@ impl UseCase for Service {
         Ok(())
     }
 
+    async fn delete_user(&self, user_id: &Uuid) -> Result<Option<Uuid>, UseCaseError> {
+        let deleted_user_id = self.user_repo.delete_user_by_id(user_id).await?;
+
+        Ok(deleted_user_id)
+    }
+
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError> {
         let user_id = user.id.clone();
         let user_email = user.email.clone();

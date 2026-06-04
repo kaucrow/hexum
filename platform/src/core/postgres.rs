@@ -1,4 +1,7 @@
-pub(crate) use sqlx::postgres::PgPool;
+pub(crate) use sqlx::{
+    FromRow,
+    postgres::PgPool,
+};
 
 use std::sync::LazyLock;
 

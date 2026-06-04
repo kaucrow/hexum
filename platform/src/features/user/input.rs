@@ -12,6 +12,7 @@ pub trait UseCase: Send + Sync + 'static {
     // ─── User modification ───
     async fn change_user_email(&self, new_email: &str) -> Result<(), UseCaseError>;
     async fn verify_user_email_change(&self, user_id: &Uuid, code: &str) -> Result<(), UseCaseError>;
+    async fn delete_user(&self, user_id: &Uuid) -> Result<Option<Uuid>, UseCaseError>;
 
     // ─── Registration ───
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError>;

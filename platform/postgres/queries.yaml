@@ -24,6 +24,7 @@ user:
   delete_by_id: |
     DELETE FROM platform.user
     WHERE id = $1
+    RETURNING id
 
 user_authenticator:
   get_by_user_id_and_provider: |

@@ -44,7 +44,7 @@ impl From<LocalError> for PortError {
     }
 }
 
-#[derive(sqlx::FromRow)]
+#[derive(FromRow)]
 #[allow(dead_code)]
 pub struct PingDbRow {
     pub value: i32,
