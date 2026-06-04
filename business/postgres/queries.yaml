@@ -237,31 +237,35 @@ group:
     SELECT
       g.id AS group_id,
       g.group_name,
-      recipes_json.recipes
+      COALESCE(recipes_json.recipes, '[]'::json) AS recipes
     FROM recipe.group g
     LEFT JOIN LATERAL (
+      -- Aggregates the pre-sorted, pre-limited rows into a JSON array --
       SELECT json_agg(json_build_object(
-        'id', r.id,
-        'recipe_name', r.recipe_name,
-        'thumbnail_url', r.thumbnail_url,
-        'origin', CASE WHEN r.external_id IS NULL THEN 'local' ELSE 'external' END,
+        'id', limited_recipes.id,
+        'recipe_name', limited_recipes.recipe_name,
+        'thumbnail_url', limited_recipes.thumbnail_url,
+        'origin', CASE WHEN limited_recipes.external_id IS NULL THEN 'local' ELSE 'external' END,
         'tags', COALESCE(tags_json.tags, ARRAY[]::varchar[])
       )) AS recipes
-      FROM recipe.group_recipe gr
-      JOIN recipe.recipe r ON r.id = gr.recipe_id
+      FROM (
+        -- Fetches, sorts, and limits the raw rows --
+        SELECT r.id, r.recipe_name, r.thumbnail_url, r.external_id, r.created_at
+        FROM recipe.group_recipe gr
+        JOIN recipe.recipe r ON r.id = gr.recipe_id
+        WHERE gr.group_id = g.id
+        ORDER BY r.created_at DESC
+        LIMIT $3
+      ) limited_recipes
+      -- Gathers the tags ONLY for the winning limited recipes --
       LEFT JOIN LATERAL (
         SELECT array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL) AS tags
         FROM recipe.recipe_tag rt
-        WHERE rt.recipe_id = r.id
+        WHERE rt.recipe_id = limited_recipes.id
       ) tags_json ON true
-      WHERE gr.group_id = g.id
-      -- LIMIT RECIPES PER GROUP --
-      ORDER BY r.created_at DESC
-      LIMIT $3
     ) recipes_json ON true
     WHERE g.created_by = $1
     ORDER BY g.id ASC
-    -- LIMIT TOTAL GROUPS (For pagination: Page 1 = OFFSET 0, Page 2 = OFFSET 5) --
     LIMIT $2
 
   get_recipes_by_group_id: |
