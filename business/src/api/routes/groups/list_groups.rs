@@ -24,7 +24,7 @@ pub async fn list_groups(
     auth: AuthenticatedUser,
     State(state): State<BusinessState>,
 ) -> Result<Json<UserGroupsListResponse>, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     info!("Getting all group names/IDs for user '{}'", user_id);
 

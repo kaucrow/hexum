@@ -209,23 +209,25 @@ async fn test_register_user_code_in_use_retry_succeeds() {
         .times(1)
         .in_sequence(&mut seq)
         .returning(|| "123456".to_string());
-    security.expect_generate_verification_token()
-        .times(1)
-        .in_sequence(&mut seq)
-        .returning(|| "789012".to_string());
-
-    let mut email = email::MockPort::new();
-    email.expect_send_verification_email()
-        .returning(|_, _, _| Ok(()));
 
     let mut verification = verification::MockPort::new();
     verification.expect_store_verification_token()
         .times(1)
         .in_sequence(&mut seq)
         .returning(|_, _, _| Err(verification::PortError::CodeInUse));
+
+    security.expect_generate_verification_token()
+        .times(1)
+        .in_sequence(&mut seq)
+        .returning(|| "789012".to_string());
+
     verification.expect_store_verification_token()
         .times(1)
         .in_sequence(&mut seq)
+        .returning(|_, _, _| Ok(()));
+
+    let mut email = email::MockPort::new();
+    email.expect_send_verification_email()
         .returning(|_, _, _| Ok(()));
 
     let service = user::Service::new(

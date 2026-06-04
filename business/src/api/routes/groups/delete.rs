@@ -27,7 +27,7 @@ pub async fn delete(
     State(group_service): State<Arc<dyn group::UseCase>>,
     ValidatedPath(params): ValidatedPath<DeleteGroupPathParams>,
 ) -> Result<Json<DeleteGroupResponse>, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     info!(
         "Deleting group with ID '{}' from user '{}'",

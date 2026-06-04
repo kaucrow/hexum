@@ -25,6 +25,36 @@ impl Service {
     ) -> Self {
         Self { user_repo, verification, security, email }
     }
+
+    async fn generate_verification_code(
+        &self,
+        payload: &str,
+        ttl_seconds: u64,
+    ) -> Result<String, UseCaseError> {
+        let mut attempts = 0;
+        let max_attempts = 5;
+
+        loop {
+            attempts += 1;
+            let code = self.security.generate_verification_token();
+
+            match self.verification.store_verification_token(payload, &code, ttl_seconds).await {
+                Ok(()) => break Ok(code),
+                Err(verification::PortError::CodeInUse) if attempts < max_attempts => {
+                    // Code is already in use. Retry with a new code
+                    continue;
+                }
+                Err(verification::PortError::CodeInUse) => {
+                    break Err(UseCaseError::Internal(
+                        "Failed to generate a unique verification code after multiple attempts".into(),
+                    ));
+                }
+                Err(e) => {
+                    break Err(UseCaseError::Internal(e.to_string()));
+                }
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -33,6 +63,20 @@ impl UseCase for Service {
         let user = self.user_repo.get_user_by_id(id).await?;
 
         Ok(user)
+    }
+
+    async fn change_user_email(&self, new_email: &str) -> Result<(), UseCaseError> {
+        let user_new_email = EmailAddress::new(new_email.to_string())?;
+
+        let verification_code = self.generate_verification_code(new_email, 1800).await?;
+
+        self.email.send_verification_email(
+            &user_new_email,
+            &verification_code,
+            email::VerificationContext::EmailChange,
+        ).await?;
+
+        Ok(())
     }
 
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError> {
@@ -46,30 +90,12 @@ impl UseCase for Service {
         self.user_repo.add_new_user(user).await?;
         self.user_repo.add_authenticator(auth).await?;
 
-        // Retry with a fresh code if the generated one is already in use (max 5 attempts)
-        let verification_code = {
-            let mut attempts = 0;
-            let max_attempts = 5;
-            loop {
-                attempts += 1;
-                let code = self.security.generate_verification_token();
-                match self.verification.store_verification_token(&user_id, &code, 1800).await {
-                    Ok(()) => break code,
-                    Err(verification::PortError::CodeInUse) if attempts < max_attempts => {
-                        // Code is already in use. Retry with a new code
-                        continue;
-                    }
-                    Err(verification::PortError::CodeInUse) => {
-                        self.user_repo.delete_user_by_id(&user_id).await?;
-                        return Err(UseCaseError::Internal(
-                            "Failed to generate a unique verification code after multiple attempts".into(),
-                        ));
-                    }
-                    Err(e) => {
-                        self.user_repo.delete_user_by_id(&user_id).await?;
-                        return Err(UseCaseError::Internal(e.to_string()));
-                    }
-                }
+        let verification_code = match self.generate_verification_code(&user_id.to_string(), 1800).await {
+            Ok(code) => code,
+            Err(e) => {
+                // Rollbacks the user creation if the verification code generation fails
+                let _ = self.user_repo.delete_user_by_id(&user_id).await;
+                return Err(e);
             }
         };
 

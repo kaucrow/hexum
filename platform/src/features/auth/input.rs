@@ -1,16 +1,29 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
-use crate::features::user;
+use crate::{
+    prelude::*,
+    features::session::SessionPayload,
+};
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
     /// Logs in a user via username/email.
     async fn login_user(&self, identity: &str, passwd: &str) -> Result<AuthTokens, UseCaseError>;
+
+    /// Logs in a user via Google's OAuth provider.
     async fn login_user_via_google(&self, code: &str) -> Result<AuthTokens, UseCaseError>;
+
+    /// Logs in a user via Github's OAuth provider.
     async fn login_user_via_github(&self, code: &str) -> Result<AuthTokens, UseCaseError>;
-    async fn verify_user(&self, access_token: &str) -> Result<user::User, UseCaseError>;
+
+    /// Verifies a user's session using their access token.
+    async fn verify_session(&self, access_token: &str) -> Result<SessionPayload, UseCaseError>;
+
+    /// Gets a new pair of access + refresh tokens using the active refresh token.
     async fn refresh_session(&self, refresh_token: &str) -> Result<AuthTokens, UseCaseError>;
+
+    /// Logs out a user. Destroys the user session.
     async fn logout_user(&self, refresh_token: &str) -> Result<(), UseCaseError>;
 }
 

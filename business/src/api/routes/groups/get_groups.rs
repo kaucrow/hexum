@@ -27,7 +27,7 @@ pub async fn get_groups(
     State(state): State<BusinessState>,
     ValidatedQuery(queries): ValidatedQuery<UserGroupsQueryParams>,
 ) -> Result<Json<UserGroupsResponse>, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     info!(
         "Getting {} groups with up to {} recipes each for user '{}'",

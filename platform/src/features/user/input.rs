@@ -6,7 +6,13 @@ use super::{User, UserError, ConflictError};
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
+    // ─── Getters ───
     async fn get_user_by_id(&self, id: &Uuid) -> Result<Option<User>, UseCaseError>;
+
+    // ─── User modification ───
+    async fn change_user_email(&self, new_email: &str) -> Result<(), UseCaseError>;
+
+    // ─── Registration ───
     async fn register_user(&self, user: User, passwd: &str) -> Result<(), UseCaseError>;
     async fn verify_user_account(&self, code: &str) -> Result<(), UseCaseError>;
 }

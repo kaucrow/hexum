@@ -8,7 +8,7 @@ use crate::features::user;
 #[derive(Debug, Clone, Copy)]
 pub enum VerificationContext {
     AccountRegistration,
-    UsernameChange,
+    EmailChange,
     PasswordReset,
 }
 
@@ -16,7 +16,7 @@ impl VerificationContext {
     pub fn subject(&self) -> &'static str {
         match self {
             Self::AccountRegistration => "Verify your NativEat account",
-            Self::UsernameChange => "Confirm your username change",
+            Self::EmailChange => "Confirm your email change",
             Self::PasswordReset => "Reset your password",
         }
     }
@@ -24,7 +24,7 @@ impl VerificationContext {
     pub fn action_name(&self) -> &'static str {
         match self {
             Self::AccountRegistration => "Verify Account",
-            Self::UsernameChange => "Change Username",
+            Self::EmailChange => "Change Email",
             Self::PasswordReset => "Reset Password",
         }
     }
@@ -32,7 +32,7 @@ impl VerificationContext {
     pub fn description(&self) -> &'static str {
         match self {
             Self::AccountRegistration => "to activate your account",
-            Self::UsernameChange => "to confirm your new username",
+            Self::EmailChange => "to confirm your new email",
             Self::PasswordReset => "to reset your password",
         }
     }

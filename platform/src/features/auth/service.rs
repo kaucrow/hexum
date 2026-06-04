@@ -5,7 +5,11 @@ use rand::distr::{Alphanumeric, SampleString};
 use uuid::Uuid;
 
 use crate::{
-    features::{user, session, security, oauth},
+    features::{
+        user::{self, User, AuthProvider},
+        session::{self, SessionPayload},
+        security, oauth
+    },
 };
 use super::*;
 
@@ -31,7 +35,7 @@ impl Service {
         &self,
         email_str: String,
         external_id: String,
-        provider: user::AuthProvider,
+        provider: AuthProvider,
     ) -> Result<AuthTokens, UseCaseError> {
         let email = user::EmailAddress::new(email_str)
             .map_err(|e| UseCaseError::Internal(e.to_string()))?;
@@ -42,22 +46,28 @@ impl Service {
                     return Err(UseCaseError::UserInactive);
                 }
                 // Link the provider if this is the user's first time using this OAuth provider for login
-                self.ensure_provider_linked(&existing_user.id, provider, external_id).await?;
+                self.ensure_provider_linked(&existing_user.id, provider.clone(), external_id).await?;
                 existing_user
             }
             None => {
                 // Completely new user
-                self.register_oauth_user(email, provider, external_id).await?
+                self.register_oauth_user(email, provider.clone(), external_id).await?
             }
         };
 
-        self.issue_session(&user.id).await
+        self.issue_session(
+            SessionPayload {
+                user_id: user.id,
+                roles: user.roles,
+                provider,
+            }
+        ).await
     }
 
     async fn ensure_provider_linked(
         &self,
         user_id: &Uuid,
-        provider: user::AuthProvider,
+        provider: AuthProvider,
         provider_id: String,
     ) -> Result<(), UseCaseError> {
         let existing_auth = self.user_repo.get_authenticator(user_id, provider.clone()).await?;
@@ -73,13 +83,13 @@ impl Service {
     async fn register_oauth_user(
         &self,
         email: user::EmailAddress,
-        provider: user::AuthProvider,
+        provider: AuthProvider,
         provider_id: String,
-    ) -> Result<user::User, UseCaseError> {
+    ) -> Result<User, UseCaseError> {
         let suffix = Alphanumeric.sample_string(&mut rand::rng(), 6);
         let temp_username = format!("user{}", suffix);
 
-        let user = user::User::new(&temp_username, &email.as_str()).map_err(|e| UseCaseError::Internal(e.to_string()))?;
+        let user = User::new(&temp_username, &email.as_str()).map_err(|e| UseCaseError::Internal(e.to_string()))?;
         let auth = user::UserAuthenticator::new_oauth(user.id, provider, provider_id);
 
         self.user_repo.add_new_user(user.clone()).await?;
@@ -88,12 +98,12 @@ impl Service {
         Ok(user)
     }
 
-    async fn issue_session(&self, user_id: &Uuid) -> Result<AuthTokens, UseCaseError> {
-        let access_token = self.security.generate_access_token(user_id)?;
+    async fn issue_session(&self, payload: SessionPayload) -> Result<AuthTokens, UseCaseError> {
+        let access_token = self.security.generate_access_token(payload.clone())?;
         let refresh_token = self.security.generate_refresh_token();
 
         self.session
-            .store_session(&refresh_token, user_id, 7)
+            .store_session(&refresh_token, payload, 7)
             .await?;
 
         Ok(AuthTokens { access_token, refresh_token })
@@ -120,7 +130,7 @@ impl UseCase for Service {
         }
 
         let local_authenticator = self.user_repo
-            .get_authenticator(&user.id, user::AuthProvider::Local)
+            .get_authenticator(&user.id, AuthProvider::Local)
             .await?
             .ok_or(UseCaseError::UserNotFound)?;
 
@@ -137,7 +147,13 @@ impl UseCase for Service {
             return Err(UseCaseError::InvalidPassword);
         }
 
-        let auth_tokens = self.issue_session(&user.id).await?;
+        let auth_tokens = self.issue_session(
+            SessionPayload {
+                user_id: user.id,
+                roles: user.roles,
+                provider: AuthProvider::Local,
+            }
+        ).await?;
 
         Ok(auth_tokens)
     }
@@ -151,7 +167,7 @@ impl UseCase for Service {
         self.resolve_and_login(
             google_user.email,
             google_user.external_id,
-            user::AuthProvider::Google,
+            AuthProvider::Google,
         )
         .await
     }
@@ -165,35 +181,25 @@ impl UseCase for Service {
         self.resolve_and_login(
             github_user.email,
             github_user.external_id.to_string(),
-            user::AuthProvider::GitHub,
+            AuthProvider::GitHub,
         )
         .await
     }
 
-    async fn verify_user(&self, access_token: &str) -> Result<user::User, UseCaseError> {
-        let user_id = self.security.verify_access_token(access_token)?;
-
-        match self.user_repo.get_user_by_id(&user_id).await? {
-            Some(user) => {
-                if !user.is_active {
-                    return Err(UseCaseError::UserInactive)
-                }
-
-                Ok(user)
-            },
-            None => Err(UseCaseError::UserNotFound)
-        }
+    async fn verify_session(&self, access_token: &str) -> Result<SessionPayload, UseCaseError> {
+        let payload = self.security.verify_access_token(access_token)?;
+        Ok(payload)
     }
 
     async fn refresh_session(&self, refresh_token: &str) -> Result<AuthTokens, UseCaseError> {
         // Consume the session
-        let user_id = self.session
+        let session = self.session
             .consume_session(refresh_token)
             .await?
             .ok_or(UseCaseError::InvalidRefreshToken)?;
 
         // Fetch user
-        let user = self.user_repo.get_user_by_id(&user_id)
+        let user = self.user_repo.get_user_by_id(&session.user_id)
             .await?
             .ok_or(UseCaseError::UserNotFound)?;
 
@@ -201,7 +207,7 @@ impl UseCase for Service {
             return Err(UseCaseError::UserInactive)
         }
 
-        let auth_tokens = self.issue_session(&user_id).await?;
+        let auth_tokens = self.issue_session(session).await?;
 
         Ok(auth_tokens)
     }

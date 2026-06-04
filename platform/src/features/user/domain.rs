@@ -1,6 +1,7 @@
 use strum::{Display, EnumString};
 use thiserror::Error;
-use uuid::Uuid;
+
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -46,7 +47,7 @@ impl User {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Display, EnumString)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Display, EnumString)]
 pub enum Role {
     Admin,
     Manager,
@@ -158,7 +159,8 @@ impl UserAuthenticator {
     }
 }
 
-#[derive(Debug, Clone, Display, EnumString)]
+#[derive(Serialize, Deserialize, Debug, Clone, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
 pub enum AuthProvider {
     Local,
     Google,

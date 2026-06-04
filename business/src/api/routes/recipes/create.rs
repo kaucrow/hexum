@@ -25,7 +25,7 @@ pub async fn create(
     State(state): State<BusinessState>,
     multipart: Multipart,
 ) -> Result<impl IntoResponse, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     // ─── Parse & validate multipart fields ───
     let form = ParsedRecipeForm::from_multipart(multipart).await?;

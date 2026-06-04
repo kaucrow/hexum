@@ -26,7 +26,7 @@ pub async fn create(
     State(state): State<BusinessState>,
     ValidatedJson(body): ValidatedJson<CreateGroupRequest>,
 ) -> Result<(StatusCode, Json<CreateGroupResponse>), ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     info!(
         "Creating group '{}' for user '{}'",

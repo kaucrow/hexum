@@ -28,7 +28,7 @@ pub async fn remove_recipe(
     State(state): State<BusinessState>,
     ValidatedPath(params): ValidatedPath<GroupRecipePathParams>,
 ) -> Result<StatusCode, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     let group_id = Uuid::from_str(&params.group_id)
         .map_err(|_| {

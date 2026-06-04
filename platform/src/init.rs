@@ -17,7 +17,7 @@ pub async fn init(
     telemetry::init(subscriber);
 
     let pg_user_adapter = Arc::new(user::PostgresAdapter::new(pool));
-    let redis_session_adapter = Arc::new(session::RedisAdapter::new(&config).await?);
+    let redis_session_adapter = Arc::new(session::RedisAdapter::new(redis_conn.clone()).await?);
     let paseto_security_adapter = Arc::new(security::PasetoAdapter::new()?);
     let oauth_adapter = Arc::new(oauth::OAuthAdapter::new(&config));
 

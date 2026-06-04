@@ -19,37 +19,6 @@ impl RedisAdapter {
         Ok(Self { conn })
     }
 
-    async fn do_store_verification_token(&self, user_id: &Uuid, token: &str, expires_in_secs: u64) -> Result<(), LocalError> {
-        let key = self.format_key(token);
-
-        // Use SET NX to ensure the code is unique — only set if the key doesn't already exist
-        let set: Option<String> = self.conn.clone().set_nx(key.clone(), user_id.to_string()).await?;
-
-        match set {
-            Some(_) => {
-                // Key was set successfully, now set the expiry
-                let _: () = self.conn.clone().expire(key, expires_in_secs as i64).await?;
-                Ok(())
-            }
-            None => {
-                // Key already exists — code collision
-                Err(LocalError::CodeInUse)
-            }
-        }
-    }
-
-    async fn do_consume_verification_token(&self, token: &str) -> Result<Uuid, LocalError> {
-        let key = self.format_key(token);
-
-        let user_id: String = self.conn.clone().get_del::<&str, Option<String>>(&key)
-            .await?
-            .ok_or(LocalError::VerificationTokenInvalid)?;
-
-        let user_id_uuid = Uuid::try_parse(&user_id)?;
-
-        Ok(user_id_uuid)
-    }
-
     fn format_key(&self, token: &str) -> String {
         format!("verify:{token}")
     }
@@ -57,12 +26,43 @@ impl RedisAdapter {
 
 #[async_trait]
 impl Port for RedisAdapter {
-    async fn store_verification_token(&self, user_id: &Uuid, token: &str, expires_in_secs: u64) -> Result<(), PortError> {
-        Ok(self.do_store_verification_token(user_id, token, expires_in_secs).await?)
+    async fn store_verification_token(&self, payload: &str, token: &str, expires_in_secs: u64) -> Result<(), PortError> {
+        let res: Result<_, LocalError> = async {
+            let key = self.format_key(token);
+
+            // Only sets the code if the key doesn't already exist
+            let set: Option<String> = self.conn.clone().set_nx(&key, payload).await?;
+
+            match set {
+                Some(_) => {
+                    // Key was set successfully, now set the expiry
+                    let _: () = self.conn.clone().expire(key, expires_in_secs as i64).await?;
+                    Ok(())
+                }
+                None => {
+                    // Key already exists — code collision
+                    Err(LocalError::CodeInUse)
+                }
+            }
+        }.await;
+
+        res.map_err(Into::into)
     }
 
     async fn consume_verification_token(&self, token: &str) -> Result<Uuid, PortError> {
-        Ok(self.do_consume_verification_token(token).await?)
+        let res: Result<_, LocalError> = async {
+            let key = self.format_key(token);
+
+            let user_id: String = self.conn.clone().get_del::<&str, Option<String>>(&key)
+                .await?
+                .ok_or(LocalError::VerificationTokenInvalid)?;
+
+            let user_id_uuid = Uuid::try_parse(&user_id)?;
+
+            Ok(user_id_uuid)
+        }.await;
+
+        res.map_err(Into::into)
     }
 }
 

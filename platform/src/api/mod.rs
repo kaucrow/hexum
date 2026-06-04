@@ -9,7 +9,7 @@ pub use docs::Docs;
 pub use axum::{
     Json, Router,
     routing::{get, post, delete, put},
-    extract::{State, Query, Path},
+    extract::{State, Query, Path, FromRef},
     response::{Html, Response, IntoResponse},
     http::StatusCode,
     body::Bytes,
@@ -20,9 +20,9 @@ pub use utoipa::{ToSchema, IntoParams};
 pub use axum_extra::extract::{CookieJar, Multipart};
 pub use validator::Validate;
 pub use askama::Template;
-pub use extractors::AuthenticatedUser;
 
 pub use error::ApiError;
+pub use extractors::{AuthenticatedUser, RequireRole, role};
 
 use axum::{
     body::Body,

@@ -287,7 +287,7 @@ pub async fn spawn_test_app() -> TestApp {
         pool.clone(),
     ));
     let redis_session_adapter = Arc::new(
-        platform::features::session::RedisAdapter::new(&config)
+        platform::features::session::RedisAdapter::new(redis_conn.clone())
             .await
             .expect("Failed to create session RedisAdapter"),
     );

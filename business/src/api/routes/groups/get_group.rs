@@ -29,7 +29,7 @@ pub async fn get_group(
     ValidatedPath(params): ValidatedPath<GroupIdPathParams>,
     ValidatedQuery(queries): ValidatedQuery<GetGroupQueryParams>,
 ) -> Result<Json<RecipesGroupItem>, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     let group_id = Uuid::from_str(&params.group_id)
         .map_err(|_| {

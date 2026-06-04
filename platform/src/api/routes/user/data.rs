@@ -22,7 +22,7 @@ pub async fn get_user_data(
     auth: AuthenticatedUser,
     State(user_service): State<Arc<dyn user::UseCase>>,
 ) -> Result<Json<UserDataResponse>, ApiError> {
-    let user_id = auth.0.id;
+    let user_id = auth.user_id;
 
     info!("Getting profile data for user ID '{}'", &user_id);
 

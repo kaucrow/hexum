@@ -1,15 +1,29 @@
+use std::marker::PhantomData;
+use std::ops::Deref;
+
 use crate::{
     prelude::*,
     api::*,
     features::{user, auth},
 };
 
-#[allow(dead_code)]
-pub struct AuthenticatedUser(pub user::User);
+/// Generic extractor that requires an authenticated user and works with
+/// any state type `T` that implements `FromRef<Arc<dyn auth::UseCase>>`.
+/// Both `PlatformState` and `BusinessState` satisfy this bound via their
+/// `#[derive(FromRef)]` macros.
+pub struct AuthenticatedUser {
+    pub user_id: Uuid,
+    pub roles: Vec<user::Role>,
+    pub provider: user::AuthProvider,
+}
 
-/// Generic extractor that works with any state type `T` that implements
-/// `FromRef<Arc<dyn auth::UseCase>>`. Both `PlatformState` and `BusinessState`
-/// satisfy this bound via their `#[derive(FromRef)]` macros.
+impl AuthenticatedUser {
+    /// Check if the user has any of the given roles.
+    pub fn has_any_role(&self, allowed_roles: &[user::Role]) -> bool {
+        self.roles.iter().any(|user_role| allowed_roles.contains(user_role))
+    }
+}
+
 impl<T> FromRequestParts<T> for AuthenticatedUser
 where
     T: Send + Sync,
@@ -34,16 +48,78 @@ where
             .map(|cookie| cookie.value())
             .ok_or(StatusCode::UNAUTHORIZED)?;
 
-        let user = auth_service
-            .verify_user(access_token)
+        let session = auth_service
+            .verify_session(access_token)
             .await
             .map_err(|e| {
                 warn!("Session verification failed: {e}");
                 StatusCode::UNAUTHORIZED
             })?;
 
-        info!("Session verification successful for user `{}`", user.username.as_str());
+        let user_id = session.user_id;
+        let roles = session.roles;
+        let provider = session.provider;
 
-        Ok(Self(user))
+        info!(
+            "Session verification successful for user with ID '{}', via '{}'",
+            user_id,
+            provider,
+        );
+
+        Ok(Self { user_id, roles, provider })
+    }
+}
+
+pub mod role {
+    use crate::features::user;
+
+    /// The trait that binds a type to a specific `user::Role` variant.
+    pub trait RoleMarker: Send + Sync + 'static {
+        const ROLE: user::Role;
+    }
+
+    pub struct Admin;
+    impl RoleMarker for Admin { const ROLE: user::Role = user::Role::Admin; }
+
+    pub struct Manager;
+    impl RoleMarker for Manager { const ROLE: user::Role = user::Role::Manager; }
+
+    pub struct BasicUser;
+    impl RoleMarker for BasicUser { const ROLE: user::Role = user::Role::BasicUser; }
+}
+
+/// Generic extractor that requires a specific role defined by a `RoleMarker`.
+pub struct RequireRole<M: role::RoleMarker>(
+    pub AuthenticatedUser,
+    pub PhantomData<M>,
+);
+
+impl<T, M> FromRequestParts<T> for RequireRole<M>
+where
+    T: Send + Sync,
+    Arc<dyn auth::UseCase>: FromRef<T>,
+    M: role::RoleMarker,
+{
+    type Rejection = StatusCode;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &T,
+    ) -> Result<Self, Self::Rejection> {
+        let auth = AuthenticatedUser::from_request_parts(parts, state).await?;
+
+        if !auth.roles.contains(&M::ROLE) {
+            return Err(StatusCode::FORBIDDEN);
+        }
+
+        Ok(Self(auth, PhantomData))
+    }
+}
+
+impl<M: role::RoleMarker> Deref for RequireRole<M> {
+    type Target = AuthenticatedUser;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
