@@ -86,6 +86,8 @@ mod internal {
         pub batch_insert_tags: String,
         pub batch_insert_ingredients: String,
 
+        pub delete: String,
+
         pub get_latest_history_by_user_id: String,
         pub record_history: String,
     }

@@ -1,5 +1,3 @@
-use platform::api::extractors::AuthenticatedUser;
-
 use crate::{
     prelude::*,
     api::*,

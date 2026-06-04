@@ -27,6 +27,8 @@ pub async fn create(
 ) -> Result<impl IntoResponse, ApiError> {
     let user_id = auth.user_id;
 
+    info!("Recipe creation requested for user '{}'", user_id);
+
     // ─── Parse & validate multipart fields ───
     let form = ParsedRecipeForm::from_multipart(multipart).await?;
 

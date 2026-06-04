@@ -22,7 +22,7 @@ impl PostgresAdapter {
         tags: &[String],
     ) -> Result<Vec<Uuid>, LocalError> {
         let recipe_search_ids =
-            sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(&QUERIES.recipe.get_search_ids_by_tags))
+            sqlx::query_as::<_, RecipeIdDbRow>(sql(&QUERIES.recipe.get_search_ids_by_tags))
                 .bind(tags)
                 .fetch_all(&self.pool)
                 .await?
@@ -44,7 +44,7 @@ impl PostgresAdapter {
             &QUERIES.recipe.get_search_ids_by_query_and_tags
         };
 
-        let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
+        let recipe_search_ids = sqlx::query_as::<_, RecipeIdDbRow>(sql(sql_query))
             .bind(query)
             .bind(tags)
             .fetch_all(&self.pool)
@@ -74,7 +74,7 @@ impl LocalRepository for PostgresAdapter {
                         &QUERIES.recipe.get_search_ids_by_query
                     };
 
-                    let recipe_search_ids = sqlx::query_as::<_, RecipeSearchIdDbRow>(sql(sql_query))
+                    let recipe_search_ids = sqlx::query_as::<_, RecipeIdDbRow>(sql(sql_query))
                         .bind(q)
                         .fetch_all(&self.pool)
                         .await?
@@ -325,7 +325,23 @@ impl LocalRepository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
-    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError> {
+    async fn delete_recipe(&self, recipe_id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, LocalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let deleted_recipe_id = sqlx::query_as::<_, RecipeIdDbRow>(sql(&QUERIES.recipe.delete))
+                .bind(recipe_id)
+                .bind(user_id)
+                .fetch_optional(&self.pool)
+                .await?
+                .map(|row| row.id);
+
+            Ok(deleted_recipe_id)
+        }.await;
+
+        res.map_err(Into::into)
+
+    }
+
+    async fn record_recipe_history(&self, user_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalRepositoryError> {
         let res: Result<_, LocalError> = async {
             sqlx::query(sql(&QUERIES.recipe.record_history))
                 .bind(user_id)
@@ -394,7 +410,7 @@ impl TryFrom<RecipeDbRow> for Recipe {
 }
 
 #[derive(FromRow)]
-struct RecipeSearchIdDbRow {
+struct RecipeIdDbRow {
     id: Uuid,
 }
 

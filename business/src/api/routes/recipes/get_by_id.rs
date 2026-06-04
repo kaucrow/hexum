@@ -27,16 +27,18 @@ pub async fn get_by_id(
     ValidatedPath(params): ValidatedPath<RecipePathParams>,
     OptionalUser(user): OptionalUser,
 ) -> Result<Json<RecipeResponse>, ApiError> {
-    info!("Getting recipe with ID '{}'", params.id);
+    let recipe_id_str = params.id;
 
-    let id = Uuid::from_str(&params.id)
+    info!("Getting recipe with ID '{}'", recipe_id_str);
+
+    let recipe_id = Uuid::from_str(&recipe_id_str)
         .map_err(|_| {
             let mut errors = HashMap::new();
-            errors.insert("id".to_string(), vec![format!("Invalid ID format '{}'", params.id)]);
+            errors.insert("id".to_string(), vec![format!("Invalid ID format '{}'", &recipe_id_str)]);
             ApiError::Validation(errors)
         })?;
 
-    let recipe_result = recipe_service.get_recipe_by_id(id).await?;
+    let recipe_result = recipe_service.get_recipe_by_id(&recipe_id).await?;
 
     if let Some(recipe) = recipe_result {
         // If the user is authenticated, record this recipe in their history
@@ -44,7 +46,7 @@ pub async fn get_by_id(
             let svc = recipe_service.clone();
             let recipe_id = recipe.id;
             tokio::spawn(async move {
-                if let Err(e) = svc.record_recipe_history(user.user_id, recipe_id).await {
+                if let Err(e) = svc.record_recipe_history(&user.user_id, &recipe_id).await {
                     error!("Failed to record recipe history: {:?}", e);
                 }
             });
@@ -52,7 +54,7 @@ pub async fn get_by_id(
 
         Ok(Json(RecipeResponse::from(recipe)))
     } else {
-        Err(ApiError::NotFound(format!("Failed to find recipe with ID '{}'", params.id)))
+        Err(ApiError::NotFound(format!("Failed to find recipe with ID '{}'", &recipe_id_str)))
     }
 }
 

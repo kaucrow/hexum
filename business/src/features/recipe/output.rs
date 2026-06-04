@@ -33,7 +33,9 @@ pub trait LocalRepository: Send + Sync + 'static {
     // ─── Commands ───
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError>;
 
-    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError>;
+    async fn delete_recipe(&self, recipe_id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, LocalRepositoryError>;
+
+    async fn record_recipe_history(&self, user_id: &Uuid, recipe_id: &Uuid) -> Result<(), LocalRepositoryError>;
 }
 
 pub struct CreateRecipeData {

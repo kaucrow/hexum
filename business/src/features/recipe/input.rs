@@ -17,7 +17,7 @@ pub trait UseCase: Send + Sync + 'static {
         search_id: Option<Uuid>,
     ) -> Result<SearchResultsPage, UseCaseError>;
 
-    async fn get_recipe_by_id(&self, id: Uuid) -> Result<Option<Recipe>, UseCaseError>;
+    async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, UseCaseError>;
 
     async fn get_popular_recipes(&self, limit: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
 
@@ -32,7 +32,9 @@ pub trait UseCase: Send + Sync + 'static {
     // ─── Commands ───
     async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError>;
 
-    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), UseCaseError>;
+    async fn delete_recipe(&self, id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, UseCaseError>;
+
+    async fn record_recipe_history(&self, user_id: &Uuid, recipe_id: &Uuid) -> Result<(), UseCaseError>;
 }
 
 pub struct SearchResultsPage {

@@ -12,6 +12,7 @@ use super::routes;
         routes::recipes::sync::sync,
         routes::recipes::search::search,
         routes::recipes::get_by_id::get_by_id,
+        routes::recipes::delete::delete,
         routes::recipes::explore::popular,
         routes::recipes::explore::latest,
         routes::recipes::explore::top_tags,

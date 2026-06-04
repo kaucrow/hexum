@@ -16,6 +16,7 @@ pub fn router(state: BusinessState, upload_dir: String) -> Router {
         .route("/recipes/search", get(routes::recipes::search))
         .route("/recipes/history", get(routes::recipes::history))
         .route("/recipes/{id}", get(routes::recipes::get_by_id))
+        .route("/recipes/{id}", delete(routes::recipes::delete))
         .route("/recipes/popular", get(routes::recipes::popular))
         .route("/recipes/latest", get(routes::recipes::latest))
         .route("/recipes/top-tags", get(routes::recipes::top_tags))

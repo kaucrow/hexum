@@ -26,8 +26,8 @@ CREATE TABLE IF NOT EXISTS recipe.recipe_ingredient (
 );
 
 CREATE TABLE IF NOT EXISTS recipe.history (
-    user_id UUID NOT NULL REFERENCES platform.user(id),
-    recipe_id UUID NOT NULL REFERENCES recipe.recipe(id),
+    user_id UUID NOT NULL REFERENCES platform.user(id) ON DELETE CASCADE,
+    recipe_id UUID NOT NULL REFERENCES recipe.recipe(id) ON DELETE CASCADE,
     viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (user_id, recipe_id)
 );

@@ -5,6 +5,7 @@ pub mod get_by_id;
 pub mod explore;
 pub mod create;
 pub mod history;
+pub mod delete;
 
 pub use sync::sync;
 pub use search::search;
@@ -12,6 +13,7 @@ pub use get_by_id::get_by_id;
 pub use explore::{popular, latest, top_tags};
 pub use create::create;
 pub use history::history;
+pub use delete::delete;
 
 use std::collections::HashMap;
 

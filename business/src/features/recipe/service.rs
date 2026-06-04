@@ -94,7 +94,7 @@ impl UseCase for Service {
         })
     }
 
-    async fn get_recipe_by_id(&self, id: Uuid) -> Result<Option<Recipe>, UseCaseError> {
+    async fn get_recipe_by_id(&self, id: &Uuid) -> Result<Option<Recipe>, UseCaseError> {
         let recipe = if let Some(recipe) = self.cache_repo.get_recipe(&id).await? {
             // ─── Cache Hit ───
             // Return the recipe data from cache
@@ -102,7 +102,7 @@ impl UseCase for Service {
         } else {
             // ─── Cache Miss ───
             // Search for the recipe in DB & return it
-            let recipe = self.local_repo.get_recipe_by_id(&id).await?;
+            let recipe = self.local_repo.get_recipe_by_id(id).await?;
 
             // If the recipe exists, set the recipe cache
             if let Some(data) = &recipe {
@@ -207,7 +207,13 @@ impl UseCase for Service {
         Ok(recipe)
     }
 
-    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), UseCaseError> {
+    async fn delete_recipe(&self, id: &Uuid, user_id: &Uuid) -> Result<Option<Uuid>, UseCaseError> {
+        let deleted_recipe_id = self.local_repo.delete_recipe(id, user_id).await?;
+
+        Ok(deleted_recipe_id)
+    }
+
+    async fn record_recipe_history(&self, user_id: &Uuid, recipe_id: &Uuid) -> Result<(), UseCaseError> {
         self.local_repo.record_recipe_history(user_id, recipe_id).await?;
 
         Ok(())
