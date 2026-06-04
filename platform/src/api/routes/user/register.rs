@@ -37,7 +37,7 @@ pub async fn register(
 
 #[utoipa::path(
     post,
-    path = "/user/verify-register",
+    path = "/user/verify-account",
     description = "Verifies the user account using a 6-digit code sent via email.",
     request_body = VerifyAccountRequest,
     responses(
@@ -48,7 +48,7 @@ pub async fn register(
     ),
     tags = ["User"]
 )]
-pub async fn verify(
+pub async fn verify_account(
     State(user_service): State<Arc<dyn user::UseCase>>,
     ValidatedJson(payload): ValidatedJson<VerifyAccountRequest>,
 ) -> Result<Json<VerifyAccountResponse>, ApiError> {

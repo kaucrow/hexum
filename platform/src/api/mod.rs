@@ -133,7 +133,7 @@ pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
     let mut r = Router::new()
         .route("/user", get(routes::user::get_user_data))
         .route("/user/register", post(routes::user::register))
-        .route("/user/verify-register", post(routes::user::verify))
+        .route("/user/verify-account", post(routes::user::verify_account))
         .route("/user/change-email", post(routes::user::change_email))
         .route("/user/verify-email-change", post(routes::user::verify_email_change))
         .route("/auth/local/login", post(routes::auth::local::login))

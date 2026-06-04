@@ -17,7 +17,7 @@ async fn verify_user_with_valid_code() {
     // Call the verify endpoint
     let verify_resp = app
         .post_json(
-            "/user/verify",
+            "/user/verify-account",
             &json!({ "code": code }),
         )
         .await;
@@ -42,7 +42,7 @@ async fn verify_user_invalid_code_returns_401() {
 
     let response = app
         .post_json(
-            "/user/verify",
+            "/user/verify-account",
             &json!({ "code": "999999" }),
         )
         .await;

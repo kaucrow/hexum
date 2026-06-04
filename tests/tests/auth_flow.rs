@@ -18,7 +18,7 @@ async fn full_auth_lifecycle() {
     // ── Verify ───────────────────────────────────────────────
     let verify_resp = app
         .post_json(
-            "/user/verify",
+            "/user/verify-account",
             &json!({ "code": code }),
         )
         .await;
