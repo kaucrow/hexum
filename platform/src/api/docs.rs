@@ -11,6 +11,8 @@ use super::routes;
         routes::user::register::register,
         routes::user::register::verify,
         routes::user::data::get_user_data,
+        routes::user::change_email::change_email,
+        routes::user::change_email::verify_email_change,
 
         // /auth
         routes::auth::local::login,
@@ -27,8 +29,12 @@ use super::routes;
             // /user
             routes::user::dtos::RegisterRequest,
             routes::user::dtos::RegisterResponse,
-            routes::user::dtos::VerifyRequest,
-            routes::user::dtos::VerifyResponse,
+            routes::user::dtos::VerifyAccountRequest,
+            routes::user::dtos::VerifyAccountResponse,
+            routes::user::dtos::ChangeEmailRequest,
+            routes::user::dtos::ChangeEmailResponse,
+            routes::user::dtos::VerifyEmailChangeRequest,
+            routes::user::dtos::VerifyEmailChangeResponse,
             routes::user::dtos::UserDataResponse,
 
             // /auth

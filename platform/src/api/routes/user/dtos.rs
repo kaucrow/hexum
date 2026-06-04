@@ -4,6 +4,8 @@ use crate::{
 };
 use utoipa::ToSchema;
 
+// ─── User Registration DTOs ───
+
 #[derive(Deserialize, ToSchema, Validate)]
 pub struct RegisterRequest {
     #[schema(example = "johndoe")]
@@ -26,7 +28,7 @@ pub struct RegisterResponse {
 }
 
 #[derive(Deserialize, ToSchema, Validate)]
-pub struct VerifyRequest {
+pub struct VerifyAccountRequest {
     /// The 6-digit verification code sent via email.
     #[schema(example = "042739")]
     #[validate(length(equal = 6))]
@@ -34,10 +36,42 @@ pub struct VerifyRequest {
 }
 
 #[derive(Serialize, ToSchema)]
-pub struct VerifyResponse {
+pub struct VerifyAccountResponse {
     #[schema(example = "Account verification successful. You can now log in.")]
     pub message: String,
 }
+
+// ─── Email Change DTOs ───
+
+#[derive(Deserialize, ToSchema, Validate)]
+pub struct ChangeEmailRequest {
+    /// The new email address to change to.
+    #[schema(example = "newemail@gmail.com")]
+    #[validate(email)]
+    pub new_email: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct ChangeEmailResponse {
+    #[schema(example = "A 6-digit verification code has been sent to your new email. Please check your inbox and enter the code to confirm the email change.")]
+    pub message: String,
+}
+
+#[derive(Deserialize, ToSchema, Validate)]
+pub struct VerifyEmailChangeRequest {
+    /// The 6-digit verification code sent to the new email.
+    #[schema(example = "042739")]
+    #[validate(length(equal = 6))]
+    pub code: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct VerifyEmailChangeResponse {
+    #[schema(example = "Email change successful. Your email has been updated.")]
+    pub message: String,
+}
+
+// ─── User Data DTOs ───
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]

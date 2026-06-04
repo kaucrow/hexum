@@ -8,7 +8,7 @@ use super::dtos::*;
 #[utoipa::path(
     post,
     path = "/user/register",
-    description = "Registers a new user with username, password & email. The username must only contain alphanumeric characters, and will be converted to lowercase.",
+    description = "Registers a new user with username, password & email. The username must only contain alphanumeric characters, and will be converted to lowercase. A 6-digit verification code will be sent to the user's email address.",
     request_body = RegisterRequest,
     responses(
         (status = 200, description = "Registration successful", body = RegisterResponse),
@@ -37,11 +37,11 @@ pub async fn register(
 
 #[utoipa::path(
     post,
-    path = "/user/verify",
+    path = "/user/verify-register",
     description = "Verifies the user account using a 6-digit code sent via email.",
-    request_body = VerifyRequest,
+    request_body = VerifyAccountRequest,
     responses(
-        (status = 200, description = "Account verified successfully", body = VerifyResponse),
+        (status = 200, description = "Account verified successfully", body = VerifyAccountResponse),
         (status = 400, description = "Invalid or expired code"),
         (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error")
@@ -50,15 +50,15 @@ pub async fn register(
 )]
 pub async fn verify(
     State(user_service): State<Arc<dyn user::UseCase>>,
-    ValidatedJson(payload): ValidatedJson<VerifyRequest>,
-) -> Result<Json<VerifyResponse>, ApiError> {
+    ValidatedJson(payload): ValidatedJson<VerifyAccountRequest>,
+) -> Result<Json<VerifyAccountResponse>, ApiError> {
     info!("Verifying account with code: {}", &payload.code);
 
     user_service.verify_user_account(&payload.code).await?;
 
     info!("Account successfully verified for code");
 
-    Ok(Json(VerifyResponse {
+    Ok(Json(VerifyAccountResponse {
         message: "Account verification successful. You can now log in.".to_string(),
     }))
 }

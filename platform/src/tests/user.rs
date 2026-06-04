@@ -157,7 +157,7 @@ async fn test_verify_user_account_success() {
 
     let mut verification = verification::MockPort::new();
     verification.expect_consume_verification_token()
-        .returning(move |_| Ok(user_id));
+        .returning(move |_| Ok(user_id.to_string()));
 
     let service = user::Service::new(
         Arc::new(user_repo),

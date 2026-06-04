@@ -14,6 +14,9 @@ user:
     FROM platform.user
     WHERE email = $1
 
+  update_email: |
+    UPDATE platform.user SET email = $2 WHERE id = $1
+
   insert: |
     INSERT INTO platform.user (id, username, email, roles, is_active)
     VALUES ($1, $2, $3, $4, $5)

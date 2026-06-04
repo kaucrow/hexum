@@ -53,6 +53,7 @@ mod internal {
         pub get_by_id: String,
         pub get_by_username: String,
         pub get_by_email: String,
+        pub update_email: String,
         pub insert: String,
         pub delete_by_id: String,
     }

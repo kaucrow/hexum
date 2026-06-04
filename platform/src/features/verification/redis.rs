@@ -4,7 +4,6 @@ use ::redis::{
 };
 use async_trait::async_trait;
 use thiserror::Error;
-use uuid::Uuid;
 use anyhow::Result;
 
 use super::*;
@@ -49,17 +48,15 @@ impl Port for RedisAdapter {
         res.map_err(Into::into)
     }
 
-    async fn consume_verification_token(&self, token: &str) -> Result<Uuid, PortError> {
+    async fn consume_verification_token(&self, token: &str) -> Result<String, PortError> {
         let res: Result<_, LocalError> = async {
             let key = self.format_key(token);
 
-            let user_id: String = self.conn.clone().get_del::<&str, Option<String>>(&key)
+            let payload: String = self.conn.clone().get_del::<&str, Option<String>>(&key)
                 .await?
                 .ok_or(LocalError::VerificationTokenInvalid)?;
 
-            let user_id_uuid = Uuid::try_parse(&user_id)?;
-
-            Ok(user_id_uuid)
+            Ok(payload)
         }.await;
 
         res.map_err(Into::into)

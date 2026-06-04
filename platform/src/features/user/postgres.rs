@@ -123,6 +123,20 @@ impl Repository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
+    async fn update_user_email(&self, user_id: &Uuid, new_email: &EmailAddress) -> Result<(), RepositoryError> {
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.user.update_email))
+                .bind(user_id)
+                .bind(new_email.as_str())
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn get_authenticator(
         &self,
         user_id: &Uuid,
