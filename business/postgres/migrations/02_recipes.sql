@@ -25,9 +25,19 @@ CREATE TABLE IF NOT EXISTS recipe.recipe_ingredient (
     UNIQUE(recipe_id, ingredient_name)
 );
 
+CREATE TABLE IF NOT EXISTS recipe.history (
+    user_id UUID NOT NULL REFERENCES platform.user(id),
+    recipe_id UUID NOT NULL REFERENCES recipe.recipe(id),
+    viewed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    UNIQUE (user_id, recipe_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_recipe_external_id
 ON recipe.recipe (external_id);
 
 CREATE INDEX IF NOT EXISTS idx_recipe_name_trgm
 ON recipe.recipe
 USING gin (recipe_name gin_trgm_ops);
+
+CREATE INDEX idx_history_user_recent
+ON recipe.history (user_id, viewed_at DESC);

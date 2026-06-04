@@ -15,6 +15,7 @@ use super::routes;
         routes::recipes::explore::popular,
         routes::recipes::explore::latest,
         routes::recipes::explore::top_tags,
+        routes::recipes::history::history,
 
         // /tags
         routes::tags::autocomplete::autocomplete,
@@ -56,6 +57,9 @@ use super::routes;
 
             routes::recipes::dtos::TopTagsQueryParams,
             routes::recipes::dtos::TopTagsResponse,
+
+            routes::recipes::dtos::RecipeHistoryQueryParams,
+            routes::recipes::dtos::RecipeHistoryResponse,
 
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,

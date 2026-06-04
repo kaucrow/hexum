@@ -27,8 +27,12 @@ pub trait UseCase: Send + Sync + 'static {
 
     async fn get_top_tags_recipes(&self, tags_limit: usize, recipes_limit: usize) -> Result<Vec<TagRecipes>, UseCaseError>;
 
-    // ─── Command ───
+    async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
+
+    // ─── Commands ───
     async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError>;
+
+    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), UseCaseError>;
 }
 
 pub struct SearchResultsPage {

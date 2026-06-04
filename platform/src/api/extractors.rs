@@ -1,5 +1,8 @@
-use std::marker::PhantomData;
-use std::ops::Deref;
+use std::{
+    convert::Infallible,
+    marker::PhantomData,
+    ops::Deref,
+};
 
 use crate::{
     prelude::*,
@@ -121,5 +124,27 @@ impl<M: role::RoleMarker> Deref for RequireRole<M> {
 
     fn deref(&self) -> &Self::Target {
         &self.0
+    }
+}
+
+/// Optional version of [`AuthenticatedUser`] that never rejects.
+/// Returns `None` if the user is not authenticated, `Some(AuthenticatedUser)` otherwise.
+pub struct OptionalUser(pub Option<AuthenticatedUser>);
+
+impl<T> FromRequestParts<T> for OptionalUser
+where
+    T: Send + Sync,
+    Arc<dyn auth::UseCase>: axum::extract::FromRef<T>,
+{
+    type Rejection = Infallible;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &T,
+    ) -> Result<Self, Self::Rejection> {
+        match AuthenticatedUser::from_request_parts(parts, state).await {
+            Ok(user) => Ok(Self(Some(user))),
+            Err(_) => Ok(Self(None)),
+        }
     }
 }

@@ -212,6 +212,47 @@ recipe:
     INSERT INTO recipe.recipe_ingredient (id, recipe_id, ingredient_name, measure)
     SELECT * FROM UNNEST($1::uuid[], $2::uuid[], $3::varchar[], $4::varchar[])
 
+  get_latest_history_by_user_id: |
+    WITH recent_history AS (
+      -- Grab the latest unique recipes viewed by the user --
+      SELECT
+        h.recipe_id,
+        MAX(h.viewed_at) AS last_viewed_at
+      FROM recipe.history h
+      WHERE h.user_id = $1
+      GROUP BY h.recipe_id
+      ORDER BY last_viewed_at DESC
+      LIMIT $2 OFFSET $3
+    )
+    SELECT
+      r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        array_agg(rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
+      ) AS tags
+    FROM recent_history rh
+    JOIN recipe.recipe r ON rh.recipe_id = r.id
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    GROUP BY
+      r.id,
+      r.external_id,
+      r.recipe_name,
+      r.thumbnail_url,
+      rh.last_viewed_at
+    ORDER BY rh.last_viewed_at DESC
+
+  record_history: |
+    INSERT INTO recipe.history (user_id, recipe_id)
+    VALUES ($1, $2)
+    ON CONFLICT (user_id, recipe_id)
+    DO UPDATE SET viewed_at = NOW()
+
 tag:
   get_search_matches: |
     SELECT tag_name AS name

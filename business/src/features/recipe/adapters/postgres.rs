@@ -243,6 +243,25 @@ impl LocalRepository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
+    async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let recipe_history =
+                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.recipe.get_latest_history_by_user_id))
+                    .bind(user_id)
+                    .bind(limit as i64)
+                    .bind(offset as i64)
+                    .fetch_all(&self.pool)
+                    .await?
+                    .into_iter()
+                    .map(|row| RecipePreview::try_from(row))
+                    .collect::<Result<Vec<_>, _>>()?;
+
+            Ok(recipe_history)
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError> {
         let res: Result<_, LocalError> = async {
             let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
@@ -301,6 +320,20 @@ impl LocalRepository for PostgresAdapter {
                 video_url: None,
                 created_by: Some(data.created_by),
             })
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.recipe.record_history))
+                .bind(user_id)
+                .bind(recipe_id)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
         }.await;
 
         res.map_err(Into::into)

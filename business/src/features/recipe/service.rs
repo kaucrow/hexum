@@ -174,6 +174,12 @@ impl UseCase for Service {
         Ok(tag_groups)
     }
 
+    async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, UseCaseError> {
+        let history = self.local_repo.get_latest_recipe_history(&user_id, limit, offset).await?;
+
+        Ok(history)
+    }
+
     async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError> {
         // ─── Validation ───
         if input.name.trim().is_empty() {
@@ -199,6 +205,12 @@ impl UseCase for Service {
         let recipe = self.local_repo.create_recipe(data).await?;
 
         Ok(recipe)
+    }
+
+    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), UseCaseError> {
+        self.local_repo.record_recipe_history(user_id, recipe_id).await?;
+
+        Ok(())
     }
 }
 

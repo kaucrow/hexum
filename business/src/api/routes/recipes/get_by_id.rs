@@ -25,6 +25,7 @@ use super::dtos::*;
 pub async fn get_by_id(
     State(recipe_service): State<Arc<dyn recipe::UseCase>>,
     ValidatedPath(params): ValidatedPath<RecipePathParams>,
+    OptionalUser(user): OptionalUser,
 ) -> Result<Json<RecipeResponse>, ApiError> {
     info!("Getting recipe with ID '{}'", params.id);
 
@@ -38,6 +39,17 @@ pub async fn get_by_id(
     let recipe_result = recipe_service.get_recipe_by_id(id).await?;
 
     if let Some(recipe) = recipe_result {
+        // If the user is authenticated, record this recipe in their history
+        if let Some(user) = user {
+            let svc = recipe_service.clone();
+            let recipe_id = recipe.id;
+            tokio::spawn(async move {
+                if let Err(e) = svc.record_recipe_history(user.user_id, recipe_id).await {
+                    error!("Failed to record recipe history: {:?}", e);
+                }
+            });
+        }
+
         Ok(Json(RecipeResponse::from(recipe)))
     } else {
         Err(ApiError::NotFound(format!("Failed to find recipe with ID '{}'", params.id)))

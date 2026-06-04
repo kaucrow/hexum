@@ -28,8 +28,12 @@ pub trait LocalRepository: Send + Sync + 'static {
 
     async fn get_recipe_previews_by_tag_name(&self, tag_name: &str, limit: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
 
+    async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
+
     // ─── Commands ───
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError>;
+
+    async fn record_recipe_history(&self, user_id: Uuid, recipe_id: Uuid) -> Result<(), LocalRepositoryError>;
 }
 
 pub struct CreateRecipeData {

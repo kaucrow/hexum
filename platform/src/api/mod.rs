@@ -22,7 +22,7 @@ pub use validator::Validate;
 pub use askama::Template;
 
 pub use error::ApiError;
-pub use extractors::{AuthenticatedUser, RequireRole, role};
+pub use extractors::{AuthenticatedUser, OptionalUser, RequireRole, role};
 pub use crate::features::user::AuthProvider;
 
 use axum::{
