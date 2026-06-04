@@ -99,6 +99,20 @@ pub struct UserDataResponse {
     pub is_active: bool,
 }
 
+#[derive(Deserialize, ToSchema, Validate, Debug)]
+pub struct UserDataUpdateRequest {
+    /// Sets a new username.
+    #[schema(example = "janedoe")]
+    #[validate(length(max = 200))]
+    pub new_username: Option<String>
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct UserDataUpdateResponse {
+    #[schema(example = "User data updated successfully.")]
+    pub message: String,
+}
+
 // ─── User Deletion DTOs ───
 
 #[derive(Serialize, ToSchema)]

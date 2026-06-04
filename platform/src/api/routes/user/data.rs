@@ -1,6 +1,6 @@
 use crate::{
     prelude::*,
-    features::user::{self, User},
+    features::user::{self, User, NewUserData},
     api::*,
 };
 use super::dtos::*;
@@ -32,7 +32,38 @@ pub async fn get_user_data(
         .ok_or(ApiError::NotFound(format!("User with ID '{}' was not found.", &user_id)))?;
 
     let response = UserDataResponse::from(user_data);
+    Ok(Json(response))
+}
 
+#[utoipa::path(
+    patch,
+    path = "/user/update-data",
+    description = "Updates data in the user's profile.",
+    request_body = UserDataUpdateRequest,
+    responses(
+        (status = 200, description = "User data updated successfully", body = UserDataUpdateResponse),
+        (status = 401, description = "Unauthorized"),
+        (status = 409, description = "New data has a conflict with existing data"),
+        (status = 422, description = "Validation Error"),
+        (status = 500, description = "Internal Server Error"),
+    ),
+    security(("cookie_auth" = [])),
+    tags = ["User"]
+)]
+pub async fn update_user_data(
+    auth: AuthenticatedUser,
+    State(user_service): State<Arc<dyn user::UseCase>>,
+    ValidatedJson(payload): ValidatedJson<UserDataUpdateRequest>,
+) -> Result<Json<UserDataUpdateResponse>, ApiError> {
+    let user_id = auth.user_id;
+
+    info!("Updating profile data for user ID '{}' with new data: {:?}", &user_id, payload);
+
+    user_service
+        .update_user_data(&user_id, NewUserData::from(payload))
+        .await?;
+
+    let response = UserDataUpdateResponse { message: "User data updated successfully.".to_string() };
     Ok(Json(response))
 }
 
@@ -44,6 +75,14 @@ impl From<User> for UserDataResponse {
             email: user.email.as_str().to_string(),
             roles: user.roles.into_iter().map(|role| role.to_string()).collect(),
             is_active: user.is_active,
+        }
+    }
+}
+
+impl From<UserDataUpdateRequest> for NewUserData {
+    fn from(payload: UserDataUpdateRequest) -> Self {
+        Self {
+            username: payload.new_username,
         }
     }
 }

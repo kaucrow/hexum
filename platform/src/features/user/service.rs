@@ -98,6 +98,12 @@ impl UseCase for Service {
         Ok(())
     }
 
+    async fn update_user_data(&self, user_id: &Uuid, new_data: NewUserData) -> Result<(), UseCaseError> {
+        self.user_repo.update_user_data(user_id, new_data).await?;
+
+        Ok(())
+    }
+
     async fn delete_user(&self, user_id: &Uuid) -> Result<Option<Uuid>, UseCaseError> {
         let deleted_user_id = self.user_repo.delete_user_by_id(user_id).await?;
 

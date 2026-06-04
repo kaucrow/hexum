@@ -2,7 +2,13 @@ use async_trait::async_trait;
 use thiserror::Error;
 use uuid::Uuid;
 
-use super::{User, EmailAddress, UserAuthenticator, AuthProvider};
+use super::{
+    NewUserData,
+    User,
+    EmailAddress,
+    UserAuthenticator,
+    AuthProvider,
+};
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -16,6 +22,7 @@ pub trait Repository: Send + Sync + 'static {
     async fn add_new_user(&self, user: User) -> Result<(), RepositoryError>;
     async fn delete_user_by_id(&self, id: &Uuid) -> Result<Option<Uuid>, RepositoryError>;
     async fn update_user_email(&self, user_id: &Uuid, new_email: &EmailAddress) -> Result<(), RepositoryError>;
+    async fn update_user_data(&self, user_id: &Uuid, new_data: NewUserData) -> Result<(), RepositoryError>;
 
     // ─── Authentication ───
     async fn get_authenticator(

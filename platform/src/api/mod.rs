@@ -8,7 +8,7 @@ pub use docs::Docs;
 #[allow(dead_code)]
 pub use axum::{
     Json, Router,
-    routing::{get, post, delete, put},
+    routing::{get, post, delete, put, patch},
     extract::{State, Query, Path, FromRef},
     response::{Html, Response, IntoResponse},
     http::StatusCode,
@@ -174,6 +174,7 @@ pub fn router(state: PlatformState, enable_dev_endpoints: bool) -> Router {
         .route("/user/verify-account", post(routes::user::verify_account))
         .route("/user/change-email", post(routes::user::change_email))
         .route("/user/verify-email-change", post(routes::user::verify_email_change))
+        .route("/user/update-data", patch(routes::user::update_user_data))
         .route("/auth/local/login", post(routes::auth::local::login))
         .route("/auth/oauth/google/login", post(routes::auth::oauth::google_login))
         .route("/auth/oauth/github/login", post(routes::auth::oauth::github_login))

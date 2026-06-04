@@ -138,6 +138,33 @@ impl Repository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
+    async fn update_user_data(&self, user_id: &Uuid, new_data: NewUserData) -> Result<(), RepositoryError> {
+         let res: Result<_, LocalError> = async {
+            if let Some(new_username) = &new_data.username {
+                let user = sqlx::query_as::<_, UserDbRow>(sql(&QUERIES.user.get_by_username))
+                    .bind(new_username)
+                    .fetch_optional(&self.pool)
+                    .await?
+                    .map(|row| User::try_from(row))
+                    .transpose()?;
+
+                if user.is_some() {
+                    return Err(LocalError::Logic(RepositoryError::Conflict(ConflictError::UsernameInUse)));
+                }
+            };
+
+            sqlx::query(sql(&QUERIES.user.update_data))
+                .bind(user_id)
+                .bind(new_data.username)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn get_authenticator(
         &self,
         user_id: &Uuid,
