@@ -28,7 +28,7 @@ pub async fn change_email(
 ) -> Result<Json<ChangeEmailResponse>, ApiError> {
     let user_id = &auth.user_id;
 
-    if !(auth.provider != AuthProvider::Local) {
+    if auth.provider != AuthProvider::Local {
         return Err(ApiError::BadRequest(
             "You must be logged in via username/email to request an email change".to_string()
         ));

@@ -128,6 +128,7 @@ impl Port for PasetoAdapter {
         let res: Result<_, LocalError> = {
             let mut claims =
                 Claims::new().map_err(|e| LocalError::Paseto(e))?;
+
             claims
                 .add_additional("user_id", payload.user_id.to_string())
                 .map_err(|e| LocalError::Paseto(e))?;
