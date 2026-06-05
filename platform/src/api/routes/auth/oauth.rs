@@ -144,10 +144,20 @@ pub struct OAuthCallbackTemplate<'a> {
 pub async fn oauth_callback_ui(
     State(config): State<Arc<Config>>,
 ) -> Result<impl IntoResponse, ApiError> {
+    let google_login_uri = &format!("{}{}",
+        config.api.path_suffix,
+        config.oauth.google.login_endpoint,
+    );
+
+    let github_login_uri = &format!("{}{}",
+        config.api.path_suffix,
+        config.oauth.github.login_endpoint,
+    );
+
     let template = OAuthCallbackTemplate {
         login_ui_url: &config.oauth.login_ui_url(&config.frontend.url),
-        google_login_uri: &config.oauth.google.login_endpoint,
-        github_login_uri: &config.oauth.github.login_endpoint,
+        google_login_uri,
+        github_login_uri,
     };
 
     let html_content = template
