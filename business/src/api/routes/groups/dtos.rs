@@ -208,10 +208,10 @@ pub struct UserGroupsListResponse {
 #[derive(Deserialize, IntoParams, ToSchema, Validate)]
 #[serde(rename_all = "snake_case")]
 pub struct DeleteGroupPathParams {
-    /// The Recipe's ID (UUID).
+    /// The Group's ID (UUID).
     #[schema(format = "uuid")]
     #[validate(length(equal = 36))]
-    pub id: String,
+    pub group_id: String,
 }
 
 #[derive(Serialize, ToSchema)]

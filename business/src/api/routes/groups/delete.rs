@@ -31,13 +31,13 @@ pub async fn delete(
 
     info!(
         "Deleting group with ID '{}' from user '{}'",
-        params.id, user_id,
+        params.group_id, user_id,
     );
 
-    let group_id = Uuid::from_str(&params.id)
+    let group_id = Uuid::from_str(&params.group_id)
         .map_err(|_| {
             let mut errors = HashMap::new();
-            errors.insert("group_id".to_string(), vec![format!("Invalid UUID format '{}'", params.id)]);
+            errors.insert("group_id".to_string(), vec![format!("Invalid UUID format '{}'", params.group_id)]);
             ApiError::Validation(errors)
         })?;
 
