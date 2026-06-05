@@ -47,13 +47,14 @@ impl UseCase for Service {
             return Err(UseCaseError::NotGroupOwner);
         }
 
-        let recipes = self.local_repo
+        let (recipes, _) = self.local_repo
             .get_group_recipes(group_id, recipes_limit, 0).await?;
 
         let recipes_group = RecipesGroup {
             group_id: group.id,
             group_name: group.name,
             recipes,
+            total_recipes: 0, // Not computed here; only used for listing
         };
 
         Ok(Some(recipes_group))
@@ -72,12 +73,13 @@ impl UseCase for Service {
     async fn get_user_recipe_groups(&self,
         user_id: &Uuid,
         groups_limit: usize,
+        groups_offset: usize,
         recipes_limit: usize
-    ) -> Result<Vec<RecipesGroup>, UseCaseError> {
-        let recipe_groups = self.local_repo
-            .get_user_recipe_groups(user_id, groups_limit, recipes_limit).await?;
+    ) -> Result<UserRecipeGroupsPage, UseCaseError> {
+        let (recipe_groups, total_groups) = self.local_repo
+            .get_user_recipe_groups(user_id, groups_limit, groups_offset, recipes_limit).await?;
 
-        Ok(recipe_groups)
+        Ok(UserRecipeGroupsPage { groups: recipe_groups, total_groups })
     }
 
     async fn get_group_recipes(
@@ -86,13 +88,13 @@ impl UseCase for Service {
         group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
-    ) -> Result<Vec<RecipePreview>, UseCaseError> {
+    ) -> Result<GroupRecipesPage, UseCaseError> {
         self.verify_group_ownership(user_id, group_id).await?;
 
-        let recipe_previews = self.local_repo
+        let (recipe_previews, total_items) = self.local_repo
             .get_group_recipes(group_id, recipes_limit, offset).await?;
 
-        Ok(recipe_previews)
+        Ok(GroupRecipesPage { items: recipe_previews, total_items })
     }
 
     async fn create_group(&self, name: &str, description: Option<String>, user_id: &Uuid) -> Result<Uuid, UseCaseError> {

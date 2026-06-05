@@ -5,7 +5,7 @@ use platform::api::extractors::AuthenticatedUser;
 use crate::{
     prelude::*,
     api::*,
-    features::group::RecipePreview,
+    features::group,
 };
 use super::dtos::*;
 use super::super::recipes::dtos::RecipePreviewItem;
@@ -45,19 +45,20 @@ pub async fn get_recipes(
         queries.recipes_limit, group_id, queries.offset, user_id,
     );
 
-    let recipes = state.group
+    let page = state.group
         .get_group_recipes(&user_id, &group_id, queries.recipes_limit, queries.offset)
         .await?;
 
-    Ok(Json(GroupRecipesResponse::from(recipes)))
+    Ok(Json(GroupRecipesResponse::from(page)))
 }
 
-impl From<Vec<RecipePreview>> for GroupRecipesResponse {
-    fn from(recipes: Vec<RecipePreview>) -> Self {
+impl From<group::GroupRecipesPage> for GroupRecipesResponse {
+    fn from(page: group::GroupRecipesPage) -> Self {
         Self {
-            recipes: recipes.into_iter()
+            recipes: page.items.into_iter()
                 .map(|recipe| RecipePreviewItem::from(recipe))
                 .collect(),
+            meta: GroupRecipesMeta { total_items: page.total_items },
         }
     }
 }

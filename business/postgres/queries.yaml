@@ -253,6 +253,27 @@ recipe:
       rh.last_viewed_at
     ORDER BY rh.last_viewed_at DESC
 
+  get_created_by_user: |
+    SELECT
+      r.id,
+      CASE
+        WHEN r.external_id IS NULL THEN 'local'
+        ELSE 'external'
+      END AS origin,
+      r.recipe_name,
+      r.thumbnail_url,
+      COALESCE(
+        array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
+        ARRAY[]::varchar[]
+      ) AS tags,
+      COUNT(*) OVER() AS total_count
+    FROM recipe.recipe r
+    LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id
+    WHERE r.created_by = $1
+    GROUP BY r.id
+    ORDER BY r.created_at DESC
+    LIMIT $2 OFFSET $3
+
   record_history: |
     INSERT INTO recipe.history (user_id, recipe_id)
     VALUES ($1, $2)
@@ -284,7 +305,9 @@ group:
     SELECT
       g.id AS group_id,
       g.group_name,
-      COALESCE(recipes_json.recipes, '[]'::json) AS recipes
+      COALESCE(recipes_json.recipes, '[]'::json) AS recipes,
+      COUNT(*) OVER() AS total_groups_count,
+      (SELECT COUNT(*) FROM recipe.group_recipe WHERE group_id = g.id) AS total_recipes_count
     FROM recipe.group g
     LEFT JOIN LATERAL (
       -- Aggregates the pre-sorted, pre-limited rows into a JSON array --
@@ -302,7 +325,7 @@ group:
         JOIN recipe.recipe r ON r.id = gr.recipe_id
         WHERE gr.group_id = g.id
         ORDER BY r.created_at DESC
-        LIMIT $3
+        LIMIT $4
       ) limited_recipes
       -- Gathers the tags ONLY for the winning limited recipes --
       LEFT JOIN LATERAL (
@@ -313,7 +336,8 @@ group:
     ) recipes_json ON true
     WHERE g.created_by = $1
     ORDER BY g.id ASC
-    LIMIT $2
+    -- PAGINATION --
+    LIMIT $2 OFFSET $3
 
   get_recipes_by_group_id: |
     SELECT
@@ -327,7 +351,8 @@ group:
       COALESCE(
         array_agg(DISTINCT rt.tag_name) FILTER (WHERE rt.tag_name IS NOT NULL),
         ARRAY[]::varchar[]
-      ) AS tags
+      ) AS tags,
+      COUNT(*) OVER() AS total_count
     FROM recipe.recipe r
     JOIN recipe.group_recipe gr ON r.id = gr.recipe_id
     LEFT JOIN recipe.recipe_tag rt ON r.id = rt.recipe_id

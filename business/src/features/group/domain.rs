@@ -29,4 +29,5 @@ pub struct RecipesGroup {
     pub group_id: Uuid,
     pub group_name: String,
     pub recipes: Vec<RecipePreview>,
+    pub total_recipes: usize,
 }

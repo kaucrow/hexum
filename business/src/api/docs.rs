@@ -17,6 +17,7 @@ use super::routes;
         routes::recipes::explore::latest,
         routes::recipes::explore::top_tags,
         routes::recipes::history::history,
+        routes::recipes::created::created,
 
         // /tags
         routes::tags::autocomplete::autocomplete,
@@ -44,6 +45,7 @@ use super::routes;
 
             routes::recipes::dtos::RecipeSearchQueryParams,
             routes::recipes::dtos::RecipeSearchResponse,
+            routes::recipes::dtos::RecipeSearchMeta,
 
             routes::recipes::dtos::RecipePreviewItem,
 
@@ -62,6 +64,10 @@ use super::routes;
             routes::recipes::dtos::RecipeHistoryQueryParams,
             routes::recipes::dtos::RecipeHistoryResponse,
 
+            routes::recipes::dtos::UserCreatedRecipesQueryParams,
+            routes::recipes::dtos::UserCreatedRecipesResponse,
+            routes::recipes::dtos::UserCreatedRecipesMeta,
+
             // /tags
             routes::tags::dtos::TagsAutocompleteQueryParams,
             routes::tags::dtos::TagsAutocompleteResponse,
@@ -69,12 +75,14 @@ use super::routes;
             // /groups
             routes::groups::dtos::UserGroupsQueryParams,
             routes::groups::dtos::UserGroupsResponse,
+            routes::groups::dtos::UserGroupsMeta,
             routes::groups::dtos::RecipesGroupItem,
 
             routes::groups::dtos::GetGroupQueryParams,
 
             routes::groups::dtos::GroupRecipesQueryParams,
             routes::groups::dtos::GroupRecipesResponse,
+            routes::groups::dtos::GroupRecipesMeta,
 
             routes::groups::dtos::GroupIdPathParams,
             routes::groups::dtos::GroupRecipePathParams,

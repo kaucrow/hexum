@@ -30,6 +30,8 @@ pub trait LocalRepository: Send + Sync + 'static {
 
     async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
 
+    async fn get_recipe_previews_by_creator(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<(Vec<RecipePreview>, usize), LocalRepositoryError>;
+
     // ─── Commands ───
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError>;
 

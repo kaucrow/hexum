@@ -23,15 +23,16 @@ pub trait LocalRepository: Send + Sync + 'static {
         &self,
         user_id: &Uuid,
         groups_limit: usize,
+        groups_offset: usize,
         recipes_limit: usize
-    ) -> Result<Vec<RecipesGroup>, LocalRepositoryError>;
+    ) -> Result<(Vec<RecipesGroup>, usize), LocalRepositoryError>;
 
     async fn get_group_recipes(
         &self,
         group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
-    ) -> Result<Vec<RecipePreview>, LocalRepositoryError>;
+    ) -> Result<(Vec<RecipePreview>, usize), LocalRepositoryError>;
 
     // ─── Commands ───
     async fn create_group(&self, group: Group) -> Result<Uuid, LocalRepositoryError>;

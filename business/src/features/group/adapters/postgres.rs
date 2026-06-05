@@ -56,21 +56,27 @@ impl LocalRepository for PostgresAdapter {
         &self,
         user_id: &Uuid,
         groups_limit: usize,
+        groups_offset: usize,
         recipes_limit: usize
-    ) -> Result<Vec<RecipesGroup>, LocalRepositoryError> {
+    ) -> Result<(Vec<RecipesGroup>, usize), LocalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let recipe_groups =
-                sqlx::query_as::<_, RecipesGroupDbRow>(sql(&QUERIES.group.get_with_latest_recipes_by_user_id))
+            let rows =
+                sqlx::query_as::<_, RecipesGroupCountDbRow>(sql(&QUERIES.group.get_with_latest_recipes_by_user_id))
                     .bind(user_id)
                     .bind(groups_limit as i64)
+                    .bind(groups_offset as i64)
                     .bind(recipes_limit as i64)
                     .fetch_all(&self.pool)
-                    .await?
-                    .into_iter()
-                    .map(|row| RecipesGroup::try_from(row))
-                    .collect::<Result<Vec<RecipesGroup>, LocalError>>()?;
+                    .await?;
 
-            Ok(recipe_groups)
+            let total_groups = rows.first().map(|r| r.total_groups_count as usize).unwrap_or(0);
+
+            let recipe_groups = rows
+                .into_iter()
+                .map(|row| RecipesGroup::try_from(row))
+                .collect::<Result<Vec<RecipesGroup>, LocalError>>()?;
+
+            Ok((recipe_groups, total_groups))
         }.await;
 
         res.map_err(Into::into)
@@ -81,20 +87,24 @@ impl LocalRepository for PostgresAdapter {
         group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
-    ) -> Result<Vec<RecipePreview>, LocalRepositoryError> {
+    ) -> Result<(Vec<RecipePreview>, usize), LocalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let recipe_groups =
-                sqlx::query_as::<_, RecipePreviewDbRow>(sql(&QUERIES.group.get_recipes_by_group_id))
+            let rows =
+                sqlx::query_as::<_, GroupRecipePreviewCountDbRow>(sql(&QUERIES.group.get_recipes_by_group_id))
                     .bind(group_id)
                     .bind(recipes_limit as i64)
                     .bind(offset as i64)
                     .fetch_all(&self.pool)
-                    .await?
-                    .into_iter()
-                    .map(|row| RecipePreview::try_from(row))
-                    .collect::<Result<Vec<RecipePreview>, LocalError>>()?;
+                    .await?;
 
-            Ok(recipe_groups)
+            let total_count = rows.first().map(|r| r.total_count as usize).unwrap_or(0);
+
+            let recipes = rows
+                .into_iter()
+                .map(|row| RecipePreview::try_from(row))
+                .collect::<Result<Vec<RecipePreview>, LocalError>>()?;
+
+            Ok((recipes, total_count))
         }.await;
 
         res.map_err(Into::into)
@@ -201,16 +211,18 @@ impl From<GroupDbRow> for Group {
 }
 
 #[derive(FromRow)]
-struct RecipesGroupDbRow {
+struct RecipesGroupCountDbRow {
     group_id: Uuid,
     group_name: String,
     #[sqlx(json)]
     recipes: Vec<RecipePreviewDbRow>,
+    total_groups_count: i64,
+    total_recipes_count: i64,
 }
 
-impl TryFrom<RecipesGroupDbRow> for RecipesGroup {
+impl TryFrom<RecipesGroupCountDbRow> for RecipesGroup {
     type Error = LocalError;
-    fn try_from(row: RecipesGroupDbRow) -> Result<Self, Self::Error> {
+    fn try_from(row: RecipesGroupCountDbRow) -> Result<Self, Self::Error> {
         Ok(Self {
             group_id: row.group_id,
             group_name: row.group_name,
@@ -219,6 +231,7 @@ impl TryFrom<RecipesGroupDbRow> for RecipesGroup {
                 .into_iter()
                 .map(|recipe_preview_row| RecipePreview::try_from(recipe_preview_row))
                 .collect::<Result<Vec<_>, _>>()?,
+            total_recipes: row.total_recipes_count as usize,
         })
     }
 }
@@ -235,6 +248,31 @@ struct RecipePreviewDbRow {
 impl TryFrom<RecipePreviewDbRow> for RecipePreview {
     type Error = LocalError;
     fn try_from(row: RecipePreviewDbRow) -> Result<Self, Self::Error> {
+        let origin: RecipeOrigin = row.origin.parse()?;
+
+        Ok(Self {
+            id: row.id,
+            origin,
+            name: row.recipe_name,
+            tags: row.tags,
+            thumbnail_url: row.thumbnail_url,
+        })
+    }
+}
+
+#[derive(FromRow)]
+struct GroupRecipePreviewCountDbRow {
+    id: Uuid,
+    origin: String,
+    recipe_name: String,
+    tags: Vec<String>,
+    thumbnail_url: Option<String>,
+    total_count: i64,
+}
+
+impl TryFrom<GroupRecipePreviewCountDbRow> for RecipePreview {
+    type Error = LocalError;
+    fn try_from(row: GroupRecipePreviewCountDbRow) -> Result<Self, Self::Error> {
         let origin: RecipeOrigin = row.origin.parse()?;
 
         Ok(Self {

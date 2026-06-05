@@ -4,6 +4,18 @@ use thiserror::Error;
 
 use super::*;
 
+#[derive(Debug)]
+pub struct UserRecipeGroupsPage {
+    pub groups: Vec<RecipesGroup>,
+    pub total_groups: usize,
+}
+
+#[derive(Debug)]
+pub struct GroupRecipesPage {
+    pub items: Vec<RecipePreview>,
+    pub total_items: usize,
+}
+
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
     // ─── Getters ───
@@ -23,8 +35,9 @@ pub trait UseCase: Send + Sync + 'static {
         &self,
         user_id: &Uuid,
         groups_limit: usize,
+        groups_offset: usize,
         recipes_limit: usize
-    ) -> Result<Vec<RecipesGroup>, UseCaseError>;
+    ) -> Result<UserRecipeGroupsPage, UseCaseError>;
 
     async fn get_group_recipes(
         &self,
@@ -32,7 +45,7 @@ pub trait UseCase: Send + Sync + 'static {
         group_id: &Uuid,
         recipes_limit: usize,
         offset: usize
-    ) -> Result<Vec<RecipePreview>, UseCaseError>;
+    ) -> Result<GroupRecipesPage, UseCaseError>;
 
     // ─── Commands ───
     async fn create_group(&self, name: &str, description: Option<String>, user_id: &Uuid) -> Result<Uuid, UseCaseError>;

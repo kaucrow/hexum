@@ -29,6 +29,8 @@ pub trait UseCase: Send + Sync + 'static {
 
     async fn get_latest_recipe_history(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<Vec<RecipePreview>, UseCaseError>;
 
+    async fn get_recipes_created_by_user(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<UserCreatedRecipesPage, UseCaseError>;
+
     // ─── Commands ───
     async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError>;
 
@@ -41,6 +43,11 @@ pub struct SearchResultsPage {
     pub items: Vec<RecipePreview>,
     pub total_items: usize,
     pub search_id: Uuid,
+}
+
+pub struct UserCreatedRecipesPage {
+    pub items: Vec<RecipePreview>,
+    pub total_items: usize,
 }
 
 pub struct CreateRecipeInput {

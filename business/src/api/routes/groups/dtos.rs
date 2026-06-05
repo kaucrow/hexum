@@ -38,6 +38,11 @@ pub struct UserGroupsQueryParams {
     #[validate(range(min = 1, max = 20))]
     pub groups_limit: usize,
 
+    /// The pagination offset.
+    #[param(example = 0, minimum = 0)]
+    #[validate(range(min = 0))]
+    pub groups_offset: usize,
+
     /// The max amount of recipes to fetch per group.
     #[param(example = 5, minimum = 1, maximum = 20)]
     #[validate(range(min = 1, max = 20))]
@@ -80,6 +85,16 @@ pub struct RecipesGroupItem {
 
     /// The recipes within this group.
     pub recipes: Vec<RecipePreviewItem>,
+
+    /// The total number of recipes in this group.
+    pub total_recipes: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserGroupsMeta {
+    /// The total number of groups owned by the user.
+    pub total_items: usize,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -97,15 +112,28 @@ pub struct RecipesGroupItem {
                     "tags": ["Pasta", "Italian"],
                     "thumbnailUrl": "https://www.themealdb.com/images/media/meals/llc9is1557421634.jpg",
                 }
-            ]
+            ],
+            "totalRecipes": 5
         }
-    ]
+    ],
+    "meta": {
+        "totalItems": 3
+    }
 }))]
 pub struct UserGroupsResponse {
     pub groups: Vec<RecipesGroupItem>,
+    pub meta: UserGroupsMeta,
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GroupRecipesMeta {
+    /// The total number of recipes in this group.
+    pub total_items: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 #[schema(example = json!({
     "recipes": [
         {
@@ -116,9 +144,13 @@ pub struct UserGroupsResponse {
             "thumbnailUrl": "https://www.themealdb.com/images/media/meals/llc9is1557421634.jpg",
         }
     ],
+    "meta": {
+        "totalItems": 12
+    }
 }))]
 pub struct GroupRecipesResponse {
     pub recipes: Vec<RecipePreviewItem>,
+    pub meta: GroupRecipesMeta,
 }
 
 #[derive(Deserialize, ToSchema, Validate)]

@@ -3,7 +3,7 @@ use platform::api::extractors::AuthenticatedUser;
 use crate::{
     prelude::*,
     api::*,
-    features::group::RecipesGroup,
+    features::group::{self, RecipesGroup},
 };
 use super::dtos::*;
 use super::super::recipes::dtos::RecipePreviewItem;
@@ -30,23 +30,17 @@ pub async fn get_groups(
     let user_id = auth.user_id;
 
     info!(
-        "Getting {} groups with up to {} recipes each for user '{}'",
-        queries.groups_limit, queries.recipes_limit, user_id,
+        "Getting {} groups with offset {} with up to {} recipes each for user '{}'",
+        queries.groups_limit, queries.groups_offset, queries.recipes_limit, user_id,
     );
 
-    let groups = state.group
-        .get_user_recipe_groups(&user_id, queries.groups_limit, queries.recipes_limit)
+    let page = state.group
+        .get_user_recipe_groups(
+            &user_id, queries.groups_limit, queries.groups_offset, queries.recipes_limit
+        )
         .await?;
 
-    Ok(Json(UserGroupsResponse::from(groups)))
-}
-
-impl From<Vec<RecipesGroup>> for UserGroupsResponse {
-    fn from(groups: Vec<RecipesGroup>) -> Self {
-        Self {
-            groups: groups.into_iter().map(|group| RecipesGroupItem::from(group)).collect(),
-        }
-    }
+    Ok(Json(UserGroupsResponse::from(page)))
 }
 
 impl From<RecipesGroup> for RecipesGroupItem {
@@ -57,6 +51,16 @@ impl From<RecipesGroup> for RecipesGroupItem {
             recipes: group.recipes.into_iter()
                 .map(|recipe| RecipePreviewItem::from(recipe))
                 .collect(),
+            total_recipes: group.total_recipes,
+        }
+    }
+}
+
+impl From<group::UserRecipeGroupsPage> for UserGroupsResponse {
+    fn from(page: group::UserRecipeGroupsPage) -> Self {
+        Self {
+            groups: page.groups.into_iter().map(|group| RecipesGroupItem::from(group)).collect(),
+            meta: UserGroupsMeta { total_items: page.total_groups },
         }
     }
 }

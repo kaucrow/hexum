@@ -262,6 +262,37 @@ impl LocalRepository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
+    async fn get_recipe_previews_by_creator(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<(Vec<RecipePreview>, usize), LocalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let rows = sqlx::query_as::<_, RecipePreviewCountDbRow>(sql(&QUERIES.recipe.get_created_by_user))
+                .bind(user_id)
+                .bind(limit as i64)
+                .bind(offset as i64)
+                .fetch_all(&self.pool)
+                .await?;
+
+            let total_count = rows.first().map(|r| r.total_count as usize).unwrap_or(0);
+
+            let recipes = rows
+                .into_iter()
+                .map(|row| -> Result<RecipePreview, LocalError> {
+                    let origin: RecipeOrigin = row.origin.parse()?;
+                    Ok(RecipePreview {
+                        id: row.id,
+                        origin,
+                        name: row.recipe_name,
+                        tags: row.tags,
+                        thumbnail_url: row.thumbnail_url,
+                    })
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+
+            Ok((recipes, total_count))
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn create_recipe(&self, data: CreateRecipeData) -> Result<Recipe, LocalRepositoryError> {
         let res: Result<_, LocalError> = async {
             let mut tx: Transaction<'_, Postgres> = self.pool.begin().await?;
@@ -421,6 +452,16 @@ struct RecipePreviewDbRow {
     recipe_name: String,
     tags: Vec<String>,
     thumbnail_url: Option<String>,
+}
+
+#[derive(FromRow)]
+struct RecipePreviewCountDbRow {
+    id: Uuid,
+    origin: String,
+    recipe_name: String,
+    tags: Vec<String>,
+    thumbnail_url: Option<String>,
+    total_count: i64,
 }
 
 impl TryFrom<RecipePreviewDbRow> for domain::RecipePreview {

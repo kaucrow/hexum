@@ -90,6 +90,7 @@ mod internal {
 
         pub get_latest_history_by_user_id: String,
         pub record_history: String,
+        pub get_created_by_user: String,
     }
 
     #[derive(Deserialize, Debug)]

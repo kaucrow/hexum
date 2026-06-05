@@ -180,6 +180,13 @@ impl UseCase for Service {
         Ok(history)
     }
 
+    async fn get_recipes_created_by_user(&self, user_id: &Uuid, limit: usize, offset: usize) -> Result<UserCreatedRecipesPage, UseCaseError> {
+        let (items, total_items) = self.local_repo
+            .get_recipe_previews_by_creator(user_id, limit, offset).await?;
+
+        Ok(UserCreatedRecipesPage { items, total_items })
+    }
+
     async fn create_recipe(&self, input: CreateRecipeInput) -> Result<Recipe, UseCaseError> {
         // ─── Validation ───
         if input.name.trim().is_empty() {

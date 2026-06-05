@@ -225,6 +225,48 @@ pub struct RecipeHistoryResponse {
 #[derive(Deserialize, IntoParams, ToSchema, Validate)]
 #[serde(rename_all = "snake_case")]
 #[into_params(parameter_in = Query)]
+pub struct UserCreatedRecipesQueryParams {
+    /// The max amount of recipes to fetch.
+    #[param(example = 10, minimum = 1)]
+    #[validate(range(min = 1, max = 40))]
+    pub limit: usize,
+
+    /// The number of items to skip (for pagination).
+    #[param(example = 0)]
+    pub offset: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+#[schema(example = json!({
+    "recipes": [
+        {
+            "id": "05639468-710b-44fe-9fc7-372514e95c37",
+            "origin": "external",
+            "name": "Spaghetti Carbonara",
+            "tags": ["Pasta", "Italian"],
+            "thumbnailUrl": "https://www.themealdb.com/images/media/meals/llc9is1557421634.jpg",
+        }
+    ],
+    "meta": {
+        "totalItems": 42,
+    }
+}))]
+pub struct UserCreatedRecipesResponse {
+    pub recipes: Vec<RecipePreviewItem>,
+    pub meta: UserCreatedRecipesMeta,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct UserCreatedRecipesMeta {
+    /// Total amount of recipes created by the user.
+    pub total_items: usize,
+}
+
+#[derive(Deserialize, IntoParams, ToSchema, Validate)]
+#[serde(rename_all = "snake_case")]
+#[into_params(parameter_in = Query)]
 pub struct TopTagsQueryParams {
     /// The max amount of tags to fetch.
     #[param(example = 10, minimum = 1, maximum = 20)]
