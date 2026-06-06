@@ -390,7 +390,7 @@ group:
         DELETE FROM recipe.recipe
         WHERE id IN (SELECT recipe_id FROM recipes_to_delete)
     )
-    SELECT id AS deleted_group_id FROM target_group
+    SELECT id FROM target_group
 
   add_recipe: |
     INSERT INTO recipe.group_recipe (group_id, recipe_id)
