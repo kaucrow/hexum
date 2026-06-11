@@ -24,12 +24,10 @@ async fn main() -> Result<()> {
     let redis_conn = init_redis_conn(&config).await?;
 
     let platform_state = platform::init(pool.clone(), redis_conn.clone(), config.clone()).await?;
-    let business_state = business::init(
-        pool, redis_conn, platform_state.auth.clone(), config.clone()
-    ).await?;
+    let business_state = business::init(pool).await?;
 
     let platform_router = platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
+    let business_router = business::api::router(business_state);
 
     let mut openapi = MasterDocs::openapi();
 
