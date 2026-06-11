@@ -41,7 +41,7 @@ impl LettreAdapter {
 
         Ok(Self {
             mailer,
-            frontend_url: config.frontend.url(),
+            frontend_url: config.frontend.url.clone(),
             from_addr: config.email.from.clone(),
         })
     }
@@ -50,24 +50,30 @@ impl LettreAdapter {
 #[derive(Template)]
 #[template(path = "verification_email.html")]
 struct VerificationEmailTemplate<'a> {
-    url: &'a str,
+    code: &'a str,
+    action_name: &'static str,
+    description: &'static str,
 }
 
 impl LettreAdapter {
-    async fn do_send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), LocalError> {
-        let url = format!("{}user/verify-ui?token={}", self.frontend_url, token);
-
-        let template = VerificationEmailTemplate { url: &url };
+    async fn do_send_verification_email(&self, to: &user::EmailAddress, code: &str, context: VerificationContext) -> Result<(), LocalError> {
+        let template = VerificationEmailTemplate {
+            code,
+            action_name: context.action_name(),
+            description: context.description(),
+        };
         let html_body = template.render()?;
+
+        let subject = context.subject();
 
         let email = Message::builder()
             .from(self.from_addr.parse()?)
             .to(to.as_str().parse()?)
-            .subject("Verify your account")
+            .subject(subject)
             .multipart(
                 MultiPart::alternative()
                     .singlepart(
-                        SinglePart::plain(format!("Verify your account here: {}", url))
+                        SinglePart::plain(format!("{} - Your verification code is: {}", subject, code))
                     )
                     .singlepart(
                         SinglePart::html(html_body)
@@ -82,8 +88,8 @@ impl LettreAdapter {
 
 #[async_trait]
 impl Port for LettreAdapter {
-    async fn send_verification_email(&self, to: &user::EmailAddress, token: &str) -> Result<(), PortError> {
-        Ok(self.do_send_verification_email(to, token).await?)
+    async fn send_verification_email(&self, to: &user::EmailAddress, code: &str, context: VerificationContext) -> Result<(), PortError> {
+        Ok(self.do_send_verification_email(to, code, context).await?)
     }
 }
 

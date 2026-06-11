@@ -287,7 +287,7 @@ pub async fn spawn_test_app() -> TestApp {
         pool.clone(),
     ));
     let redis_session_adapter = Arc::new(
-        platform::features::session::RedisAdapter::new(&config)
+        platform::features::session::RedisAdapter::new(redis_conn.clone())
             .await
             .expect("Failed to create session RedisAdapter"),
     );
@@ -306,7 +306,7 @@ pub async fn spawn_test_app() -> TestApp {
     );
 
     let redis_verification_adapter = Arc::new(
-        platform::features::verification::RedisAdapter::new(&config)
+        platform::features::verification::RedisAdapter::new(redis_conn.clone())
             .await
             .expect("Failed to create verification RedisAdapter"),
     );
@@ -339,14 +339,14 @@ pub async fn spawn_test_app() -> TestApp {
     };
 
     // ── Business layer (uses business::init) ───────────────────
-    let business_state = business::init(pool.clone())
+    let business_state = business::init(pool.clone(), redis_conn.clone(), platform_state.auth.clone(), config.clone())
         .await
         .expect("Failed to init business state");
 
     // ── Router ─────────────────────────────────────────────────
     let platform_router =
         platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state);
+    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
     let app = Router::new()
         .merge(platform_router)
         .merge(business_router);

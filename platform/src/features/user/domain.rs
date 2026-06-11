@@ -1,6 +1,7 @@
 use strum::{Display, EnumString};
 use thiserror::Error;
-use uuid::Uuid;
+
+use crate::prelude::*;
 
 #[derive(Debug, Clone)]
 pub struct User {
@@ -46,7 +47,7 @@ impl User {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Display, EnumString)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Display, EnumString)]
 pub enum Role {
     Admin,
     Manager,
@@ -158,7 +159,8 @@ impl UserAuthenticator {
     }
 }
 
-#[derive(Debug, Clone, Display, EnumString)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Display, EnumString)]
+#[serde(rename_all = "lowercase")]
 pub enum AuthProvider {
     Local,
     Google,
@@ -307,16 +309,20 @@ mod tests {
         fn test_user_deactivate() {
             let mut user = User::new("charlie", "charlie@test.com").unwrap();
             assert!(user.is_active);
-
             user.deactivate().unwrap();
             assert!(!user.is_active);
         }
 
         #[test]
-        fn test_user_deactivate_twice_fails() {
+        fn test_user_deactivate_when_inactive_fails() {
             let mut user = User::new("dave", "dave@test.com").unwrap();
+            assert!(user.is_active);
+
             user.deactivate().unwrap();
+            assert!(!user.is_active);
+
             let err = user.deactivate().unwrap_err();
+            assert!(!user.is_active);
             assert!(matches!(err, UserError::UserAlreadyDeactivated));
         }
 

@@ -4,10 +4,7 @@ use crate::{
     features::auth,
     api::*,
 };
-use super::{
-    build_removal_cookie,
-    dtos::*,
-};
+use super::dtos::*;
 
 #[utoipa::path(
     post,
@@ -35,6 +32,6 @@ pub async fn logout(
     let access_cookie = build_removal_cookie("access_token", "/", &config.api.protocol);
     let refresh_cookie = build_removal_cookie("refresh_token", "/auth/refresh-session", &config.api.protocol);
 
-    let response = LogoutResponse { message: "Logout successful".to_string() };
+    let response = LogoutResponse { message: "Logout successful.".to_string() };
     Ok((jar.add(access_cookie).add(refresh_cookie), Json(response)))
 }

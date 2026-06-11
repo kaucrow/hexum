@@ -4,7 +4,6 @@ use crate::{
     features::auth,
     api::*,
 };
-use super::build_cookie;
 
 #[utoipa::path(
     post,

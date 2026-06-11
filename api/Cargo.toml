@@ -9,6 +9,7 @@ business = { path = "../business" }
 anyhow = { workspace = true }
 axum = { workspace = true }
 sqlx = { workspace = true }
+redis = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
 utoipa-scalar = { workspace = true }

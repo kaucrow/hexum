@@ -11,7 +11,7 @@ use platform::{Environment, get_config};
 
 use api::{
     docs::{self, MasterDocs},
-    db::init_postgres_pool,
+    init::*,
 };
 
 #[tokio::main]
@@ -21,18 +21,21 @@ async fn main() -> Result<()> {
     let config = Arc::new(get_config()?);
 
     let pool = init_postgres_pool(&config).await?;
+    let redis_conn = init_redis_conn(&config).await?;
 
-    let platform_state = platform::init(pool.clone(), config.clone()).await?;
-    let business_state = business::init(pool).await?;
+    let platform_state = platform::init(pool.clone(), redis_conn.clone(), config.clone()).await?;
+    let business_state = business::init(
+        pool, redis_conn, platform_state.auth.clone(), config.clone()
+    ).await?;
 
     let platform_router = platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state);
+    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
 
     let mut openapi = MasterDocs::openapi();
 
     if config.environment == Environment::Production {
         openapi.servers = Some(vec![
-            Server::new("/api")
+            Server::new(config.api.path_suffix.clone())
         ]);
     }
 
@@ -42,7 +45,7 @@ async fn main() -> Result<()> {
     let docs_auth_layer = docs::get_auth_layer(config.clone());
 
     let docs_router: Router<()> = Router::new()
-        .merge(Scalar::with_url("/", openapi)) 
+        .merge(Scalar::with_url("/", openapi))
         .layer(docs_auth_layer);
 
     let app = Router::new()

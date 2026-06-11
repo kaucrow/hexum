@@ -21,6 +21,7 @@ services:
     # Swap the configuration mount directory to the local path
     volumes:
       - ./config/development:/app/config/development:ro
+      - ./uploads:/app/uploads
 
     # Set the environment to development
     environment:

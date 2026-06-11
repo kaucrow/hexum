@@ -1,11 +1,14 @@
 use uuid::Uuid;
 
-use crate::prelude::*;
-use crate::features::*;
-use crate::features::auth::*;
+use crate::{
+    prelude::*,
+    features::*,
+    features::auth::*,
+    features::session::SessionPayload,
+};
 
 // ==================================================================
-// Helpers
+//   Helpers
 // ==================================================================
 
 fn make_test_user(id: Uuid) -> user::User {
@@ -42,7 +45,7 @@ fn setup_successful_login(
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -62,7 +65,10 @@ fn setup_successful_login(
     security.expect_verify_password()
         .returning(move |pass, _| pass == pwd);
     security.expect_generate_access_token()
-        .returning(|id| Ok(format!("access_token:{id}")));
+        .returning(|payload| {
+            let token = format!("access_token:{}", payload.user_id);
+            Ok(token)
+        });
     security.expect_generate_refresh_token()
         .returning(|| "refresh_token_123".to_string());
 
@@ -72,7 +78,7 @@ fn setup_successful_login(
 }
 
 // ==================================================================
-// login_user — Core Flows
+//   login_user — Core Flows
 // ==================================================================
 
 #[tokio::test]
@@ -82,7 +88,7 @@ async fn test_login_user_by_username_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -101,7 +107,10 @@ async fn test_login_user_by_username_success() {
     security.expect_verify_password()
         .returning(|_, _| true);
     security.expect_generate_access_token()
-        .returning(|id| Ok(format!("access_token:{id}")));
+        .returning(|payload| {
+            let token = format!("access_token:{}", payload.user_id);
+            Ok(token)
+        });
     security.expect_generate_refresh_token()
         .returning(|| "refresh_token_123".to_string());
 
@@ -129,9 +138,9 @@ async fn test_login_user_by_email_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -150,7 +159,10 @@ async fn test_login_user_by_email_success() {
     security.expect_verify_password()
         .returning(|_, _| true);
     security.expect_generate_access_token()
-        .returning(|id| Ok(format!("access_token:{id}")));
+        .returning(|payload| {
+            let token = format!("access_token:{}", payload.user_id);
+            Ok(token)
+        });
     security.expect_generate_refresh_token()
         .returning(|| "refresh_token_123".to_string());
 
@@ -171,9 +183,9 @@ async fn test_login_user_by_email_success() {
 async fn test_login_user_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -197,7 +209,7 @@ async fn test_login_user_inactive() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -221,7 +233,7 @@ async fn test_login_user_not_verified() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -254,7 +266,7 @@ async fn test_login_user_invalid_password() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
     {
         let uid = user_id;
         user_repo.expect_get_authenticator()
@@ -284,12 +296,12 @@ async fn test_login_user_invalid_password() {
 }
 
 // ==================================================================
-// login_user — Password Edge Cases
+//   login_user — Password Edge Cases
 // ==================================================================
 
-// ------------------------------------------------------------------
-// Valid-Format Passwords
-// ------------------------------------------------------------------
+// ──────────────────────────────────────────────────────────────────
+//   Valid-Format Passwords
+// ──────────────────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_login_with_valid_format_password_success() {
@@ -321,17 +333,17 @@ async fn test_login_with_punctuation_mixed_password_success() {
     assert!(result.is_ok(), "Login with mixed-punctuation password should succeed");
 }
 
-// ------------------------------------------------------------------
-// Empty and Edge Identity Values
-// ------------------------------------------------------------------
+// ──────────────────────────────────────────────────────────────────
+//   Empty and Edge Identity Values
+// ──────────────────────────────────────────────────────────────────
 
 #[tokio::test]
 async fn test_login_with_empty_identity_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
     user_repo.expect_get_user_by_email()
-        .returning(|_| None);
+        .returning(|_| Ok(None));
 
     let session = session::MockPort::new();
     let security = security::MockPort::new();
@@ -344,92 +356,7 @@ async fn test_login_with_empty_identity_not_found() {
 }
 
 // ==================================================================
-// verify_user
-// ==================================================================
-
-#[tokio::test]
-async fn test_verify_user_success() {
-    let user_id = Uuid::new_v4();
-    let test_user = make_test_user(user_id);
-
-    let mut user_repo = user::MockRepository::new();
-    user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
-
-    let mut security = security::MockPort::new();
-    security.expect_verify_access_token()
-        .returning(move |_| Ok(user_id));
-
-    let session = session::MockPort::new();
-    let oauth = oauth::MockPort::new();
-
-    let service = auth::Service::new(
-        Arc::new(user_repo),
-        Arc::new(session),
-        Arc::new(security),
-        Arc::new(oauth),
-    );
-
-    let result = service.verify_user("valid-access-token").await;
-    assert!(result.is_ok());
-
-    let user = result.unwrap();
-    assert_eq!(user.username.as_str(), "testuser");
-}
-
-#[tokio::test]
-async fn test_verify_user_inactive() {
-    let mut test_user = make_test_user(Uuid::new_v4());
-    test_user.is_active = false;
-
-    let mut user_repo = user::MockRepository::new();
-    user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
-
-    let mut security = security::MockPort::new();
-    security.expect_verify_access_token()
-        .returning(|_| Ok(Uuid::new_v4()));
-
-    let session = session::MockPort::new();
-    let oauth = oauth::MockPort::new();
-
-    let service = auth::Service::new(
-        Arc::new(user_repo),
-        Arc::new(session),
-        Arc::new(security),
-        Arc::new(oauth),
-    );
-
-    let result = service.verify_user("some-token").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserInactive)));
-}
-
-#[tokio::test]
-async fn test_verify_user_not_found() {
-    let mut user_repo = user::MockRepository::new();
-    user_repo.expect_get_user_by_id()
-        .returning(|_| None);
-
-    let mut security = security::MockPort::new();
-    security.expect_verify_access_token()
-        .returning(|_| Ok(Uuid::new_v4()));
-
-    let session = session::MockPort::new();
-    let oauth = oauth::MockPort::new();
-
-    let service = auth::Service::new(
-        Arc::new(user_repo),
-        Arc::new(session),
-        Arc::new(security),
-        Arc::new(oauth),
-    );
-
-    let result = service.verify_user("some-token").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserNotFound)));
-}
-
-// ==================================================================
-// refresh_session
+//   refresh_session
 // ==================================================================
 
 #[tokio::test]
@@ -439,17 +366,20 @@ async fn test_refresh_session_success() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut session = session::MockPort::new();
     session.expect_consume_session()
-        .returning(move |_| Ok(Some(user_id)));
+        .returning(move |_| Ok(Some(SessionPayload { user_id, roles: vec![user::Role::BasicUser], provider: user::AuthProvider::Local })));
     session.expect_store_session()
         .returning(|_, _, _| Ok(()));
 
     let mut security = security::MockPort::new();
     security.expect_generate_access_token()
-        .returning(|id| Ok(format!("access_token:{id}")));
+        .returning(|payload| {
+            let token = format!("access_token:{}", payload.user_id);
+            Ok(token)
+        });
     security.expect_generate_refresh_token()
         .returning(|| "refresh_token_123".to_string());
 
@@ -495,11 +425,11 @@ async fn test_refresh_session_inactive_user() {
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_id()
-        .returning(move |_| Some(test_user.clone()));
+        .returning(move |_| Ok(Some(test_user.clone())));
 
     let mut session = session::MockPort::new();
     session.expect_consume_session()
-        .returning(|_| Ok(Some(Uuid::new_v4())));
+        .returning(|_| Ok(Some(SessionPayload { user_id: Uuid::new_v4(), roles: vec![user::Role::BasicUser], provider: user::AuthProvider::Local })));
 
     let security = security::MockPort::new();
     let oauth = oauth::MockPort::new();
@@ -516,7 +446,7 @@ async fn test_refresh_session_inactive_user() {
 }
 
 // ==================================================================
-// logout_user
+//   logout_user
 // ==================================================================
 
 #[tokio::test]
@@ -525,7 +455,7 @@ async fn test_logout_user_success() {
 
     let mut session = session::MockPort::new();
     session.expect_consume_session()
-        .returning(|_| Ok(Some(Uuid::new_v4())));
+        .returning(|_| Ok(Some(SessionPayload { user_id: Uuid::new_v4(), roles: vec![user::Role::BasicUser], provider: user::AuthProvider::Local })));
 
     let security = security::MockPort::new();
     let oauth = oauth::MockPort::new();

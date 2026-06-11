@@ -1,52 +1,21 @@
+use ::redis::{
+    AsyncCommands,
+    aio::ConnectionManager,
+};
 use async_trait::async_trait;
-use ::redis::AsyncCommands;
 use thiserror::Error;
-use uuid::Uuid;
 use anyhow::Result;
 
-use crate::prelude::*;
-use crate::Config;
 use super::*;
 
 #[derive(Clone)]
 pub struct RedisAdapter {
-    pub conn: ::redis::aio::ConnectionManager,
+    pub conn: ConnectionManager,
 }
 
 impl RedisAdapter {
-    pub async fn new(config: &Config) -> Result<Self> {
-        let client = ::redis::Client::open(config.redis.url())?;
-
-        let conn = ::redis::aio::ConnectionManager::new(client)
-            .await
-            .context("Failed to connect to Redis database.")?;
-
+    pub async fn new(conn: ConnectionManager) -> Result<Self> {
         Ok(Self { conn })
-    }
-
-    async fn do_store_session(&self, refresh_token: &str, user_id: &Uuid, ttl_days: u64) -> Result<(), LocalError> {
-        let ttl_seconds = ttl_days * 24 * 60 * 60;
-
-        // Saves the key and sets the expiration
-        let key = self.format_key(refresh_token);
-        let _: () = self.conn.clone().set_ex(key, user_id.to_string(), ttl_seconds).await?;
-
-        Ok(())
-    }
-
-    async fn do_consume_session(&self, refresh_token: &str) -> Result<Option<Uuid>, LocalError> {
-        // Fetches the user_id and deletes the token
-        let key = self.format_key(refresh_token);
-        let user_id: Option<String> = self.conn.clone().get_del(key)
-            .await
-            .ok();
-
-        if let Some(user_id) = user_id {
-            let user_id_uuid = Uuid::try_parse(&user_id)?;
-            Ok(Some(user_id_uuid))
-        } else {
-            Ok(None)
-        }
     }
 
     fn format_key(&self, token: &str) -> String {
@@ -56,12 +25,47 @@ impl RedisAdapter {
 
 #[async_trait]
 impl Port for RedisAdapter {
-    async fn store_session(&self, refresh_token: &str, user_id: &Uuid, ttl_days: u64) -> Result<(), PortError> {
-        Ok(self.do_store_session(refresh_token, user_id, ttl_days).await?)
+    async fn store_session(
+        &self,
+        refresh_token: &str,
+        payload: SessionPayload,
+        ttl_days: u64,
+    ) -> Result<(), PortError> {
+        let res: Result<_, LocalError> = async {
+            let ttl_seconds = ttl_days * 24 * 60 * 60;
+
+            // Saves the key-value pair and sets the expiration
+            let key = self.format_key(refresh_token);
+            let value = serde_json::to_string(&payload)?;
+
+            let _: () = self.conn.clone().set_ex(key, value, ttl_seconds).await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
     }
 
-    async fn consume_session(&self, refresh_token: &str) -> Result<Option<Uuid>, PortError> {
-        Ok(self.do_consume_session(refresh_token).await?)
+    async fn consume_session(
+        &self,
+        refresh_token: &str
+    ) -> Result<Option<SessionPayload>, PortError> {
+        let res: Result<_, LocalError> = async {
+            // Fetches the user_id and deletes the token
+            let key = self.format_key(refresh_token);
+            let session_payload: Option<String> = self.conn.clone().get_del(key)
+                .await
+                .ok();
+
+            if let Some(payload_str) = session_payload {
+                let session_payload: SessionPayload = serde_json::from_str(&payload_str)?;
+                Ok(Some(session_payload))
+            } else {
+                Ok(None)
+            }
+        }.await;
+
+        res.map_err(Into::into)
     }
 }
 
@@ -71,6 +75,8 @@ pub enum LocalError {
     Redis(#[from] ::redis::RedisError),
     #[error(transparent)]
     Uuid(#[from] uuid::Error),
+    #[error(transparent)]
+    Serialization(#[from] serde_json::Error),
 }
 
 impl From<LocalError> for PortError {
@@ -78,6 +84,7 @@ impl From<LocalError> for PortError {
         match e {
             LocalError::Redis(e) => PortError::Internal(e.to_string()),
             LocalError::Uuid(e) => PortError::Internal(e.to_string()),
+            LocalError::Serialization(e) => PortError::Internal(e.to_string()),
         }
     }
 }

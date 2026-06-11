@@ -8,9 +8,13 @@ use super::routes;
 #[openapi(
     paths(
         // /user
-        routes::user::register,
-        routes::user::verify,
-        routes::user::verify_ui,
+        routes::user::register::register,
+        routes::user::register::verify_account,
+        routes::user::data::get_user_data,
+        routes::user::data::update_user_data,
+        routes::user::change_email::change_email,
+        routes::user::change_email::verify_email_change,
+        routes::user::delete::delete,
 
         // /auth
         routes::auth::local::login,
@@ -25,9 +29,18 @@ use super::routes;
             // ==== Requests & Responses ====
 
             // /user
-            routes::dtos::RegisterRequest,
-            routes::dtos::RegisterResponse,
-            routes::dtos::VerifyResponse,
+            routes::user::dtos::RegisterRequest,
+            routes::user::dtos::RegisterResponse,
+            routes::user::dtos::VerifyAccountRequest,
+            routes::user::dtos::VerifyAccountResponse,
+            routes::user::dtos::ChangeEmailRequest,
+            routes::user::dtos::ChangeEmailResponse,
+            routes::user::dtos::VerifyEmailChangeRequest,
+            routes::user::dtos::VerifyEmailChangeResponse,
+            routes::user::dtos::UserDataResponse,
+            routes::user::dtos::UserDataUpdateRequest,
+            routes::user::dtos::UserDataUpdateResponse,
+            routes::user::dtos::UserDeletionResponse,
 
             // /auth
             routes::auth::dtos::LoginRequest,

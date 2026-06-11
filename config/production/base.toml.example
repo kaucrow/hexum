@@ -4,17 +4,15 @@ debug = true
 enable_dev_endpoints = true
 host = "0.0.0.0"
 domain = "hexum.com"
+path_suffix = "/api"
 port = 8080
-protocol = "http"
 docs_endpoint = "docs"
 
 [api.docs_users]
 docs-user-1 = "password"
 
 [frontend]
-domain = "hexum.com"
-port = 8080
-protocol = "https"
+url = "https://hexum.com/api"
 
 [postgresql]
 pool_max_conn = 5
@@ -30,21 +28,28 @@ port = 6379
 passwd = ""
 number = "0"
 
+[storage]
+upload_dir = "/app/uploads"
+
 [email]
 provider = "resend"
 from = "noreply@kaucrow.com"
 api_key = ""
 
 [oauth]
-login_ui_endpoint = "auth/oauth/login-ui"
-callback_endpoint = "auth/oauth/callback-ui"
+login_ui_endpoint = "/auth/oauth/login-ui"
+callback_endpoint = "/auth/oauth/callback-ui"
 
 [oauth.google]
-login_endpoint = "auth/oauth/google/login"
+login_endpoint = "/auth/oauth/google/login"
 client_id = ""
 client_secret = ""
 
 [oauth.github]
-login_endpoint = "auth/oauth/github/login"
+login_endpoint = "/auth/oauth/github/login"
 client_id = ""
 client_secret = ""
+
+[external_api]
+url = "https://www.themealdb.com/api/json/v1"
+key = "1"

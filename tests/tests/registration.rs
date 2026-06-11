@@ -119,7 +119,7 @@ async fn register_user_invalid_username() {
         )
         .await;
 
-    assert_eq!(response.status(), 400);
+    assert_eq!(response.status(), 422);
 
     // Ensure no user was persisted
     let user_id = app.get_user_id_by_email(&email).await;
@@ -143,7 +143,7 @@ async fn register_user_invalid_password() {
         )
         .await;
 
-    assert_eq!(response.status(), 400);
+    assert_eq!(response.status(), 422);
 
     // Ensure no user was persisted
     let user_id = app.get_user_id_by_email(&email).await;
