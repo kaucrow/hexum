@@ -187,8 +187,7 @@ impl UseCase for Service {
     async fn login_user_via_google(&self, code: &str) -> Result<AuthTokens, UseCaseError> {
         let google_user = self.oauth
             .get_google_user_info_by_code(code)
-            .await
-            .map_err(|e| UseCaseError::Internal(format!("Google Auth failed: {:?}", e)))?;
+            .await?;
 
         self.resolve_and_login(
             google_user.email,
@@ -201,8 +200,7 @@ impl UseCase for Service {
     async fn login_user_via_github(&self, code: &str) -> Result<AuthTokens, UseCaseError> {
         let github_user = self.oauth
             .get_github_user_info_by_code(code)
-            .await
-            .map_err(|e| UseCaseError::Internal(format!("GitHub Auth failed: {:?}", e)))?;
+            .await?;
 
         self.resolve_and_login(
             github_user.email,

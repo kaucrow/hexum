@@ -203,7 +203,7 @@ async fn test_login_user_not_found() {
         Arc::new(oauth),
     );
 
-    let result = service.login_user("unknown", "password123").await;
+    let result = service.login_user("unknown@example.com", "password123").await;
     assert!(
         matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
         "Expected InvalidCredentials, got {:?}",

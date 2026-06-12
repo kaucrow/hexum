@@ -101,6 +101,10 @@ impl Port for OAuthAdapter {
             .await
             .map_err(|e| PortError::NetworkError(e.to_string()))?;
 
+        if !token_res.status().is_success() {
+            return Err(PortError::InvalidCode);
+        }
+
         let token_data: GitHubTokenResponse = token_res
             .json()
             .await

@@ -12,6 +12,15 @@ docs_endpoint = "docs"
 [api.docs_users]
 hexum = "hexum"
 
+[ratelimit]
+login_max_attempts = 100
+login_window_secs = 900
+login_lockout_secs = 1800
+login_base_delay_ms = 0
+ip_max_per_minute = 100
+register_ip_max_per_hour = 50
+verify_max_per_minute = 50
+
 [frontend]
 url = "http://localhost:8080"
 

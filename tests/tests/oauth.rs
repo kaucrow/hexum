@@ -1,16 +1,16 @@
 use integration_tests::spawn_test_app;
+use serde_json::json;
 
 #[tokio::test]
 async fn google_login_with_invalid_code_returns_error() {
     let app = spawn_test_app().await;
 
     // Calling the Google OAuth endpoint with a garbage code should
-    // return a 400 Bad Request (invalid code) or 500 depending on
-    // how the network call fails.
+    // return a 400 Bad Request (invalid code).
     let response = app
         .client
         .post(app.url("/auth/oauth/google/login"))
-        .query(&[("code", "invalid_authorization_code")])
+        .json(&json!({ "code": "invalid_authorization_code" }))
         .send()
         .await
         .expect("Request failed");
@@ -32,7 +32,7 @@ async fn github_login_with_invalid_code_returns_error() {
     let response = app
         .client
         .post(app.url("/auth/oauth/github/login"))
-        .query(&[("code", "invalid_authorization_code")])
+        .json(&json!({ "code": "invalid_authorization_code" }))
         .send()
         .await
         .expect("Request failed");
