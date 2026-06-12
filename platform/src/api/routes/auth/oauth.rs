@@ -1,7 +1,7 @@
 use crate::{
     Config,
     prelude::*,
-    features::auth,
+    features::{auth, ratelimit},
     api::*,
 };
 use super::dtos::*;
@@ -15,6 +15,7 @@ use super::dtos::*;
         (status = 200, description = "Login successful", body = LoginResponse, headers(
             ("Set-Cookie" = String, description = "HTTP-only cookies for access_token and refresh_token")
         )),
+        (status = 429, description = "Too Many Requests"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["Authentication"]
@@ -22,9 +23,16 @@ use super::dtos::*;
 pub async fn google_login(
     State(config): State<Arc<Config>>,
     State(auth_service): State<Arc<dyn auth::UseCase>>,
+    State(ratelimit): State<Arc<dyn ratelimit::UseCase>>,
     jar: CookieJar,
+    ClientIp(client_ip): ClientIp,
     Json(payload): Json<OAuthLoginRequest>,
 ) -> Result<(CookieJar, Json<LoginResponse>), ApiError> {
+    // ── IP-based rate limiting ──
+    ratelimit
+        .check_ip_limit(&client_ip, "oauth_google")
+        .await?;
+
     info!("Google OAuth login requested with code {}`", &payload.code);
 
     let tokens = auth_service
@@ -50,6 +58,7 @@ pub async fn google_login(
         (status = 200, description = "Login successful", body = LoginResponse, headers(
             ("Set-Cookie" = String, description = "HTTP-only cookies for access_token and refresh_token")
         )),
+        (status = 429, description = "Too Many Requests"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["Authentication"]
@@ -57,9 +66,16 @@ pub async fn google_login(
 pub async fn github_login(
     State(config): State<Arc<Config>>,
     State(auth_service): State<Arc<dyn auth::UseCase>>,
+    State(ratelimit): State<Arc<dyn ratelimit::UseCase>>,
     jar: CookieJar,
+    ClientIp(client_ip): ClientIp,
     Json(payload): Json<OAuthLoginRequest>,
 ) -> Result<(CookieJar, Json<LoginResponse>), ApiError> {
+    // ── IP-based rate limiting ──
+    ratelimit
+        .check_ip_limit(&client_ip, "oauth_github")
+        .await?;
+
     info!("GitHub OAuth login requested with code {}`", &payload.code);
 
     let tokens = auth_service
@@ -110,7 +126,7 @@ pub async fn oauth_login_ui(
 
     let html_content = template
         .render()
-        .map_err(|e| ApiError::Internal(e.to_string()))?;
+        .map_err(|_| ApiError::Internal)?;
 
     Ok(Html(html_content))
 }
@@ -162,7 +178,7 @@ pub async fn oauth_callback_ui(
 
     let html_content = template
         .render()
-        .map_err(|e| ApiError::Internal(e.to_string()))?;
+        .map_err(|_l| ApiError::Internal)?;
 
     Ok(Html(html_content))
 }

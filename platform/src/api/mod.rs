@@ -11,7 +11,7 @@ pub use axum::{
     routing::{get, post, delete, put, patch},
     extract::{State, Query, Path, FromRef},
     response::{Html, Response, IntoResponse},
-    http::StatusCode,
+    http::{StatusCode, HeaderMap},
     body::Bytes,
 };
 #[allow(dead_code)]
@@ -22,7 +22,7 @@ pub use validator::Validate;
 pub use askama::Template;
 
 pub use error::ApiError;
-pub use extractors::{AuthenticatedUser, OptionalUser, RequireRole, role};
+pub use extractors::{AuthenticatedUser, ClientIp, OptionalUser, RequireRole, role};
 pub use crate::features::user::AuthProvider;
 
 use axum::{
@@ -148,6 +148,7 @@ pub fn build_cookie<'a>(name: &'a str, value: String, path: &'a str, protocol: &
 
     cookie.build()
 }
+
 
 // Helper function to build removal cookies
 pub fn build_removal_cookie<'a>(name: &'a str, path: &'a str, protocol: &ApiProtocol) -> Cookie<'a> {

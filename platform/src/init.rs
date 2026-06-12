@@ -17,7 +17,7 @@ pub async fn init(
     telemetry::init(subscriber);
 
     let pg_user_adapter = Arc::new(user::PostgresAdapter::new(pool));
-    let redis_session_adapter = Arc::new(session::RedisAdapter::new(redis_conn.clone()).await?);
+    let redis_session_adapter = Arc::new(session::RedisAdapter::new(redis_conn.clone()).await);
     let paseto_security_adapter = Arc::new(security::PasetoAdapter::new()?);
     let oauth_adapter = Arc::new(oauth::OAuthAdapter::new(&config));
 
@@ -28,7 +28,12 @@ pub async fn init(
         oauth_adapter,
     );
 
-    let redis_verification_adapter = Arc::new(verification::RedisAdapter::new(redis_conn).await?);
+    let redis_verification_adapter = Arc::new(verification::RedisAdapter::new(redis_conn.clone()).await);
+    let redis_ratelimit_adapter = Arc::new(ratelimit::RedisAdapter::new(redis_conn).await);
+    let ratelimit_service = Arc::new(ratelimit::Service::new(
+        redis_ratelimit_adapter,
+        config.clone(),
+    ));
 
     let email_adapter: Arc<dyn email::Port> = match config.email.sender {
         EmailSender::Smtp(_) => Arc::new(email::LettreAdapter::new(&config)?),
@@ -46,5 +51,6 @@ pub async fn init(
         config,
         auth: Arc::new(auth_service),
         user: Arc::new(user_service),
+        ratelimit: ratelimit_service,
     })
 }

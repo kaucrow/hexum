@@ -1,7 +1,7 @@
 use crate::{
     Config,
     prelude::*,
-    features::auth,
+    features::{auth, ratelimit},
     api::*,
 };
 
@@ -14,6 +14,7 @@ use crate::{
             ("Set-Cookie" = String, description = "Updated HTTP-only cookies for access_token and refresh_token")
         )),
         (status = 401, description = "Unauthorized - Missing, invalid, or expired refresh token cookie"),
+        (status = 429, description = "Too Many Requests"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["Authentication"]
@@ -21,8 +22,15 @@ use crate::{
 pub async fn refresh_session(
     State(config): State<Arc<Config>>,
     State(auth_service): State<Arc<dyn auth::UseCase>>,
+    State(ratelimit): State<Arc<dyn ratelimit::UseCase>>,
     jar: CookieJar,
+    ClientIp(client_ip): ClientIp,
 ) -> Result<CookieJar, ApiError> {
+    // ── IP-based rate limiting ──
+    ratelimit
+        .check_ip_limit(&client_ip, "refresh")
+        .await?;
+
     info!("Session refresh requested");
 
     // Get the refresh token from the cookie

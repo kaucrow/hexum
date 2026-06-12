@@ -1,10 +1,8 @@
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use rand::distr::{Alphanumeric, SampleString};
-use uuid::Uuid;
 
 use crate::{
+    prelude::*,
     features::{
         user::{self, User, AuthProvider},
         session::{self, SessionPayload},
@@ -12,6 +10,11 @@ use crate::{
     },
 };
 use super::*;
+
+/// A well-formed but never-matching argon2id hash used when the user
+/// does not exist, to ensure constant-time password verification and
+/// prevent time-based attacks that could reveal valid usernames.
+const DUMMY_ARGON2_HASH: &str = "$argon2id$v=19$m=19456,t=2,p=1$AAAAAAAAAAAAAAAAAAAAAA$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 #[derive(Clone)]
 pub struct Service {
@@ -29,6 +32,39 @@ impl Service {
         oauth: Arc<dyn oauth::Port>,
     ) -> Self {
         Self { user_repo, session, security, oauth }
+    }
+
+    /// Resolves a user by identity (username or email) and returns the
+    /// user along with their local authenticator (if any) and the password
+    /// hash to verify against.
+    ///
+    /// When the user is not found, returns `None` for both user and
+    /// authenticator. The caller must then verify against [`DUMMY_ARGON2_HASH`]
+    /// to maintain constant-time behaviour.
+    async fn resolve_local_user(
+        &self,
+        identity: &str,
+    ) -> Result<(Option<User>, Option<user::UserAuthenticator>), UseCaseError> {
+        // Try username first
+        let user = if let Some(u) = self.user_repo.get_user_by_username(identity).await? {
+            Some(u)
+        } else {
+            // Try email
+            if let Ok(email) = user::EmailAddress::new(identity.to_string()) {
+                self.user_repo.get_user_by_email(&email).await?
+            } else {
+                None
+            }
+        };
+
+        let authenticator = match &user {
+            Some(u) => self.user_repo
+                .get_authenticator(&u.id, AuthProvider::Local)
+                .await?,
+            None => None,
+        };
+
+        Ok((user, authenticator))
     }
 
     async fn resolve_and_login(
@@ -113,49 +149,39 @@ impl Service {
 #[async_trait]
 impl UseCase for Service {
     async fn login_user(&self, identity: &str, passwd: &str) -> Result<AuthTokens, UseCaseError> {
-        let user = if let Some(u) = self.user_repo.get_user_by_username(identity).await? {
-            u
-        } else {
-            // If the identity is not a username, try parsing is as email.
-            // If it's not a valid email format, we stop here.
-            let email = user::EmailAddress::new(identity.to_string())
-                .or(Err(UseCaseError::UserNotFound))?;
+        // Resolve user + local authenticator (or None for both)
+        let (user_opt, auth_opt) = self.resolve_local_user(identity).await?;
 
-            self.user_repo.get_user_by_email(&email).await?
-                .ok_or(UseCaseError::UserNotFound)?
-        };
+        // Determine the hash to verify, real or dummy.
+        // Always run an argon2 verification so an attacker cannot
+        // distinguish "user not found" from "wrong password" via response time.
+        let hash_to_verify = auth_opt
+            .as_ref()
+            .and_then(|a| a.hashed_passwd.as_deref())
+            .unwrap_or(DUMMY_ARGON2_HASH);
 
-        if !user.is_active {
-            return Err(UseCaseError::UserInactive);
-        }
+        let password_ok = self.security.verify_password(passwd, hash_to_verify);
 
-        let local_authenticator = self.user_repo
-            .get_authenticator(&user.id, AuthProvider::Local)
-            .await?
-            .ok_or(UseCaseError::UserNotFound)?;
+        // Combine all checks into a single decision
+        match (user_opt, auth_opt, password_ok) {
+            (Some(user), Some(auth), true) => {
+                if !user.is_active {
+                    return Err(UseCaseError::InvalidCredentials);
+                }
+                if let Some(false) = auth.is_verified {
+                    return Err(UseCaseError::InvalidCredentials);
+                }
 
-        if let Some(is_verified) = local_authenticator.is_verified {
-            if !is_verified {
-                return Err(UseCaseError::UserNotVerified);
+                self.issue_session(
+                    SessionPayload {
+                        user_id: user.id,
+                        roles: user.roles,
+                        provider: AuthProvider::Local,
+                    }
+                ).await
             }
+            _ => Err(UseCaseError::InvalidCredentials),
         }
-
-        let hashed_passwd = local_authenticator.hashed_passwd
-            .ok_or(UseCaseError::Internal("User with local auth has no password set.".to_string()))?;
-
-        if !self.security.verify_password(&passwd, &hashed_passwd) {
-            return Err(UseCaseError::InvalidPassword);
-        }
-
-        let auth_tokens = self.issue_session(
-            SessionPayload {
-                user_id: user.id,
-                roles: user.roles,
-                provider: AuthProvider::Local,
-            }
-        ).await?;
-
-        Ok(auth_tokens)
     }
 
     async fn login_user_via_google(&self, code: &str) -> Result<AuthTokens, UseCaseError> {

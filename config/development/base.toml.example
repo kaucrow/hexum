@@ -11,6 +11,28 @@ docs_endpoint = "docs"
 [api.docs_users]
 docs-user-1 = "password"
 
+[ratelimit]
+# Maximum failed login attempts before account lockout (per identity, within the window)
+login_max_attempts = 5
+
+# Sliding window in seconds for counting failed login attempts
+login_window_secs = 900
+
+# Lockout duration in seconds after exceeding max failed attempts
+login_lockout_secs = 1800
+
+# Base delay in milliseconds for progressive backoff after each failed login
+login_base_delay_ms = 500
+
+# Maximum requests per IP per minute across auth endpoints
+ip_max_per_minute = 20
+
+# Maximum registration requests per IP per hour
+register_ip_max_per_hour = 3
+
+# Maximum verification attempts per IP per minute
+verify_max_per_minute = 5
+
 [frontend]
 url = "http://localhost:8080"
 

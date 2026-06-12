@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, net::SocketAddr};
 
 use axum::Router;
 use utoipa::{OpenApi, openapi::Server};
@@ -59,7 +59,7 @@ async fn main() -> Result<()> {
     info!("API listening on {}", config.api.url().yellow());
     info!("View API docs at {}{}", config.api.url().yellow(), config.api.docs_endpoint.yellow().bold());
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app.into_make_service_with_connect_info::<SocketAddr>()).await?;
 
     Ok(())
 }

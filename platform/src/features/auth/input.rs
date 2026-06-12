@@ -27,6 +27,7 @@ pub trait UseCase: Send + Sync + 'static {
     async fn logout_user(&self, refresh_token: &str) -> Result<(), UseCaseError>;
 }
 
+#[derive(Debug)]
 pub struct AuthTokens {
     pub access_token: String,
     pub refresh_token: String,
@@ -36,6 +37,9 @@ pub struct AuthTokens {
 pub enum UseCaseError {
     #[error("The password provided is invalid.")]
     InvalidPassword,
+
+    #[error("The credentials provided are invalid.")]
+    InvalidCredentials,
 
     #[error("The access token provided is invalid: {0}")]
     InvalidAccessToken(String),
@@ -54,6 +58,12 @@ pub enum UseCaseError {
 
     #[error("The user email hasn't been verified.")]
     UserNotVerified,
+
+    #[error("Too many requests. Retry after {retry_after_secs}s.")]
+    TooManyRequests { retry_after_secs: u64 },
+
+    #[error("Account temporarily locked. Retry after {retry_after_secs}s.")]
+    LockedOut { retry_after_secs: u64 },
 
     #[error("Parsing error: {0}")]
     Parse(String),

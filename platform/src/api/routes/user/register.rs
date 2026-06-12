@@ -1,6 +1,7 @@
 use crate::{
+    Config,
     prelude::*,
-    features::user,
+    features::{user, ratelimit},
     api::*,
 };
 use super::dtos::*;
@@ -14,14 +15,27 @@ use super::dtos::*;
         (status = 200, description = "Registration successful", body = RegisterResponse),
         (status = 409, description = "The provided username or email is already in use"),
         (status = 422, description = "Validation Error"),
+        (status = 429, description = "Too Many Requests"),
         (status = 500, description = "Internal Server Error"),
     ),
     tags = ["User"]
 )]
 pub async fn register(
+    State(config): State<Arc<Config>>,
     State(user_service): State<Arc<dyn user::UseCase>>,
+    State(ratelimit): State<Arc<dyn ratelimit::UseCase>>,
+    ClientIp(client_ip): ClientIp,
     ValidatedJson(payload): ValidatedJson<RegisterRequest>,
 ) -> Result<Json<RegisterResponse>, ApiError> {
+    // ─── IP-based rate limiting for registration (per hour) ───
+    ratelimit
+        .check_custom_limit(
+            &format!("ratelimit:ip:{}:register", client_ip),
+            config.ratelimit.register_ip_max_per_hour,
+            3600,
+        )
+        .await?;
+
     info!("User registration request with username `{}` & email `{}`", &payload.username, &payload.email);
 
     let user = user::User::new(&payload.username, &payload.email)?;
@@ -44,14 +58,27 @@ pub async fn register(
         (status = 200, description = "Account verified successfully", body = VerifyAccountResponse),
         (status = 400, description = "Invalid or expired code"),
         (status = 422, description = "Validation Error"),
+        (status = 429, description = "Too Many Requests"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["User"]
 )]
 pub async fn verify_account(
+    State(config): State<Arc<Config>>,
     State(user_service): State<Arc<dyn user::UseCase>>,
+    State(ratelimit): State<Arc<dyn ratelimit::UseCase>>,
+    ClientIp(client_ip): ClientIp,
     ValidatedJson(payload): ValidatedJson<VerifyAccountRequest>,
 ) -> Result<Json<VerifyAccountResponse>, ApiError> {
+    // ── IP-based rate limiting for verification (per minute) ──
+    ratelimit
+        .check_custom_limit(
+            &format!("ratelimit:ip:{}:verify", client_ip),
+            config.ratelimit.verify_max_per_minute,
+            60,
+        )
+        .await?;
+
     info!("Verifying account with code: {}", &payload.code);
 
     user_service.verify_user_account(&payload.code).await?;
@@ -87,7 +114,7 @@ impl From<user::UserError> for ApiError {
             user::UserError::UserAlreadyDeactivated
             | user::UserError::InsufficientPermissions => {
                 error!("Unexpected domain error: {e}");
-                ApiError::Internal("An internal error occurred".to_string())
+                ApiError::Internal
             }
         }
     }
@@ -116,7 +143,7 @@ impl From<user::UseCaseError> for ApiError {
             },
             user::UseCaseError::Internal(e) => {
                 error!("An internal error occurred: {e}");
-                ApiError::Internal("An internal error occurred".to_string())
+                ApiError::Internal
             }
         }
     }

@@ -19,6 +19,7 @@ argon2 = { workspace = true }
 askama = { workspace = true }
 axum-extra = { workspace = true }
 chrono = { workspace = true }
+tokio = { workspace = true, features = ["rt", "time"] }
 lettre = { workspace = true }
 local-ip-address = { workspace = true }
 pasetors = { workspace = true }

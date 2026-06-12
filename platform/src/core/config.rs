@@ -10,6 +10,8 @@ pub struct Config {
     #[serde(default)]
     pub environment: Environment,
     pub api: internal::ApiConfig,
+    #[serde(default)]
+    pub ratelimit: internal::RateLimitConfig,
     pub frontend: internal::FrontendConfig,
     #[serde(rename = "postgresql")]
     pub postgres: internal::PostgresConfig,
@@ -106,6 +108,44 @@ mod internal {
             match self.protocol {
                 ApiProtocol::Http => format!("http://{}{}:{}/", self.domain, self.path_suffix, self.port),
                 ApiProtocol::Https => format!("https://{}{}/", self.domain, self.path_suffix),
+            }
+        }
+    }
+
+    #[derive(Deserialize, Clone)]
+    pub struct RateLimitConfig {
+        /// Maximum failed login attempts before lockout (per identity, in the window).
+        pub login_max_attempts: u64,
+
+        /// Sliding window in seconds for counting failed login attempts.
+        pub login_window_secs: u64,
+
+        /// Duration in seconds for which an identity is locked out after exceeding max attempts.
+        pub login_lockout_secs: u64,
+
+        /// Base delay in milliseconds for progressive backoff after each failed login.
+        pub login_base_delay_ms: u64,
+
+        /// Maximum requests per IP per minute across all auth endpoints.
+        pub ip_max_per_minute: u64,
+
+        /// Maximum registration requests per IP per hour.
+        pub register_ip_max_per_hour: u64,
+
+        /// Maximum verification attempts per identity per minute.
+        pub verify_max_per_minute: u64,
+    }
+
+    impl Default for RateLimitConfig {
+        fn default() -> Self {
+            Self {
+                login_max_attempts: 5,
+                login_window_secs: 900,
+                login_lockout_secs: 1800,
+                login_base_delay_ms: 500,
+                ip_max_per_minute: 20,
+                register_ip_max_per_hour: 3,
+                verify_max_per_minute: 5,
             }
         }
     }

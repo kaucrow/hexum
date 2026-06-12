@@ -188,7 +188,12 @@ async fn test_login_user_not_found() {
         .returning(|_| Ok(None));
 
     let session = session::MockPort::new();
-    let security = security::MockPort::new();
+    let mut security = security::MockPort::new();
+    // Constant-time: verify_password is ALWAYS called, even when user not found.
+    // It will be called with the DUMMY_ARGON2_HASH.
+    security.expect_verify_password()
+        .returning(|_, _| false);
+
     let oauth = oauth::MockPort::new();
 
     let service = auth::Service::new(
@@ -199,20 +204,38 @@ async fn test_login_user_not_found() {
     );
 
     let result = service.login_user("unknown", "password123").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserNotFound)));
+    assert!(
+        matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Expected InvalidCredentials, got {:?}",
+        result
+    );
 }
 
 #[tokio::test]
 async fn test_login_user_inactive() {
-    let mut test_user = make_test_user(Uuid::new_v4());
+    let user_id = Uuid::new_v4();
+    let mut test_user = make_test_user(user_id);
     test_user.is_active = false;
 
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
         .returning(move |_| Ok(Some(test_user.clone())));
+    {
+        let uid = user_id;
+        user_repo.expect_get_authenticator()
+            .returning(move |_, _| {
+                let mut auth = user::UserAuthenticator::new_local(uid, "hashed:pass".into());
+                auth.is_verified = Some(true);
+                Ok(Some(auth))
+            });
+    }
 
     let session = session::MockPort::new();
-    let security = security::MockPort::new();
+    let mut security = security::MockPort::new();
+    // Constant-time: verify_password still runs even for inactive users.
+    security.expect_verify_password()
+        .returning(|_, _| true);
+
     let oauth = oauth::MockPort::new();
 
     let service = auth::Service::new(
@@ -223,7 +246,11 @@ async fn test_login_user_inactive() {
     );
 
     let result = service.login_user("testuser", "password123").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserInactive)));
+    assert!(
+        matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Expected InvalidCredentials for inactive user, got {:?}",
+        result
+    );
 }
 
 #[tokio::test]
@@ -245,7 +272,11 @@ async fn test_login_user_not_verified() {
     }
 
     let session = session::MockPort::new();
-    let security = security::MockPort::new();
+    let mut security = security::MockPort::new();
+    // Constant-time: verify_password still runs even for unverified users.
+    security.expect_verify_password()
+        .returning(|_, _| true);
+
     let oauth = oauth::MockPort::new();
 
     let service = auth::Service::new(
@@ -256,7 +287,11 @@ async fn test_login_user_not_verified() {
     );
 
     let result = service.login_user("testuser", "password123").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserNotVerified)));
+    assert!(
+        matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Expected InvalidCredentials for unverified user, got {:?}",
+        result
+    );
 }
 
 #[tokio::test]
@@ -292,7 +327,11 @@ async fn test_login_user_invalid_password() {
     );
 
     let result = service.login_user("testuser", "wrongpassword").await;
-    assert!(matches!(result, Err(auth::UseCaseError::InvalidPassword)));
+    assert!(
+        matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Expected InvalidCredentials for wrong password, got {:?}",
+        result
+    );
 }
 
 // ==================================================================
@@ -319,8 +358,8 @@ async fn test_login_with_valid_format_password_mismatch() {
     let service = setup_successful_login("C0rrect-Horse!", user_id);
 
     let result = service.login_user("testuser", "Wrong-Horse1!").await;
-    assert!(matches!(result, Err(auth::UseCaseError::InvalidPassword)),
-        "Mismatched valid-format password should fail");
+    assert!(matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Mismatched valid-format password should fail with InvalidCredentials");
 }
 
 #[tokio::test]
@@ -342,17 +381,23 @@ async fn test_login_with_empty_identity_not_found() {
     let mut user_repo = user::MockRepository::new();
     user_repo.expect_get_user_by_username()
         .returning(|_| Ok(None));
-    user_repo.expect_get_user_by_email()
-        .returning(|_| Ok(None));
+    // Empty string is not a valid email — resolve_local_user won't try email lookup
 
     let session = session::MockPort::new();
-    let security = security::MockPort::new();
+    let mut security = security::MockPort::new();
+    // Constant-time: verify_password ALWAYS called with DUMMY_ARGON2_HASH
+    security.expect_verify_password()
+        .returning(|_, _| false);
     let oauth = oauth::MockPort::new();
 
     let service = make_service(user_repo, session, security, oauth);
 
     let result = service.login_user("", "password123").await;
-    assert!(matches!(result, Err(auth::UseCaseError::UserNotFound)));
+    assert!(
+        matches!(result, Err(auth::UseCaseError::InvalidCredentials)),
+        "Expected InvalidCredentials for empty identity, got {:?}",
+        result
+    );
 }
 
 // ==================================================================

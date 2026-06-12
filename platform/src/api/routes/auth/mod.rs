@@ -16,9 +16,10 @@ use crate::{
 impl From<auth::UseCaseError> for ApiError {
     fn from(e: auth::UseCaseError) -> Self {
         match e {
-            auth::UseCaseError::InvalidPassword => {
-                warn!("Invalid password: {e}");
-                ApiError::Unauthorized("No user with these credentials was found.".to_string())
+            auth::UseCaseError::InvalidPassword
+            | auth::UseCaseError::InvalidCredentials => {
+                warn!("Invalid credentials: {e}");
+                ApiError::Unauthorized("Invalid username/email or password.".to_string())
             }
             auth::UseCaseError::InvalidAccessToken(s) => {
                 warn!("Invalid access token: {s}");
@@ -34,15 +35,29 @@ impl From<auth::UseCaseError> for ApiError {
             }
             auth::UseCaseError::UserNotFound => {
                 warn!("User not found: {e}");
-                ApiError::Unauthorized("No user with these credentials was found.".to_string())
+                ApiError::Unauthorized("Invalid username/email or password.".to_string())
             }
             auth::UseCaseError::UserInactive => {
                 warn!("User is inactive: {e}");
-                ApiError::Unauthorized("The user has been disabled.".to_string())
+                ApiError::Unauthorized("Invalid username/email or password.".to_string())
             }
             auth::UseCaseError::UserNotVerified => {
                 warn!("User email has not been verified: {e}");
-                ApiError::Unauthorized("The user email has not been verified.".to_string())
+                ApiError::Unauthorized("Invalid username/email or password.".to_string())
+            }
+            auth::UseCaseError::TooManyRequests { retry_after_secs } => {
+                warn!("Rate limit exceeded, retry after {retry_after_secs}s");
+                ApiError::TooManyRequests(
+                    "Too many requests. Please slow down.".to_string(),
+                    Some(retry_after_secs),
+                )
+            }
+            auth::UseCaseError::LockedOut { retry_after_secs } => {
+                warn!("Account locked out, retry after {retry_after_secs}s");
+                ApiError::TooManyRequests(
+                    "Account temporarily locked due to too many failed attempts.".to_string(),
+                    Some(retry_after_secs),
+                )
             }
             auth::UseCaseError::Parse(s) => {
                 warn!("Parse error: {s}");
@@ -50,7 +65,7 @@ impl From<auth::UseCaseError> for ApiError {
             }
             auth::UseCaseError::Internal(e) => {
                 error!("An internal error occurred: {e}");
-                ApiError::Internal("An internal error occurred.".to_string())
+                ApiError::Internal
             }
         }
     }

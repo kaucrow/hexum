@@ -4,7 +4,6 @@ use ::redis::{
 };
 use async_trait::async_trait;
 use thiserror::Error;
-use anyhow::Result;
 
 use super::*;
 
@@ -14,8 +13,8 @@ pub struct RedisAdapter {
 }
 
 impl RedisAdapter {
-    pub async fn new(conn: ConnectionManager) -> Result<Self> {
-        Ok(Self { conn })
+    pub async fn new(conn: ConnectionManager) -> Self {
+        Self { conn }
     }
 
     fn format_key(&self, token: &str) -> String {

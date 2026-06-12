@@ -1,8 +1,11 @@
 use std::{
     convert::Infallible,
     marker::PhantomData,
+    net::SocketAddr,
     ops::Deref,
 };
+
+use axum::extract::ConnectInfo;
 
 use crate::{
     prelude::*,
@@ -146,5 +149,41 @@ where
             Ok(user) => Ok(Self(Some(user))),
             Err(_) => Ok(Self(None)),
         }
+    }
+}
+
+/// Extracts the client's real IP address from the request.
+///
+/// Checks the `X-Forwarded-For` header first (set by reverse proxies like
+/// Traefik). Falls back to the direct TCP connection's peer address via
+/// [`ConnectInfo`]. Returns `"unknown"` only if neither source is available.
+pub struct ClientIp(pub String);
+
+impl<S> FromRequestParts<S> for ClientIp
+where
+    S: Send + Sync,
+{
+    type Rejection = Infallible;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        // Try X-Forwarded-For header
+        if let Some(forwarded) = parts.headers.get("x-forwarded-for") {
+            if let Ok(value) = forwarded.to_str() {
+                if let Some(ip) = value.split(',').next() {
+                    let ip = ip.trim();
+                    if !ip.is_empty() {
+                        return Ok(ClientIp(ip.to_string()));
+                    }
+                }
+            }
+        }
+
+        // Fall back to direct connection IP via ConnectInfo
+        if let Ok(ConnectInfo(addr)) = ConnectInfo::<SocketAddr>::from_request_parts(parts, state).await {
+            return Ok(ClientIp(addr.ip().to_string()));
+        }
+
+        // If no client IP could be obtained, fall back to "unknown"
+        Ok(ClientIp("unknown".to_string()))
     }
 }

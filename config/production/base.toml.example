@@ -11,6 +11,15 @@ docs_endpoint = "docs"
 [api.docs_users]
 docs-user-1 = "password"
 
+[ratelimit]
+login_max_attempts = 5
+login_window_secs = 900
+login_lockout_secs = 1800
+login_base_delay_ms = 500
+ip_max_per_minute = 20
+register_ip_max_per_hour = 3
+verify_max_per_minute = 5
+
 [frontend]
 url = "https://hexum.com/api"
 

@@ -289,7 +289,6 @@ pub async fn spawn_test_app() -> TestApp {
     let redis_session_adapter = Arc::new(
         platform::features::session::RedisAdapter::new(redis_conn.clone())
             .await
-            .expect("Failed to create session RedisAdapter"),
     );
     let paseto_security_adapter = Arc::new(
         platform::features::security::PasetoAdapter::new()
@@ -308,8 +307,17 @@ pub async fn spawn_test_app() -> TestApp {
     let redis_verification_adapter = Arc::new(
         platform::features::verification::RedisAdapter::new(redis_conn.clone())
             .await
-            .expect("Failed to create verification RedisAdapter"),
     );
+
+    let redis_ratelimit_adapter = Arc::new(
+        platform::features::ratelimit::RedisAdapter::new(redis_conn.clone())
+            .await
+    );
+
+    let ratelimit_service = Arc::new(platform::features::ratelimit::Service::new(
+        redis_ratelimit_adapter,
+        config.clone(),
+    ));
 
     // Determine which email adapter to use
     let email_adapter: Arc<dyn platform::features::email::Port> =
@@ -336,6 +344,7 @@ pub async fn spawn_test_app() -> TestApp {
         config: config.clone(),
         auth: Arc::new(auth_service),
         user: Arc::new(user_service),
+        ratelimit: ratelimit_service,
     };
 
     // ── Business layer (uses business::init) ───────────────────
