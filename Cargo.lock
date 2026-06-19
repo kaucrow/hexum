@@ -404,9 +404,11 @@ dependencies = [
  "sqlx",
  "strum",
  "thiserror",
+ "tokio",
  "tracing",
  "utoipa",
  "uuid",
+ "validator",
 ]
 
 [[package]]
@@ -2592,6 +2594,7 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+ "uuid",
  "xxhash-rust",
 ]
 

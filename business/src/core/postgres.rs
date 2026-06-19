@@ -54,7 +54,8 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Game {
-        pub search: String,
-        pub get_external_ids_for_search: String,
+        pub get_ids_by_query: String,
+        pub get_games_by_ids: String,
+        pub get_external_ids_by_internal_ids: String,
     }
 }

@@ -1,9 +1,10 @@
 use async_trait::async_trait;
 use thiserror::Error;
+use uuid::Uuid;
 
 use crate::prelude::*;
 use super::{
-    SearchResult,
+    SearchSession,
     InternalRepositoryError,
     ExternalRepositoryError,
     CacheRepositoryError,
@@ -14,10 +15,11 @@ pub trait UseCase: Send + Sync + 'static {
     // ─── Getters ───
     async fn search_for_game(
         &self,
-        query: &str,
+        query: Option<&str>,
+        search_id: Option<Uuid>,
         limit: usize,
-        offset: usize
-    ) -> Result<SearchResult, UseCaseError>;
+        offset: usize,
+    ) -> Result<SearchSession, UseCaseError>;
 }
 
 #[derive(Error, Debug)]

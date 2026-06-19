@@ -6,11 +6,6 @@ use anyhow::Result;
 use crate::postgres::*;
 use super::*;
 
-#[derive(FromRow)]
-struct ExternalIdRow {
-    pub external_id: i32,
-}
-
 #[derive(Clone)]
 pub struct PostgresAdapter {
     pub pool: PgPool,
@@ -24,17 +19,32 @@ impl PostgresAdapter {
 
 #[async_trait]
 impl InternalRepository for PostgresAdapter {
-    async fn search_for_game(
+    async fn get_game_ids_by_query(
         &self,
         query: &str,
-        limit: usize,
-        offset: usize,
+    ) -> Result<Vec<Uuid>, InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let games = sqlx::query_as::<_, InternalIdDbRow>(sql(&QUERIES.game.get_ids_by_query))
+                .bind(query)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(|row| row.id)
+                .collect();
+
+            Ok(games)
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn get_games_by_ids(
+        &self,
+        ids: &[Uuid],
     ) -> Result<Vec<GameSearchResultItem>, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let games = sqlx::query_as::<_, GameSearchResultDbRow>(sql(&QUERIES.game.search))
-                .bind(query)
-                .bind(limit as i64)
-                .bind(offset as i64)
+            let games = sqlx::query_as::<_, GameSearchResultDbRow>(sql(&QUERIES.game.get_games_by_ids))
+                .bind(ids)
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
@@ -47,13 +57,13 @@ impl InternalRepository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
-    async fn get_external_ids_for_search(
+    async fn get_external_ids_by_internal_ids(
         &self,
-        query: &str,
+        ids: &[Uuid],
     ) -> Result<Vec<u64>, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let ids = sqlx::query_as::<_, ExternalIdRow>(sql(&QUERIES.game.get_external_ids_for_search))
-                .bind(query)
+            let ids = sqlx::query_as::<_, ExternalIdDbRow>(sql(&QUERIES.game.get_external_ids_by_internal_ids))
+                .bind(ids)
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
@@ -96,4 +106,14 @@ impl From<GameSearchResultDbRow> for GameSearchResultItem {
             name: row.game_name,
         }
     }
+}
+
+#[derive(FromRow)]
+struct InternalIdDbRow {
+    pub id: Uuid,
+}
+
+#[derive(FromRow)]
+struct ExternalIdDbRow {
+    pub external_id: i32,
 }

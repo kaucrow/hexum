@@ -5,12 +5,7 @@ mod docs;
 pub use docs::Docs;
 
 #[allow(unused_imports)]
-pub(crate) use axum::{
-    Json,
-    extract::{State, Query},
-    response::{Html, Response, IntoResponse},
-    http::StatusCode,
-};
+pub(crate) use platform::api::*;
 
 pub(crate) use error::ApiError;
 

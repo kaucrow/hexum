@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use async_trait::async_trait;
+use uuid::Uuid;
 
 use crate::prelude::*;
 use super::*;
@@ -19,64 +19,190 @@ impl Service {
     ) -> Self {
         Self { internal_repo, external_repo, cache_repo }
     }
+
+    /// Handles pagination with external repository fallback when internal results are exhausted.
+    async fn paginate_with_fallback(
+        &self,
+        query: Option<&str>,
+        total_internal: usize,
+        mut items: Vec<GameSearchResultItem>,
+        limit: usize,
+        offset: usize,
+        exclude: &[u64],
+    ) -> Result<(Vec<GameSearchResultItem>, usize), UseCaseError> {
+        // ─── If we have enough internal items for this page, count & return ───
+        if items.len() >= limit || offset + limit <= total_internal {
+            let ext_count = if let Some(q) = query {
+                self.external_repo.count_search_results(q, exclude).await?
+            } else {
+                0
+            };
+
+            let total_count = total_internal + ext_count;
+            return Ok((items, total_count));
+        }
+
+        // ─── Internal items exhausted. Fall back to external repository ───
+        let q = query.unwrap_or("");
+
+        let mut current_ext_offset = if offset >= total_internal {
+            offset - total_internal
+        } else {
+            0   // If this is the first page on the boundary
+        };
+
+        const BATCH_SIZE: usize = 50;
+        let mut external_repo_retries = 10;
+
+        while items.len() < limit && external_repo_retries > 0 {
+            let remaining_needed = limit - items.len();
+
+            let batch = self
+                .external_repo
+                .search_for_game(q, BATCH_SIZE, current_ext_offset, exclude)
+                .await?;
+
+            if batch.is_empty() {
+                break;
+            }
+
+            let take_amount = std::cmp::min(remaining_needed, batch.len());
+            items.extend(batch.into_iter().take(take_amount));
+
+            current_ext_offset += BATCH_SIZE;
+            external_repo_retries -= 1;
+        }
+
+        // ─── Count the totals ───
+        let ext_count = self
+            .external_repo
+            .count_search_results(q, exclude)
+            .await?;
+
+        let total_count = total_internal + ext_count;
+
+        Ok((items, total_count))
+    }
 }
 
 #[async_trait]
 impl UseCase for Service {
     async fn search_for_game(
         &self,
-        query: &str,
+        query: Option<&str>,
+        search_id: Option<Uuid>,
         limit: usize,
         offset: usize,
-    ) -> Result<SearchResult, UseCaseError> {
-        // Try to get the exclusion IDs from cache
-        let exclude_ids = match self.cache_repo.get_search_exclusion_ids(query).await? {
-            Some(ids) => ids, // Cache hit
+    ) -> Result<SearchSession, UseCaseError> {
+        // ─── Try existing search session via search_id ───
+        if let Some(search_id) = search_id {
+            let search_id_str = search_id.to_string();
+
+            if let Some(page) = self
+                .cache_repo
+                .get_search_result_ids(&search_id_str, limit, offset)
+                .await?
+            {
+                let total_internal = page.total_items;
+
+                // Return an empty page if there are no internal item results & there's no query
+                if total_internal == 0 && query.is_none() {
+                    return Ok(SearchSession {
+                        search_id,
+                        result: SearchResult { items: vec![], total_count: 0 },
+                    });
+                }
+
+                // Fetch page items and the full cached ID list concurrently
+                let (items, cached_internal_ids_res) = tokio::try_join!(
+                    async { self.internal_repo.get_games_by_ids(&page.ids).await.map_err(UseCaseError::from) },
+                    async { self.cache_repo.get_all_search_result_ids(&search_id_str).await.map_err(UseCaseError::from) }
+                )?;
+
+                let cached_internal_ids = cached_internal_ids_res.unwrap_or_default();
+
+                let exclude = self
+                    .internal_repo
+                    .get_external_ids_by_internal_ids(&cached_internal_ids)
+                    .await?;
+
+                let (items, total_count) = self
+                    .paginate_with_fallback(
+                        query,
+                        total_internal,
+                        items,
+                        limit,
+                        offset,
+                        &exclude,
+                    )
+                    .await?;
+
+                return Ok(SearchSession {
+                    search_id,
+                    result: SearchResult { items, total_count },
+                });
+            }
+        }
+
+        // ─── Fresh search ───
+        let new_search_id = Uuid::new_v4();
+        let q = match query {
+            Some(q) => q,
             None => {
-                // Cache miss: fetch all matched internal IDs from DB and cache them
-                let ids = self.internal_repo.get_external_ids_for_search(query).await?;
-                self.cache_repo.cache_search_exclusion_ids(query, &ids).await?;
-                ids
+                return Ok(SearchSession {
+                    search_id: new_search_id,
+                    result: SearchResult { items: vec![], total_count: 0 },
+                });
             }
         };
 
-        // The length of our exclusion list equals the total internal matches
-        let total_internal = exclude_ids.len();
-
-        // Count total external matches (respecting exclusion list)
-        let total_external = self.external_repo
-            .count_search_results(query, &exclude_ids)
+        // Get all internal matches' IDs
+        let internal_matches_ids = self
+            .internal_repo
+            .get_game_ids_by_query(q)
             .await?;
 
-        let total_count = total_internal + total_external;
+        let total_internal = internal_matches_ids.len();
 
-        let mut items = Vec::new();
+        // ─── Cache all internal repository matches ───
+        let cache_repo = Arc::clone(&self.cache_repo);
+        let cache_key = new_search_id.to_string();
+        let cache_ids = internal_matches_ids.clone(); // Cloned to move safely into the static thread block
 
-        // Fetch internal results if the requested offset falls within internal range
-        if offset < total_internal {
-            let mut internal_games = self.internal_repo
-                .search_for_game(query, limit, offset)
-                .await?;
-            items.append(&mut internal_games);
-        }
+        tokio::spawn(async move {
+            if let Err(e) = cache_repo.cache_search_result_ids(&cache_key, &cache_ids).await {
+                error!("Search cache saving failed: {:?}", e);
+            }
+        });
 
-        // Fetch from external API to fill any remaining slots up to `limit`
-        if items.len() < limit {
-            let remaining_limit = limit - items.len();
+        // Paginate the matches
+        let page_uuids: Vec<Uuid> = internal_matches_ids
+            .iter()
+            .copied()
+            .skip(offset)
+            .take(limit)
+            .collect();
 
-            let external_offset = if offset >= total_internal {
-                offset - total_internal // Paginating purely within external results
-            } else {
-                0 // Crossing the boundary on this page
-            };
+        // Get the games & the external IDs concurrently
+        let (items, exclude) = tokio::try_join!(
+            async { self.internal_repo.get_games_by_ids(&page_uuids).await.map_err(UseCaseError::from) },
+            async { self.internal_repo.get_external_ids_by_internal_ids(&internal_matches_ids).await.map_err(UseCaseError::from) }
+        )?;
 
-            let mut external_games = self.external_repo
-                .search_for_game(query, remaining_limit, external_offset, &exclude_ids)
-                .await?;
+        let (items, total_count) = self
+            .paginate_with_fallback(
+                Some(q),
+                total_internal,
+                items,
+                limit,
+                offset,
+                &exclude,
+            )
+            .await?;
 
-            items.append(&mut external_games);
-        }
-
-        Ok(SearchResult { items, total_count })
+        Ok(SearchSession {
+            search_id: new_search_id,
+            result: SearchResult { items, total_count },
+        })
     }
 }

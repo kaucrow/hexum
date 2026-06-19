@@ -15,3 +15,11 @@ pub struct SearchResult {
     /// and external API (respecting the exclusion list).
     pub total_count: usize,
 }
+
+/// A search session that ties a search_id to its results.
+/// The search_id must be passed back by the client for paginated requests.
+#[derive(Debug, Clone)]
+pub struct SearchSession {
+    pub search_id: Uuid,
+    pub result: SearchResult,
+}

@@ -3,14 +3,18 @@ base:
     SELECT 1 as value
 
 game:
-  search: |
-    SELECT id, external_id, game_name
+  get_ids_by_query: |
+    SELECT id
     FROM game.game g
     WHERE g.game_name % $1
     ORDER BY similarity(g.game_name, $1) DESC, id ASC
-    LIMIT $2 OFFSET $3
 
-  get_external_ids_for_search: |
+  get_games_by_ids: |
+    SELECT id, external_id, game_name
+    FROM game.game
+    WHERE id = ANY($1)
+
+  get_external_ids_by_internal_ids: |
     SELECT external_id
     FROM game.game
-    WHERE game_name % $1
+    WHERE id = ANY($1) AND external_id IS NOT NULL
