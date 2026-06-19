@@ -7,6 +7,7 @@ mod core;
 #[cfg(test)]
 mod tests;
 
+pub use prelude::get_root_path;
 pub use init::init;
 pub use core::{
     Config,

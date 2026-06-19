@@ -348,7 +348,7 @@ pub async fn spawn_test_app() -> TestApp {
     };
 
     // ── Business layer (uses business::init) ───────────────────
-    let business_state = business::init(pool.clone())
+    let business_state = business::init(pool.clone(), redis_conn.clone())
         .await
         .expect("Failed to init business state");
 

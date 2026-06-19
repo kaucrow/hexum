@@ -1,5 +1,6 @@
-use crate::prelude::*;
 use utoipa::ToSchema;
+
+use crate::prelude::*;
 
 #[derive(Serialize, ToSchema)]
 pub struct BusinessHealthResponse {

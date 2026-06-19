@@ -1,3 +1,16 @@
 base:
   ping: |
     SELECT 1 as value
+
+game:
+  search: |
+    SELECT id, external_id, game_name
+    FROM game.game g
+    WHERE g.game_name % $1
+    ORDER BY similarity(g.game_name, $1) DESC, id ASC
+    LIMIT $2 OFFSET $3
+
+  get_external_ids_for_search: |
+    SELECT external_id
+    FROM game.game
+    WHERE game_name % $1

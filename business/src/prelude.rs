@@ -1,6 +1,6 @@
-pub use std::sync::Arc;
+pub use std::sync::{Arc, RwLock};
 pub use tracing::{info, error};
-pub use serde::{Serialize, Deserialize};
+pub use serde::{Serialize, Deserialize, de::DeserializeOwned};
 pub use anyhow::{Result, Context};
 
 use std::path::PathBuf;

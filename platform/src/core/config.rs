@@ -55,7 +55,7 @@ pub fn get_config() -> Result<Config, config::ConfigError> {
 
     let config_directory = root_path.join(format!("config/{}", environment));
 
-    let filename = "base.toml";
+    let filename = "platform.toml";
 
     let settings = config::Config::builder()
         .add_source(config::File::from(
