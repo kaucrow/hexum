@@ -26,6 +26,7 @@ pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
 pub(crate) struct Queries {
     pub base: self::internal::Base,
     pub game: self::internal::Game,
+    pub platform: self::internal::Platform,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -57,5 +58,11 @@ mod internal {
         pub get_ids_by_query: String,
         pub get_games_by_ids: String,
         pub get_external_ids_by_internal_ids: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Platform {
+        pub get_all: String,
+        pub upsert_many: String,
     }
 }

@@ -6,6 +6,8 @@ use super::routes;
     paths(
         routes::health::health,
         routes::games::search::search,
+        routes::platforms::get::get_platforms,
+        routes::platforms::sync::sync_platforms,
     ),
     components(
         schemas(
@@ -14,6 +16,8 @@ use super::routes;
             routes::games::dtos::GameSearchResultItemDto,
             routes::games::dtos::GameSearchMeta,
             routes::games::dtos::GameSearchResponse,
+            routes::platforms::dtos::PlatformResponse,
+            routes::platforms::dtos::PlatformSyncResponse,
         )
     ),
 )]

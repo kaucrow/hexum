@@ -18,3 +18,15 @@ game:
     SELECT external_id
     FROM game.game
     WHERE id = ANY($1) AND external_id IS NOT NULL
+
+platform:
+  get_all: |
+    SELECT id, external_id, platform_name, generation
+    FROM platform.platform
+    ORDER BY generation DESC NULLS LAST, platform_name ASC
+
+  upsert_many: |
+    INSERT INTO platform.platform (id, external_id, platform_name, generation)
+    SELECT * FROM UNNEST($1::uuid[], $2::int[], $3::varchar[], $4::int[])
+    ON CONFLICT (external_id)
+    DO UPDATE SET platform_name = EXCLUDED.platform_name
