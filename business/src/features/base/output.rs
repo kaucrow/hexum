@@ -1,6 +1,8 @@
 use async_trait::async_trait;
 use thiserror::Error;
 
+// ─── Base port ───────────────────────────────────────
+
 #[async_trait]
 pub trait Port: Send + Sync + 'static {
     async fn ping_db(&self) -> Result<(), PortError>;

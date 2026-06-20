@@ -11,11 +11,13 @@ pub async fn init(
 ) -> Result<BusinessState, anyhow::Error> {
     let config = Arc::new(get_config()?);
 
-    // ── Base ──────────────────────────────────────────────────────────
+    // ─── Base ─────────────────────────────────────────────────────────
     let pg_base_adapter = Arc::new(base::PostgresAdapter::new(pool.clone()));
     let base_service = Arc::new(base::Service::new(pg_base_adapter));
 
-    // ── Search ────────────────────────────────────────────────────────
+    let pagination_cache_repo = Arc::new(base::pagination::RedisAdapter::new(redis_conn));
+
+    // ─── Search ───────────────────────────────────────────────────────
     let http_client = reqwest::Client::new();
 
     // Videogame API adapter. Holds auth credentials + access token,
@@ -29,12 +31,11 @@ pub async fn init(
 
     let internal_search_adapter = Arc::new(search::PostgresAdapter::new(pool));
     let external_search_adapter = Arc::new(search::IgdbAdapter::new(igdb_port));
-    let search_cache_adapter = Arc::new(search::RedisAdapter::new(redis_conn));
 
     let search_service = Arc::new(search::Service::new(
         internal_search_adapter,
         external_search_adapter,
-        search_cache_adapter,
+        pagination_cache_repo,
     ));
 
     Ok(BusinessState {

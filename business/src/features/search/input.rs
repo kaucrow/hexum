@@ -3,16 +3,14 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::prelude::*;
-use super::{
-    SearchSession,
-    InternalRepositoryError,
-    ExternalRepositoryError,
-    CacheRepositoryError,
+use crate::features::base::pagination::{
+    CacheRepositoryError, ExternalRepositoryError,
+    InternalRepositoryError, PaginationError,
 };
+use super::SearchSession;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
-    // ─── Getters ───
     async fn search_for_game(
         &self,
         query: Option<&str>,
@@ -48,5 +46,15 @@ impl From<CacheRepositoryError> for UseCaseError {
 impl From<ExternalRepositoryError> for UseCaseError {
     fn from(e: ExternalRepositoryError) -> Self {
         UseCaseError::VideogameApi(e.to_string())
+    }
+}
+
+impl From<PaginationError> for UseCaseError {
+    fn from(e: PaginationError) -> Self {
+        match e {
+            PaginationError::External(e) => UseCaseError::VideogameApi(e.to_string()),
+            PaginationError::Internal(e) => UseCaseError::Internal(e.to_string()),
+            PaginationError::Cache(e) => UseCaseError::Internal(e.to_string()),
+        }
     }
 }

@@ -7,7 +7,9 @@ use crate::{
     prelude::*,
     features::videogame_api,
 };
-use super::*;
+use crate::features::base::pagination::{
+    ExternalRepository, ExternalRepositoryError, GameResultItem,
+};
 
 #[derive(Clone)]
 pub struct IgdbAdapter {
@@ -37,14 +39,14 @@ impl IgdbAdapter {
 
 #[async_trait]
 impl ExternalRepository for IgdbAdapter {
-    async fn search_for_game(
+    async fn search(
         &self,
         query: &str,
         limit: usize,
         offset: usize,
         exclude_ids: &[u64],
-    ) -> Result<Vec<GameSearchResultItem>, ExternalRepositoryError> {
-        let res: Result<Vec<GameSearchResultItem>, LocalError> = async {
+    ) -> Result<Vec<GameResultItem>, ExternalRepositoryError> {
+        let res: Result<Vec<GameResultItem>, LocalError> = async {
             let url = "https://api.igdb.com/v4/games";
             let escaped_query = query.replace('"', "\\\"");
             let exclusion = Self::build_exclusion_clause(exclude_ids);
@@ -62,7 +64,7 @@ impl ExternalRepository for IgdbAdapter {
 
             let items = items
                 .into_iter()
-                .map(GameSearchResultItem::from)
+                .map(GameResultItem::from)
                 .collect();
 
             Ok(items)
@@ -72,7 +74,7 @@ impl ExternalRepository for IgdbAdapter {
         res.map_err(Into::into)
     }
 
-    async fn count_search_results(
+    async fn count(
         &self,
         query: &str,
         exclude_ids: &[u64],
@@ -122,8 +124,8 @@ impl From<videogame_api::PortError> for LocalError {
 impl From<LocalError> for ExternalRepositoryError {
     fn from(e: LocalError) -> Self {
         match e {
-            LocalError::IgdbHttp(msg) => ExternalRepositoryError::VideogameApi(msg),
-            LocalError::IgdbInternal(msg) => ExternalRepositoryError::VideogameApi(msg),
+            LocalError::IgdbHttp(msg) => ExternalRepositoryError::External(msg),
+            LocalError::IgdbInternal(msg) => ExternalRepositoryError::External(msg),
         }
     }
 }
@@ -139,7 +141,7 @@ struct IgdbCountResponse {
     pub count: usize,
 }
 
-impl From<IgdbGameResponse> for GameSearchResultItem {
+impl From<IgdbGameResponse> for GameResultItem {
     fn from(response: IgdbGameResponse) -> Self {
         Self {
             id: Uuid::new_v4(),

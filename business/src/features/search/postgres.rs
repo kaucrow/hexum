@@ -4,7 +4,9 @@ use thiserror::Error;
 use anyhow::Result;
 
 use crate::postgres::*;
-use super::*;
+use crate::features::base::pagination::{
+    GameResultItem, InternalRepository, InternalRepositoryError,
+};
 
 #[derive(Clone)]
 pub struct PostgresAdapter {
@@ -41,14 +43,14 @@ impl InternalRepository for PostgresAdapter {
     async fn get_games_by_ids(
         &self,
         ids: &[Uuid],
-    ) -> Result<Vec<GameSearchResultItem>, InternalRepositoryError> {
+    ) -> Result<Vec<GameResultItem>, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let games = sqlx::query_as::<_, GameSearchResultDbRow>(sql(&QUERIES.game.get_games_by_ids))
+            let games = sqlx::query_as::<_, GameResultDbRow>(sql(&QUERIES.game.get_games_by_ids))
                 .bind(ids)
                 .fetch_all(&self.pool)
                 .await?
                 .into_iter()
-                .map(GameSearchResultItem::from)
+                .map(GameResultItem::from)
                 .collect();
 
             Ok(games)
@@ -92,14 +94,14 @@ impl From<LocalError> for InternalRepositoryError {
 }
 
 #[derive(FromRow)]
-pub struct GameSearchResultDbRow {
+pub struct GameResultDbRow {
     pub id: Uuid,
     pub external_id: i32,
     pub game_name: String,
 }
 
-impl From<GameSearchResultDbRow> for GameSearchResultItem {
-    fn from(row: GameSearchResultDbRow) -> Self {
+impl From<GameResultDbRow> for GameResultItem {
+    fn from(row: GameResultDbRow) -> Self {
         Self {
             id: row.id,
             external_id: Some(row.external_id.into()),
