@@ -3,12 +3,6 @@ base:
     SELECT 1 as value
 
 game:
-  get_ids_by_query: |
-    SELECT id
-    FROM game.game g
-    WHERE g.game_name % $1
-    ORDER BY similarity(g.game_name, $1) DESC, id ASC
-
   get_games_by_ids: |
     SELECT id, external_id, game_name
     FROM game.game
@@ -24,6 +18,11 @@ platform:
     SELECT id, external_id, platform_name, generation
     FROM platform.platform
     ORDER BY generation DESC NULLS LAST, platform_name ASC
+
+  get_external_ids_by_internal_ids: |
+    SELECT external_id
+    FROM platform.platform
+    WHERE id = ANY($1) AND external_id IS NOT NULL
 
   upsert_many: |
     INSERT INTO platform.platform (id, external_id, platform_name, generation)

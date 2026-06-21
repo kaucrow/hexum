@@ -1,20 +1,17 @@
-use thiserror::Error;
-use async_trait::async_trait;
-use reqwest::{Client, StatusCode};
-use anyhow::Result;
+use reqwest::{Client as HttpClient, StatusCode};
 
 use crate::prelude::*;
 use super::*;
 
 #[derive(Clone)]
 pub struct IgdbAdapter {
-    http_client: Client,
+    http_client: HttpClient,
     auth_data: VideogameApiAuthData,
     access_token: Arc<RwLock<Option<VideogameApiToken>>>,
 }
 
 impl IgdbAdapter {
-    pub fn new(http_client: Client, auth_data: VideogameApiAuthData) -> Self {
+    pub fn new(http_client: HttpClient, auth_data: VideogameApiAuthData) -> Self {
         Self {
             http_client,
             auth_data,

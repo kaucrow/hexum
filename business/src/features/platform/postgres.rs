@@ -1,9 +1,7 @@
-use async_trait::async_trait;
-use uuid::Uuid;
-use thiserror::Error;
-use anyhow::Result;
-
-use crate::postgres::*;
+use crate::{
+    prelude::*,
+    postgres::*,
+};
 use super::*;
 
 #[derive(Clone)]

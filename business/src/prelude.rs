@@ -2,6 +2,9 @@ pub use std::sync::{Arc, RwLock};
 pub use tracing::{info, error};
 pub use serde::{Serialize, Deserialize, de::DeserializeOwned};
 pub use anyhow::{Result, Context};
+pub use async_trait::async_trait;
+pub use thiserror::Error;
+pub use uuid::Uuid;
 
 use std::path::PathBuf;
 

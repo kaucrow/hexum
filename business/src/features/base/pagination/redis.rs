@@ -1,8 +1,6 @@
-use async_trait::async_trait;
 use ::redis::{AsyncCommands, aio::ConnectionManager};
-use uuid::Uuid;
-use thiserror::Error;
 
+use crate::prelude::*;
 use super::*;
 
 const CACHE_TTL_SECONDS: u64 = 600; // 10 minutes
@@ -133,6 +131,7 @@ impl CacheRepository for RedisAdapter {
 
         res.map_err(Into::into)
     }
+
 }
 
 #[derive(Error, Debug)]

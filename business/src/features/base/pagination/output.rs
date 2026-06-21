@@ -1,28 +1,11 @@
-use async_trait::async_trait;
-use thiserror::Error;
-use uuid::Uuid;
-
-use super::*;
+use crate::prelude::*;
 
 // ─── Internal repository ───────────────────────────────────
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait InternalRepository: Send + Sync + 'static {
-    /// Resolve a query to internal game UUIDs that match the query.
-    async fn get_game_ids_by_query(
-        &self,
-        query: &str,
-    ) -> Result<Vec<Uuid>, InternalRepositoryError>;
-
-    /// Resolve a batch of internal UUIDs to full GameResultItems.
-    async fn get_games_by_ids(
-        &self,
-        ids: &[Uuid],
-    ) -> Result<Vec<GameResultItem>, InternalRepositoryError>;
-
-    /// Get external IDs (as u64) for a set of internal UUIDs.
-    /// Used to build the exclusion list for the external API.
+    /// Get external IDs for a set of internal UUIDs (for building exclusion lists).
     async fn get_external_ids_by_internal_ids(
         &self,
         ids: &[Uuid],
@@ -37,23 +20,28 @@ pub enum InternalRepositoryError {
 
 // ─── External repository ───────────────────────────────────
 
-#[cfg_attr(test, mockall::automock)]
 #[async_trait]
 pub trait ExternalRepository: Send + Sync + 'static {
-    /// Search the external API with exclusion support.
-    async fn search(
+    /// The item type this repository returns (e.g. `GameResultItem`).
+    type Item: Clone + Send + 'static;
+
+    /// The search criteria type (e.g. `GameSearch`).
+    type Search: Clone + Send + 'static;
+
+    /// Fetch a batch of items from the external API.
+    async fn fetch(
         &self,
-        query: &str,
+        search: &Self::Search,
         limit: usize,
         offset: usize,
         exclude_ids: &[u64],
-    ) -> Result<Vec<GameResultItem>, ExternalRepositoryError>;
+    ) -> Result<Vec<Self::Item>, ExternalRepositoryError>;
 
-    /// Count total results in the external API matching the query,
+    /// Count total results in the external API matching the criteria,
     /// excluding the given IDs.
     async fn count(
         &self,
-        query: &str,
+        search: &Self::Search,
         exclude_ids: &[u64],
     ) -> Result<usize, ExternalRepositoryError>;
 }
@@ -88,7 +76,7 @@ pub trait CacheRepository: Send + Sync {
     async fn cache_ids(
         &self,
         key_prefix: &str,
-        session_id: &str,
+        pagination_id: &str,
         ids: &[Uuid],
     ) -> Result<(), CacheRepositoryError>;
 }

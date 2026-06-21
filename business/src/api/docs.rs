@@ -13,7 +13,7 @@ use super::routes;
         schemas(
             // ─── Requests & Responses ───
             routes::dtos::BusinessHealthResponse,
-            routes::games::dtos::GameSearchResultItemDto,
+            routes::games::dtos::GameSearchResultItemResponse,
             routes::games::dtos::GameSearchMeta,
             routes::games::dtos::GameSearchResponse,
             routes::platforms::dtos::PlatformResponse,

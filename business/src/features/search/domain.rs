@@ -1,18 +1,21 @@
-use uuid::Uuid;
-use crate::features::base::pagination::GameResultItem;
+use crate::prelude::*;
 
+/// Paginated search result for a single page.
 #[derive(Debug, Clone)]
 pub struct SearchResult {
     pub items: Vec<GameResultItem>,
     /// Total number of games matching the query from both internal DB
     /// and external API (respecting the exclusion list).
     pub total_count: usize,
+    /// The pagination ID for this search. Pass back for paginated requests.
+    pub pagination_id: Uuid,
 }
 
-/// A search session that ties a search_id to its results.
-/// The search_id must be passed back by the client for paginated requests.
+/// A game result item returned by paginated queries.
+/// Used by both internal and external repositories.
 #[derive(Debug, Clone)]
-pub struct SearchSession {
-    pub search_id: Uuid,
-    pub result: SearchResult,
+pub struct GameResultItem {
+    pub id: Uuid,
+    pub external_id: Option<u64>,
+    pub name: String,
 }

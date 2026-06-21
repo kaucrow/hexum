@@ -30,15 +30,15 @@ pub async fn init(
         client_id: config.videogame_api.auth.client_id.clone(),
         client_secret: config.videogame_api.auth.client_secret.clone(),
     };
+
     let igdb_port = videogame_api::IgdbAdapter::new(http_client.clone(), auth_data);
 
-    let internal_search_adapter = Arc::new(search::PostgresAdapter::new(pool.clone()));
-    let external_search_adapter = Arc::new(search::IgdbAdapter::new(igdb_port.clone()));
+    let search_internal_repo = Arc::new(search::PostgresAdapter::new(pool.clone()));
 
     let search_service = Arc::new(search::Service::new(
-        internal_search_adapter,
-        external_search_adapter,
+        search_internal_repo,
         pagination_cache_repo,
+        igdb_port.clone(),
     ));
 
     // ─── Platform ─────────────────────────────────────────────────────
@@ -60,8 +60,7 @@ pub async fn init(
     })
 }
 
-
-pub fn start_cron_db_sync(
+fn start_cron_db_sync(
     platform_service: Arc<dyn platform::UseCase>
 ) {
     tokio::spawn(async move {

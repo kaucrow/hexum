@@ -1,103 +1,124 @@
-use async_trait::async_trait;
-use serde::Deserialize;
-use thiserror::Error;
-use uuid::Uuid;
-
 use crate::{
     prelude::*,
     features::videogame_api,
 };
-use crate::features::base::pagination::{
-    ExternalRepository, ExternalRepositoryError, GameResultItem,
-};
+use crate::features::base::pagination;
+use super::*;
 
+/// IGDB adapter for search queries.
 #[derive(Clone)]
 pub struct IgdbAdapter {
     igdb: videogame_api::IgdbAdapter,
 }
 
 impl IgdbAdapter {
-    pub fn new(igdb: videogame_api::IgdbAdapter) -> Self {
+    pub fn new(
+        igdb: videogame_api::IgdbAdapter,
+    ) -> Self {
         Self { igdb }
     }
 
-    /// Builds the exclusion filter clause for an IGDB query body.
-    /// Returns an empty string if there are no exclusion IDs.
-    fn build_exclusion_clause(exclude_ids: &[u64]) -> String {
-        if exclude_ids.is_empty() {
-            String::new()
-        } else {
+    /// Builds the complete IGDB request body dynamically, only including
+    /// clauses for what's present (search, exclusion, platform filter,
+    /// fields, limit/offset).
+    fn build_body(
+        &self,
+        search: &PaginationGameSearch,
+        exclude_ids: &[u64],
+        limit: Option<usize>,
+        offset: Option<usize>,
+    ) -> String {
+        let mut parts: Vec<String> = Vec::new();
+
+        if let Some(query) = &search.query {
+            let escaped = query.replace('"', "\\\"");
+            parts.push(format!("search \"{}\";", escaped));
+        }
+
+        if limit.is_some() {
+            parts.push("fields name;".to_string());
+        }
+
+        let mut conditions: Vec<String> = Vec::new();
+
+        if !exclude_ids.is_empty() {
             let list = exclude_ids
                 .iter()
                 .map(|id| id.to_string())
                 .collect::<Vec<_>>()
                 .join(", ");
-            format!(" where id != ({});", list)
+            conditions.push(format!("id != ({})", list));
         }
+
+        if let Some(ref pids) = search.ext_platforms {
+            if !pids.is_empty() {
+                let list = pids
+                    .iter()
+                    .map(|id| id.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                conditions.push(format!("platforms = ({})", list));
+            }
+        }
+
+        if !conditions.is_empty() {
+            parts.push(format!("where {};", conditions.join(" & ")));
+        }
+
+        if let Some(l) = limit {
+            parts.push(format!("limit {};", l));
+        }
+        if let Some(o) = offset {
+            parts.push(format!("offset {};", o));
+        }
+
+        parts.join(" ")
     }
 }
 
 #[async_trait]
-impl ExternalRepository for IgdbAdapter {
-    async fn search(
+impl pagination::ExternalRepository for IgdbAdapter {
+    type Item = GameResultItem;
+    type Search = PaginationGameSearch;
+
+    async fn fetch(
         &self,
-        query: &str,
+        search: &Self::Search,
         limit: usize,
         offset: usize,
         exclude_ids: &[u64],
-    ) -> Result<Vec<GameResultItem>, ExternalRepositoryError> {
+    ) -> Result<Vec<Self::Item>, pagination::ExternalRepositoryError> {
         let res: Result<Vec<GameResultItem>, LocalError> = async {
-            let url = "https://api.igdb.com/v4/games";
-            let escaped_query = query.replace('"', "\\\"");
-            let exclusion = Self::build_exclusion_clause(exclude_ids);
-
-            let body = format!(
-                "search \"{}\"; fields name;{} limit {}; offset {};",
-                escaped_query, exclusion, limit, offset
-            );
+            let body = self.build_body(search, exclude_ids, Some(limit), Some(offset));
 
             let items: Vec<IgdbGameResponse> = videogame_api::Port::request(
                 &self.igdb,
-                url,
+                "https://api.igdb.com/v4/games",
                 &body,
             ).await?;
 
-            let items = items
-                .into_iter()
-                .map(GameResultItem::from)
-                .collect();
-
-            Ok(items)
-        }
-        .await;
+            Ok(items.into_iter().map(GameResultItem::from).collect())
+        }.await;
 
         res.map_err(Into::into)
     }
 
     async fn count(
         &self,
-        query: &str,
+        search: &Self::Search,
         exclude_ids: &[u64],
-    ) -> Result<usize, ExternalRepositoryError> {
+    ) -> Result<usize, pagination::ExternalRepositoryError> {
         let res: Result<usize, LocalError> = async {
-            let url = "https://api.igdb.com/v4/games/count";
-            let escaped_query = query.replace('"', "\\\"");
-            let exclusion = Self::build_exclusion_clause(exclude_ids);
-
-            let body = format!(
-                "search \"{}\";{}",
-                escaped_query, exclusion
-            );
+            let body = self.build_body(search, exclude_ids, None, None);
 
             let response: IgdbCountResponse = videogame_api::Port::request(
                 &self.igdb,
-                url,
+                "https://api.igdb.com/v4/games/count",
                 &body,
             ).await?;
 
             Ok(response.count)
-        }
-        .await;
+        }.await;
 
         res.map_err(Into::into)
     }
@@ -121,11 +142,11 @@ impl From<videogame_api::PortError> for LocalError {
     }
 }
 
-impl From<LocalError> for ExternalRepositoryError {
+impl From<LocalError> for pagination::ExternalRepositoryError {
     fn from(e: LocalError) -> Self {
         match e {
-            LocalError::IgdbHttp(msg) => ExternalRepositoryError::External(msg),
-            LocalError::IgdbInternal(msg) => ExternalRepositoryError::External(msg),
+            LocalError::IgdbHttp(msg) => pagination::ExternalRepositoryError::External(msg),
+            LocalError::IgdbInternal(msg) => pagination::ExternalRepositoryError::External(msg),
         }
     }
 }
@@ -145,7 +166,7 @@ impl From<IgdbGameResponse> for GameResultItem {
     fn from(response: IgdbGameResponse) -> Self {
         Self {
             id: Uuid::new_v4(),
-            external_id: Some(response.id as i64),
+            external_id: Some(response.id),
             name: response.name,
         }
     }

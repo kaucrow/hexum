@@ -1,8 +1,7 @@
-use std::sync::Arc;
-
 use axum::extract::FromRef;
 
 use crate::{
+    prelude::*,
     Config,
     features::{base, search, platform},
 };

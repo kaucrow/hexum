@@ -1,31 +1,85 @@
-use std::sync::Arc;
-use async_trait::async_trait;
-use uuid::Uuid;
-
 use crate::prelude::*;
 use crate::features::base::{
     PaginatedQuery, PaginatorSession,
 };
-use crate::features::base::pagination::{
-    CacheRepository, ExternalRepository, InternalRepository,
-};
+use crate::features::base::pagination::CacheRepository;
+use crate::features::videogame_api;
 
 use super::*;
 
 #[derive(Clone)]
 pub struct Service {
     query: PaginatedQuery,
+    /// Combined internal repository for search-specific queries & pagination.
+    internal_repo: Arc<dyn PaginatedInternalRepository>,
+    /// IGDB adapter.
+    igdb: IgdbAdapter,
 }
 
 impl Service {
     pub fn new(
-        internal_repo: Arc<dyn InternalRepository>,
-        external_repo: Arc<dyn ExternalRepository>,
+        internal_repo: Arc<dyn PaginatedInternalRepository>,
         pagination_cache_repo: Arc<dyn CacheRepository>,
+        igdb: videogame_api::IgdbAdapter,
     ) -> Self {
         let paginator = PaginatorSession::new(pagination_cache_repo, "search");
-        let query = PaginatedQuery::new(paginator, internal_repo, external_repo);
-        Self { query }
+        let query = PaginatedQuery::new(paginator);
+        Self { query, internal_repo, igdb: IgdbAdapter::new(igdb) }
+    }
+
+    /// Resolve UUIDs to items, build exclusion list, then call [`PaginatedQuery::paginate_with_fallback`].
+    async fn paginate(
+        &self,
+        search: &GameSearch,
+        pagination_id: Uuid,
+        internal_count: usize,
+        limit: usize,
+        offset: usize,
+    ) -> Result<SearchResult, UseCaseError> {
+        let session = self.query.session();
+
+        // Build exclusion list (skip cache if no internal results)
+        let (exclude, page_ids) = if internal_count == 0 {
+            (vec![], vec![])
+        } else {
+            let cached_ids = session.get_all_ids(&pagination_id).await?.unwrap_or_default();
+            let exclude = self.internal_repo.get_external_ids_by_internal_ids(&cached_ids).await?;
+            let (page_ids, _) = self.query.get_page_uuids(&pagination_id, limit, offset).await?;
+            (exclude, page_ids)
+        };
+
+        // Resolve UUIDs to GameResultItems
+        let items = self.internal_repo.get_games_by_ids(&page_ids).await?;
+
+        // Resolve internal platform UUIDs to external platform IDs
+        let ext_platforms = if let Some(platform_uuids) = &search.platforms {
+            Some(self.internal_repo.get_external_platform_ids_by_internal_ids(platform_uuids).await?)
+        } else {
+            None
+        };
+
+        // Build PaginationGameSearch
+        let pagination_search = PaginationGameSearch {
+            query: search.query.clone(),
+            ext_platforms,
+        };
+
+        // Perform pagination
+        let (items, total_count) = if search.query.is_some() {
+            self.query.paginate_with_fallback(
+                &self.igdb,
+                &pagination_search,
+                internal_count,
+                items,
+                limit,
+                offset,
+                &exclude,
+            ).await?
+        } else {
+            (items, internal_count)
+        };
+
+        Ok(SearchResult { items, total_count, pagination_id })
     }
 }
 
@@ -33,128 +87,35 @@ impl Service {
 impl UseCase for Service {
     async fn search_for_game(
         &self,
-        query: Option<&str>,
+        search: GameSearch,
         search_id: Option<Uuid>,
         limit: usize,
         offset: usize,
-    ) -> Result<SearchSession, UseCaseError> {
-        // ─── Try existing search session via search_id ───
-        if let Some(search_id) = search_id {
-            if let Some(page) = self
-                .query
-                .session()
-                .get_page(&search_id, limit, offset)
-                .await?
-            {
-                let total_internal = page.total_items;
-
-                // Return an empty page if there are no internal results & no query
-                if total_internal == 0 && query.is_none() {
-                    return Ok(SearchSession {
-                        search_id,
-                        result: SearchResult { items: vec![], total_count: 0 },
-                    });
-                }
-
-                // Fetch page items and the full cached ID list concurrently
-                let internal_repo = self.query.internal_repo();
-                let paginator_session = self.query.session();
-
-                let (items, cached_internal_ids_res) = tokio::try_join!(
-                    async { internal_repo.get_games_by_ids(&page.ids).await.map_err(UseCaseError::from) },
-                    async { paginator_session.get_all_ids(&search_id).await.map_err(UseCaseError::from) }
-                )?;
-
-                let cached_internal_ids = cached_internal_ids_res.unwrap_or_default();
-
-                let exclude = internal_repo
-                    .get_external_ids_by_internal_ids(&cached_internal_ids)
-                    .await?;
-
-                let q = query.unwrap_or("");
-
-                let (items, total_count) = self
-                    .query
-                    .paginate_with_fallback(
-                        q,
-                        total_internal,
-                        items,
-                        limit,
-                        offset,
-                        &exclude,
-                    )
-                    .await?;
-
-                return Ok(SearchSession {
-                    search_id,
-                    result: SearchResult { items, total_count },
-                });
+    ) -> Result<SearchResult, UseCaseError> {
+        // ─── Existing session. Paginate directly ───
+        if let Some(sid) = search_id {
+            if let Some(page) = self.query.session().get_page(&sid, 1, 0).await? {
+                return self.paginate(&search, sid, page.total_items, limit, offset).await;
             }
         }
 
         // ─── Fresh search ───
-        let new_search_id = Uuid::new_v4();
-        let q = match query {
-            Some(q) => q,
-            None => {
-                return Ok(SearchSession {
-                    search_id: new_search_id,
-                    result: SearchResult { items: vec![], total_count: 0 },
-                });
-            }
-        };
+        let new_pagination_id = Uuid::new_v4();
 
-        // Get all internal matches' IDs
-        let internal_matches_ids = self
-            .query
-            .internal_repo()
-            .get_game_ids_by_query(q)
-            .await?;
+        let internal_ids = self.internal_repo.get_game_ids_by_criteria(&search).await?;
+        let internal_count = internal_ids.len();
 
-        let total_internal = internal_matches_ids.len();
-
-        // Cache all internal repository matches in the background
-        let paginator_session = self.query.session().clone();
-        let cache_key = new_search_id;
-        let cache_ids = internal_matches_ids.clone();
-
+        // Cache IDs
+        let session = self.query.session().clone();
+        let cache_key = new_pagination_id;
+        let cache_ids = internal_ids.clone();
         tokio::spawn(async move {
-            if let Err(e) = paginator_session.cache_session(&cache_key, &cache_ids).await {
+            if let Err(e) = session.cache_pagination(&cache_key, &cache_ids).await {
                 error!("Search cache saving failed: {:?}", e);
             }
         });
 
-        // Paginate the matches
-        let page_uuids: Vec<Uuid> = internal_matches_ids
-            .iter()
-            .copied()
-            .skip(offset)
-            .take(limit)
-            .collect();
-
-        let internal_repo = self.query.internal_repo();
-
-        // Get the games & the external IDs concurrently
-        let (items, exclude) = tokio::try_join!(
-            async { internal_repo.get_games_by_ids(&page_uuids).await.map_err(UseCaseError::from) },
-            async { internal_repo.get_external_ids_by_internal_ids(&internal_matches_ids).await.map_err(UseCaseError::from) }
-        )?;
-
-        let (items, total_count) = self
-            .query
-            .paginate_with_fallback(
-                q,
-                total_internal,
-                items,
-                limit,
-                offset,
-                &exclude,
-            )
-            .await?;
-
-        Ok(SearchSession {
-            search_id: new_search_id,
-            result: SearchResult { items, total_count },
-        })
+        // Paginate the fresh results
+        self.paginate(&search, new_pagination_id, internal_count, limit, offset).await
     }
 }

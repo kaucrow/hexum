@@ -1,3 +1,5 @@
+use uuid::Uuid;
+
 use crate::{
     prelude::*,
     api::*,
@@ -12,7 +14,7 @@ use super::dtos::*;
     params(GameSearchQueryParams),
     responses(
         (status = 200, description = "Search results", body = GameSearchResponse),
-        (status = 429, description = "Validation Error"),
+        (status = 400, description = "Validation Error"),
         (status = 500, description = "Internal Server Error")
     ),
     tags = ["Games"]
@@ -22,25 +24,40 @@ pub async fn search(
     ValidatedQuery(params): ValidatedQuery<GameSearchQueryParams>,
 ) -> Result<Json<GameSearchResponse>, ApiError> {
     info!(
-        "Got game search request with query '{:?}' & search ID '{:?}'",
+        "Got game search request with query '{:?}', platforms '{:?}', pagination ID '{:?}'",
         params.q,
-        params.search_id,
+        params.platforms,
+        params.pagination_id,
     );
 
-    let session = search_service
-        .search_for_game(
-            params.q.as_deref(),
-            params.search_id,
-            params.limit,
-            params.offset,
-        )
+    // ─── Build GameSearch from query params ───
+    let platforms = params.platforms
+    .as_deref()
+    .map(|platforms_raw_str| {
+        platforms_raw_str.split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(Uuid::parse_str)
+            .collect::<Result<Vec<Uuid>, _>>()
+    })
+    .transpose()
+    .map_err(|_| ApiError::BadRequest("Invalid platforms format.".to_string()))?
+    .filter(|ids| !ids.is_empty());
+
+    let game_search = search::GameSearch {
+        query: params.q.clone(),
+        platforms,
+    };
+
+    // ─── Search + paginate ───
+    let result = search_service
+        .search_for_game(game_search, params.pagination_id, params.limit, params.offset)
         .await?;
 
-    let games: Vec<GameSearchResultItemDto> = session
-        .result
+    let games: Vec<GameSearchResultItemResponse> = result
         .items
         .into_iter()
-        .map(|item| GameSearchResultItemDto {
+        .map(|item| GameSearchResultItemResponse {
             id: item.id,
             external_id: item.external_id,
             name: item.name,
@@ -50,8 +67,8 @@ pub async fn search(
     Ok(Json(GameSearchResponse {
         games,
         meta: GameSearchMeta {
-            total_count: session.result.total_count,
-            search_id: session.search_id,
+            total_count: result.total_count,
+            pagination_id: result.pagination_id,
         },
     }))
 }

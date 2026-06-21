@@ -6,6 +6,7 @@ use crate::{
 };
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PlatformResponse {
     pub id: Uuid,
     pub external_id: Option<i64>,
@@ -14,6 +15,7 @@ pub struct PlatformResponse {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct PlatformSyncResponse {
     /// Success confirmation message.
     #[schema(example = "Platforms synced successfully.")]
