@@ -3,7 +3,7 @@ use super::*;
 
 /// Feature-agnostic pagination session management with external API fallback.
 ///
-/// Works purely at the UUID level — it does not know about feature-specific
+/// Works purely at the UUID level. It does not know about feature-specific
 /// item types. Features resolve UUIDs to their own item types and pass them
 /// to [`paginate_with_fallback`].
 #[derive(Clone)]

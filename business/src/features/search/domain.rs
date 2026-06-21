@@ -13,9 +13,11 @@ pub struct SearchResult {
 
 /// A game result item returned by paginated queries.
 /// Used by both internal and external repositories.
+/// `id` is `Some` if the game exists in the internal repository and `None` if it
+/// only exists in the external repository.
 #[derive(Debug, Clone)]
 pub struct GameResultItem {
-    pub id: Uuid,
-    pub external_id: Option<u64>,
+    pub id: Option<Uuid>,
+    pub external_id: u64,
     pub name: String,
 }

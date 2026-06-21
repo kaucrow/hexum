@@ -179,8 +179,8 @@ pub struct GameResultDbRow {
 impl From<GameResultDbRow> for GameResultItem {
     fn from(row: GameResultDbRow) -> Self {
         Self {
-            id: row.id,
-            external_id: Some(row.external_id as u64),
+            id: Some(row.id),
+            external_id: row.external_id as u64,
             name: row.game_name,
         }
     }

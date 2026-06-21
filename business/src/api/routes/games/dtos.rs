@@ -9,7 +9,7 @@ use crate::{
 #[into_params(parameter_in = Query)]
 #[serde(rename_all = "camelCase")]
 pub struct GameSearchQueryParams {
-    /// Search query string (required for initial search, optional for pagination).
+    /// Search query string.
     pub q: Option<String>,
 
     /// Comma-separated platform UUIDs to filter by.
@@ -32,8 +32,13 @@ pub struct GameSearchQueryParams {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct GameSearchResultItemResponse {
-    pub id: Uuid,
-    pub external_id: Option<u64>,
+    /// The internal game ID. Is null if it doesn't yet exist in the internal repository.
+    pub id: Option<Uuid>,
+
+    /// The external game ID.
+    pub external_id: u64,
+
+    /// The game's name.
     pub name: String,
 }
 

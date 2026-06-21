@@ -165,8 +165,8 @@ struct IgdbCountResponse {
 impl From<IgdbGameResponse> for GameResultItem {
     fn from(response: IgdbGameResponse) -> Self {
         Self {
-            id: Uuid::new_v4(),
-            external_id: Some(response.id),
+            id: None,
+            external_id: response.id,
             name: response.name,
         }
     }
