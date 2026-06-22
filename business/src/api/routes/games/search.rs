@@ -79,7 +79,11 @@ impl From<search::UseCaseError> for ApiError {
             search::UseCaseError::VideogameApi(e) => {
                 error!("Videogame API error in search: {e}");
                 ApiError::Internal("An internal error occurred".to_string())
-            }
+            },
+            search::UseCaseError::EmptySearch => {
+                warn!("Got a search request with no search fields.");
+                ApiError::BadRequest("In order to search for a game, at least one of the following must be provided: 'query', 'platformIds'.".to_string())
+            },
             search::UseCaseError::Internal(e) => {
                 error!("An internal error occurred in search: {e}");
                 ApiError::Internal("An internal error occurred".to_string())

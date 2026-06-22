@@ -37,6 +37,10 @@ pub enum UseCaseError {
     #[error("External error in Videogame API Search: {0}")]
     VideogameApi(String),
 
+    /// The search has no fields.
+    #[error("The search has no fields.")]
+    EmptySearch,
+
     /// Unexpected internal error.
     #[error("Search service: {0}.")]
     Internal(String),

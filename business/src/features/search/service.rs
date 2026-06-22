@@ -65,7 +65,7 @@ impl Service {
         };
 
         // Perform pagination
-        let (items, total_count) = if search.query.is_some() {
+        let (items, total_count) =
             self.query.paginate_with_fallback(
                 &self.igdb,
                 &pagination_search,
@@ -74,10 +74,7 @@ impl Service {
                 limit,
                 offset,
                 &exclude,
-            ).await?
-        } else {
-            (items, internal_count)
-        };
+            ).await?;
 
         Ok(SearchResult { items, total_count, pagination_id })
     }
@@ -92,6 +89,11 @@ impl UseCase for Service {
         limit: usize,
         offset: usize,
     ) -> Result<SearchResult, UseCaseError> {
+        // If the search is empty, return an error
+        if !(search.query.is_some() || search.platforms.is_some()) {
+            return Err(UseCaseError::EmptySearch);
+        }
+
         // ─── Existing session. Paginate directly ───
         if let Some(sid) = search_id {
             if let Some(page) = self.query.session().get_page(&sid, 1, 0).await? {
