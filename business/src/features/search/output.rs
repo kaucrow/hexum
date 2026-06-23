@@ -36,7 +36,6 @@ pub enum InternalRepositoryError {
     Internal(String),
 }
 
-
 // ─── InternalRepository + pagination::InternalRepository ──
 
 pub trait PaginatedInternalRepository: InternalRepository + pagination::InternalRepository {}

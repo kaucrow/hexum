@@ -10,4 +10,4 @@ pub use input::*;
 pub use output::*;
 pub use service::*;
 pub use postgres::PostgresAdapter;
-pub use igdb::IgdbPagination;
+pub use igdb::IgdbAdapter;

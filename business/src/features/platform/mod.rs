@@ -2,7 +2,7 @@ mod domain;
 mod input;
 mod output;
 mod service;
-mod postgres;
+pub mod postgres;
 mod igdb;
 
 pub use domain::*;

@@ -4,13 +4,13 @@ use crate::prelude::*;
 use super::*;
 
 #[derive(Clone)]
-pub struct IgdbAdapter {
+pub struct IgdbClient {
     http_client: HttpClient,
     auth_data: VideogameApiAuthData,
     access_token: Arc<RwLock<Option<VideogameApiToken>>>,
 }
 
-impl IgdbAdapter {
+impl IgdbClient {
     pub fn new(http_client: HttpClient, auth_data: VideogameApiAuthData) -> Self {
         Self {
             http_client,
@@ -20,7 +20,7 @@ impl IgdbAdapter {
     }
 }
 
-impl IgdbAdapter {
+impl IgdbClient {
     async fn get_token(&self) -> Result<VideogameApiToken, LocalError> {
         let res: Result<_, reqwest::Error> = async {
             let response: TwitchAuthResponse = self.http_client
@@ -86,7 +86,7 @@ impl IgdbAdapter {
 }
 
 #[async_trait]
-impl Port for IgdbAdapter {
+impl Port for IgdbClient {
     /// Sends a POST request to the given IGDB endpoint with the given body.
     /// On 401, re-authenticates once and retries.
     async fn request<T: DeserializeOwned + Send + 'static>(
@@ -113,6 +113,17 @@ impl Port for IgdbAdapter {
             }
             Err(e) => Err(e.into()),
         }
+    }
+}
+
+#[async_trait]
+impl Port for Arc<IgdbClient> {
+    async fn request<T: DeserializeOwned + Send + 'static>(
+        &self,
+        endpoint: &str,
+        body: &str,
+    ) -> Result<T, PortError> {
+        (**self).request(endpoint, body).await
     }
 }
 

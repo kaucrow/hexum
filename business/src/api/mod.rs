@@ -15,7 +15,8 @@ use crate::BusinessState;
 pub fn router(state: BusinessState) -> Router {
     Router::new()
         .route("/business-health", get(crate::routes::health::health))
-        .route("/games/search", get(crate::routes::games::search))
+        .route("/game", get(crate::routes::games::get_game))
+        .route("/game/search", get(crate::routes::games::search))
         .route("/platforms", get(crate::routes::platforms::get_platforms))
         .route("/platforms/sync", post(crate::routes::platforms::sync_platforms))
         .with_state(state)

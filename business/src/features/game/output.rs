@@ -5,9 +5,13 @@ use super::*;
 
 #[async_trait]
 pub trait InternalRepository: Send + Sync + 'static {
-    async fn upsert_platforms(&self, platforms: &[Platform]) -> Result<(), InternalRepositoryError>;
+    // ─── Getters ───
+    /// Gets a game's entire data.
+    async fn get_game(&self, id: &Uuid) -> Result<Option<Game>, InternalRepositoryError>;
 
-    async fn get_platforms(&self) -> Result<Vec<Platform>, InternalRepositoryError>;
+    /// Inserts a game from the external API into the local repo, or updates its
+    /// data if it already exists in the local repo. Returns the internal game ID.
+    async fn sync_db_game_from_external(&self, game: &Game) -> Result<Uuid, InternalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
@@ -21,13 +25,15 @@ pub enum InternalRepositoryError {
 
 #[async_trait]
 pub trait ExternalRepository: Send + Sync + 'static {
-    async fn get_platforms(&self) -> Result<Vec<Platform>, ExternalRepositoryError>;
+    // ─── Getters ───
+    /// Gets a game's entire data.
+    async fn get_game(&self, id: u64) -> Result<Option<Game>, ExternalRepositoryError>;
 }
 
 #[derive(Error, Debug)]
 pub enum ExternalRepositoryError {
     /// Videogame API error.
-    #[error("External error in Videogame API (Platform): {0}")]
+    #[error("External error in Videogame API (Game): {0}")]
     VideogameApi(String),
 
     /// Unexpected internal error.

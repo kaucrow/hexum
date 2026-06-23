@@ -27,7 +27,7 @@ impl InternalRepository for PostgresAdapter {
         ids: &[Uuid],
     ) -> Result<Vec<GameResultItem>, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
-            let games = sqlx::query_as::<_, GameResultDbRow>(sql(&QUERIES.game.get_games_by_ids))
+            let games = sqlx::query_as::<_, GameResultDbRow>(sql(&QUERIES.game.get_many_by_ids))
                 .bind(ids)
                 .fetch_all(&self.pool)
                 .await?

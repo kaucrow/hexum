@@ -4,20 +4,21 @@ use super::*;
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
     // ─── Getters ───
-    async fn get_platforms(&self) -> Result<Vec<Platform>, UseCaseError>;
+    /// Gets a game from the internal repository.
+    async fn get_internal_game(&self, id: &Uuid) -> Result<Option<Game>, UseCaseError>;
 
-    // ─── Commands ───
-    async fn sync_db_platforms(&self) -> Result<(), UseCaseError>;
+    /// Gets a game from the external API.
+    async fn get_external_game(&self, id: u64) -> Result<Option<Game>, UseCaseError>;
 }
 
 #[derive(Error, Debug)]
 pub enum UseCaseError {
     /// Videogame API error.
-    #[error("External error in Videogame API (Platform Service): {0}")]
+    #[error("External error in Videogame API (Game Service): {0}")]
     VideogameApi(String),
 
     /// Unexpected internal error.
-    #[error("Platform service: {0}.")]
+    #[error("Game service: {0}.")]
     Internal(String),
 }
 

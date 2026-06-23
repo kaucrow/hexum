@@ -31,24 +31,35 @@ pub async fn init(
         client_secret: config.videogame_api.auth.client_secret.clone(),
     };
 
-    let igdb_port = videogame_api::IgdbAdapter::new(http_client.clone(), auth_data);
+    let igdb_client = Arc::new(videogame_api::IgdbClient::new(http_client.clone(), auth_data));
 
     let search_internal_repo = Arc::new(search::PostgresAdapter::new(pool.clone()));
 
     let search_service = Arc::new(search::Service::new(
         search_internal_repo,
         pagination_cache_repo,
-        igdb_port.clone(),
+        igdb_client.clone(),
     ));
 
     // ─── Platform ─────────────────────────────────────────────────────
-    let internal_platform_adapter = Arc::new(platform::PostgresAdapter::new(pool));
-    let external_platform_adapter = Arc::new(platform::IgdbAdapter::new(igdb_port));
+    let internal_platform_adapter = Arc::new(platform::PostgresAdapter::new(pool.clone()));
+    let external_platform_adapter = Arc::new(platform::IgdbAdapter::new(igdb_client.clone()));
 
     let platform_service = Arc::new(platform::Service::new(
         internal_platform_adapter,
         external_platform_adapter,
     ));
+
+    // ─── Game ─────────────────────────────────────────────────────────
+    let internal_game_adapter = Arc::new(game::PostgresAdapter::new(pool));
+    let external_game_adapter = Arc::new(game::IgdbAdapter::new(igdb_client));
+
+    let game_service = Arc::new(game::Service::new(
+        internal_game_adapter,
+        external_game_adapter,
+    ));
+
+    // ─── Cron Jobs ────────────────────────────────────────────────────
 
     start_cron_db_sync(platform_service.clone());
 
@@ -57,6 +68,7 @@ pub async fn init(
         base: base_service,
         search: search_service,
         platform: platform_service,
+        game: game_service,
     })
 }
 

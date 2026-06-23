@@ -57,3 +57,32 @@ pub struct GameSearchResponse {
     pub games: Vec<GameSearchResultItemResponse>,
     pub meta: GameSearchMeta,
 }
+
+#[derive(Deserialize, IntoParams, Validate)]
+#[into_params(parameter_in = Query)]
+#[serde(rename_all = "camelCase")]
+pub struct GameQueryParams {
+    /// Internal game UUID.
+    pub id: Option<Uuid>,
+
+    /// External IGDB game ID.
+    pub external_id: Option<u64>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GameResponse {
+    pub id: Uuid,
+    pub external_id: Option<u64>,
+    pub name: String,
+    pub platforms: Vec<GamePlatformResponse>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GamePlatformResponse {
+    pub id: Uuid,
+    pub external_id: Option<u64>,
+    pub name: String,
+    pub generation: Option<u8>,
+}

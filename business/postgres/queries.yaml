@@ -3,7 +3,33 @@ base:
     SELECT 1 as value
 
 game:
-  get_games_by_ids: |
+  get_full_data: |
+    SELECT
+    g.id,
+    g.external_id,
+    g.game_name,
+    COALESCE(
+      jsonb_agg(
+          jsonb_build_object(
+              'id', p.id,
+              'external_id', p.external_id,
+              'platform_name', p.platform_name,
+              'generation', p.generation
+          )
+      ) FILTER (WHERE p.id IS NOT NULL),
+      '[]'::jsonb
+    ) AS platforms
+    FROM
+      game.game g
+    LEFT JOIN
+      game.game_platform gp ON g.id = gp.game_id
+    LEFT JOIN
+      platform.platform p ON gp.platform_id = p.id
+    WHERE g.id = $1
+    GROUP BY
+      g.id
+
+  get_many_by_ids: |
     SELECT id, external_id, game_name
     FROM game.game
     WHERE id = ANY($1)
@@ -12,6 +38,25 @@ game:
     SELECT external_id
     FROM game.game
     WHERE id = ANY($1) AND external_id IS NOT NULL
+
+  upsert_from_external: |
+    WITH upsert_game AS (
+      INSERT INTO game.game (id, external_id, game_name)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (external_id) DO UPDATE
+      SET game_name = EXCLUDED.game_name
+      RETURNING id
+    ),
+    delete_old_links AS (
+      DELETE FROM game.game_platform
+      WHERE game_id = (SELECT id FROM upsert_game)
+    ),
+    insert_new_links AS (
+      INSERT INTO game.game_platform (game_id, platform_id)
+      SELECT (SELECT id FROM upsert_game), UNNEST($4::uuid[])
+      ON CONFLICT (game_id, platform_id) DO NOTHING
+    )
+    SELECT id FROM upsert_game
 
 platform:
   get_all: |
@@ -23,6 +68,11 @@ platform:
     SELECT external_id
     FROM platform.platform
     WHERE id = ANY($1) AND external_id IS NOT NULL
+
+  get_internal_ids_by_external_ids: |
+    SELECT id
+    FROM platform.platform
+    WHERE external_id = ANY($1)
 
   upsert_many: |
     INSERT INTO platform.platform (id, external_id, platform_name, generation)

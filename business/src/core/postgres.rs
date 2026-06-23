@@ -55,14 +55,17 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Game {
-        pub get_games_by_ids: String,
+        pub get_full_data: String,
+        pub get_many_by_ids: String,
         pub get_external_ids_by_internal_ids: String,
+        pub upsert_from_external: String,
     }
 
     #[derive(Deserialize, Debug)]
     pub struct Platform {
         pub get_all: String,
         pub get_external_ids_by_internal_ids: String,
+        pub get_internal_ids_by_external_ids: String,
         pub upsert_many: String,
     }
 }

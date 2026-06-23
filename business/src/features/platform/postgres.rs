@@ -75,12 +75,12 @@ impl From<LocalError> for InternalRepositoryError {
     }
 }
 
-#[derive(FromRow)]
+#[derive(FromRow, Deserialize)]
 pub struct PlatformDbRow {
-    id: Uuid,
-    external_id: Option<i32>,
-    platform_name: String,
-    generation: Option<i32>,
+    pub id: Uuid,
+    pub external_id: Option<i32>,
+    pub platform_name: String,
+    pub generation: Option<i32>,
 }
 
 impl From<PlatformDbRow> for Platform {

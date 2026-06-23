@@ -9,7 +9,7 @@ use super::dtos::*;
 
 #[utoipa::path(
     get,
-    path = "/games/search",
+    path = "/game/search",
     description = "Searches for games.",
     params(GameSearchQueryParams),
     responses(

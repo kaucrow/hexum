@@ -5,6 +5,7 @@ use super::routes;
 #[openapi(
     paths(
         routes::health::health,
+        routes::games::get::get_game,
         routes::games::search::search,
         routes::platforms::get::get_platforms,
         routes::platforms::sync::sync_platforms,
@@ -16,6 +17,8 @@ use super::routes;
             routes::games::dtos::GameSearchResultItemResponse,
             routes::games::dtos::GameSearchMeta,
             routes::games::dtos::GameSearchResponse,
+            routes::games::dtos::GameResponse,
+            routes::games::dtos::GamePlatformResponse,
             routes::platforms::dtos::PlatformResponse,
             routes::platforms::dtos::PlatformSyncResponse,
         )

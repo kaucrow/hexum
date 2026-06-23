@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::features::base::{
     PaginatedQuery, PaginatorSession,
 };
-use crate::features::base::pagination::CacheRepository;
+use crate::features::base::pagination;
 use crate::features::videogame_api;
 
 use super::*;
@@ -13,18 +13,18 @@ pub struct Service {
     /// Combined internal repository for search-specific queries & pagination.
     internal_repo: Arc<dyn PaginatedInternalRepository>,
     /// IGDB adapter.
-    igdb: IgdbAdapter,
+    igdb_pagination: IgdbPagination,
 }
 
 impl Service {
     pub fn new(
         internal_repo: Arc<dyn PaginatedInternalRepository>,
-        pagination_cache_repo: Arc<dyn CacheRepository>,
-        igdb: videogame_api::IgdbAdapter,
+        pagination_cache_repo: Arc<dyn pagination::CacheRepository>,
+        igdb_core: Arc<videogame_api::IgdbClient>,
     ) -> Self {
         let paginator = PaginatorSession::new(pagination_cache_repo, "search");
         let query = PaginatedQuery::new(paginator);
-        Self { query, internal_repo, igdb: IgdbAdapter::new(igdb) }
+        Self { query, internal_repo, igdb_pagination: IgdbPagination::new(igdb_core) }
     }
 
     /// Resolve UUIDs to items, build exclusion list, then call [`PaginatedQuery::paginate_with_fallback`].
@@ -67,7 +67,7 @@ impl Service {
         // Perform pagination
         let (items, total_count) =
             self.query.paginate_with_fallback(
-                &self.igdb,
+                &self.igdb_pagination,
                 &pagination_search,
                 internal_count,
                 items,

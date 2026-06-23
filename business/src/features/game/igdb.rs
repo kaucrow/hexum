@@ -17,26 +17,22 @@ impl IgdbAdapter {
 
 #[async_trait]
 impl ExternalRepository for IgdbAdapter {
-    async fn get_platforms(&self) -> Result<Vec<Platform>, ExternalRepositoryError> {
-        let res: Result<Vec<Platform>, LocalError> = async {
-            let url = "https://api.igdb.com/v4/platforms";
+    async fn get_game(&self, id: u64) -> Result<Option<Game>, ExternalRepositoryError> {
+        let res: Result<Option<Game>, LocalError> = async {
+            let url = "https://api.igdb.com/v4/games";
 
-            let body = "fields id, name, generation; limit 500;";
+            let body = format!("fields id, name, platforms; where id = {};", id);
 
-            let items: Vec<IgdbPlatformResponse> = videogame_api::Port::request(
+            let items: Vec<IgdbGameResponse> = videogame_api::Port::request(
                 &self.igdb,
                 url,
-                body,
+                &body,
             ).await?;
 
-            let items = items
-                .into_iter()
-                .map(Platform::from)
-                .collect();
+            let game = items.into_iter().next().map(Game::from);
 
-            Ok(items)
-        }
-        .await;
+            Ok(game)
+        }.await;
 
         res.map_err(Into::into)
     }
@@ -80,9 +76,39 @@ impl From<IgdbPlatformResponse> for Platform {
     fn from(response: IgdbPlatformResponse) -> Self {
         Self {
             id: Uuid::new_v4(),
-            external_id: Some(response.id as u64),
+            external_id: Some(response.id),
             name: response.name,
             generation: response.generation,
+        }
+    }
+}
+
+#[derive(Deserialize)]
+struct IgdbGameResponse {
+    pub id: u64,
+    pub name: String,
+    pub platforms: Option<Vec<u64>>,
+}
+
+impl From<IgdbGameResponse> for Game {
+    fn from(response: IgdbGameResponse) -> Self {
+        let platforms = response
+            .platforms
+            .unwrap_or_default()
+            .into_iter()
+            .map(|ext_id| Platform {
+                id: Uuid::new_v4(),
+                external_id: Some(ext_id),
+                name: String::new(),
+                generation: None,
+            })
+            .collect();
+
+        Self {
+            id: Uuid::new_v4(),
+            external_id: Some(response.id),
+            name: response.name,
+            platforms,
         }
     }
 }

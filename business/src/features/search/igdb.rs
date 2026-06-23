@@ -7,15 +7,15 @@ use super::*;
 
 /// IGDB adapter for search queries.
 #[derive(Clone)]
-pub struct IgdbAdapter {
-    igdb: videogame_api::IgdbAdapter,
+pub struct IgdbPagination {
+    igdb_client: Arc<videogame_api::IgdbClient>,
 }
 
-impl IgdbAdapter {
+impl IgdbPagination {
     pub fn new(
-        igdb: videogame_api::IgdbAdapter,
+        igdb_client: Arc<videogame_api::IgdbClient>,
     ) -> Self {
-        Self { igdb }
+        Self { igdb_client }
     }
 
     /// Builds the complete IGDB request body dynamically, only including
@@ -77,7 +77,7 @@ impl IgdbAdapter {
 }
 
 #[async_trait]
-impl pagination::ExternalRepository for IgdbAdapter {
+impl pagination::ExternalRepository for IgdbPagination {
     type Item = GameResultItem;
     type Search = PaginationGameSearch;
 
@@ -92,7 +92,7 @@ impl pagination::ExternalRepository for IgdbAdapter {
             let body = self.build_body(search, exclude_ids, Some(limit), Some(offset));
 
             let items: Vec<IgdbGameResponse> = videogame_api::Port::request(
-                &self.igdb,
+                &self.igdb_client,
                 "https://api.igdb.com/v4/games",
                 &body,
             ).await?;
@@ -112,7 +112,7 @@ impl pagination::ExternalRepository for IgdbAdapter {
             let body = self.build_body(search, exclude_ids, None, None);
 
             let response: IgdbCountResponse = videogame_api::Port::request(
-                &self.igdb,
+                &self.igdb_client,
                 "https://api.igdb.com/v4/games/count",
                 &body,
             ).await?;

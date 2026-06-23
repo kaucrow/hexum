@@ -34,7 +34,7 @@ pub struct PaginationGameSearch {
 #[derive(Error, Debug)]
 pub enum UseCaseError {
     /// Videogame API error.
-    #[error("External error in Videogame API Search: {0}")]
+    #[error("External error in Videogame API (Search Service): {0}")]
     VideogameApi(String),
 
     /// The search has no fields.
