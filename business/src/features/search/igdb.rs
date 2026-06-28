@@ -36,7 +36,7 @@ impl IgdbPagination {
         }
 
         if limit.is_some() {
-            parts.push("fields name;".to_string());
+            parts.push("fields name, cover.url;".to_string());
         }
 
         let mut conditions: Vec<String> = Vec::new();
@@ -152,9 +152,17 @@ impl From<LocalError> for pagination::ExternalRepositoryError {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
+struct IgdbCoverResponse {
+    pub id: u64,
+    pub url: String,
+}
+
+#[derive(Deserialize)]
 struct IgdbGameResponse {
     pub id: u64,
     pub name: String,
+    pub cover: Option<IgdbCoverResponse>,
 }
 
 #[derive(Deserialize)]
@@ -164,10 +172,19 @@ struct IgdbCountResponse {
 
 impl From<IgdbGameResponse> for GameResultItem {
     fn from(response: IgdbGameResponse) -> Self {
+        let cover_url = response.cover.map(|c| {
+            if c.url.starts_with("//") {
+                format!("https:{}", c.url)
+            } else {
+                c.url
+            }
+        });
+
         Self {
             id: None,
             external_id: response.id,
             name: response.name,
+            cover_url,
         }
     }
 }

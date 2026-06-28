@@ -65,7 +65,7 @@ game:
       g.id
 
   get_many_by_ids: |
-    SELECT id, external_id, game_name
+    SELECT id, external_id, game_name, cover_url
     FROM game.game
     WHERE id = ANY($1)
 
@@ -125,7 +125,7 @@ game:
     UPDATE game.game SET view_count = view_count + 1 WHERE id = $1
 
   get_popular_by_view_count: |
-    SELECT id, external_id, game_name
+    SELECT id, external_id, game_name, cover_url
     FROM game.game
     ORDER BY view_count DESC
     LIMIT $1 OFFSET $2

@@ -40,6 +40,9 @@ pub struct GameSearchResultItemResponse {
 
     /// The game's name.
     pub name: String,
+
+    /// The game's cover image URL.
+    pub cover_url: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -47,6 +50,7 @@ pub struct GameSearchResultItemResponse {
 pub struct GameSearchMeta {
     /// Total number of games matching the query.
     pub total_count: usize,
+
     /// The ID for this search. Pass back for paginated requests.
     pub pagination_id: Uuid,
 }
@@ -140,6 +144,9 @@ pub struct PopularGameItemResponse {
 
     /// The game's name.
     pub name: String,
+
+    /// The game's cover image URL.
+    pub cover_url: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -147,6 +154,7 @@ pub struct PopularGameItemResponse {
 pub struct PopularGamesMeta {
     /// Total number of popular games available.
     pub total_count: usize,
+
     /// Whether results came from the internal DB (true) or external API (false).
     pub from_internal: bool,
 }

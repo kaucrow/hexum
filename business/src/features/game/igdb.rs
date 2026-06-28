@@ -27,7 +27,7 @@ impl ExternalRepository for IgdbAdapter {
 
             // Fetch the page of popular games
             let body = format!(
-                "fields name; sort popularity desc; limit {}; offset {};",
+                "fields name, cover.url; sort popularity desc; limit {}; offset {};",
                 limit, offset
             );
 
@@ -47,10 +47,21 @@ impl ExternalRepository for IgdbAdapter {
 
             let games: Vec<PopularGameItem> = items
                 .into_iter()
-                .map(|item| PopularGameItem {
-                    id: None,
-                    external_id: item.id,
-                    name: item.name,
+                .map(|item| {
+                    let cover_url = item.cover.map(|c| {
+                        if c.url.starts_with("//") {
+                            format!("https:{}", c.url)
+                        } else {
+                            c.url
+                        }
+                    });
+
+                    PopularGameItem {
+                        id: None,
+                        external_id: item.id,
+                        name: item.name,
+                        cover_url,
+                    }
                 })
                 .collect();
 
@@ -121,6 +132,7 @@ impl From<LocalError> for ExternalRepositoryError {
 struct IgdbPopularGameResponse {
     pub id: u64,
     pub name: String,
+    pub cover: Option<IgdbCoverResponse>,
 }
 
 #[derive(Deserialize)]

@@ -20,4 +20,5 @@ pub struct GameResultItem {
     pub id: Option<Uuid>,
     pub external_id: u64,
     pub name: String,
+    pub cover_url: Option<String>,
 }

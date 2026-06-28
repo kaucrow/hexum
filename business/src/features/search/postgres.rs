@@ -174,6 +174,7 @@ pub struct GameResultDbRow {
     pub id: Uuid,
     pub external_id: i32,
     pub game_name: String,
+    pub cover_url: Option<String>,
 }
 
 impl From<GameResultDbRow> for GameResultItem {
@@ -182,6 +183,7 @@ impl From<GameResultDbRow> for GameResultItem {
             id: Some(row.id),
             external_id: row.external_id as u64,
             name: row.game_name,
+            cover_url: row.cover_url,
         }
     }
 }

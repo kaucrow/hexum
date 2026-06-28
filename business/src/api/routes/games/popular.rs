@@ -37,6 +37,7 @@ pub async fn popular_games(
             id: item.id,
             external_id: item.external_id,
             name: item.name,
+            cover_url: item.cover_url,
         })
         .collect();
 

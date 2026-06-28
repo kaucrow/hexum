@@ -268,6 +268,7 @@ struct PopularGameItemDbRow {
     pub id: Uuid,
     pub external_id: Option<i32>,
     pub game_name: String,
+    pub cover_url: Option<String>,
 }
 
 impl From<PopularGameItemDbRow> for PopularGameItem {
@@ -276,6 +277,7 @@ impl From<PopularGameItemDbRow> for PopularGameItem {
             id: Some(row.id),
             external_id: row.external_id.unwrap_or(0) as u64,
             name: row.game_name,
+            cover_url: row.cover_url,
         }
     }
 }
