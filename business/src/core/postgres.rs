@@ -27,6 +27,8 @@ pub(crate) struct Queries {
     pub base: self::internal::Base,
     pub game: self::internal::Game,
     pub platform: self::internal::Platform,
+    pub genre: self::internal::Genre,
+    pub company: self::internal::Company,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -59,6 +61,10 @@ mod internal {
         pub get_many_by_ids: String,
         pub get_external_ids_by_internal_ids: String,
         pub upsert_from_external: String,
+        pub delete_game_genres: String,
+        pub insert_game_genres: String,
+        pub delete_game_companies: String,
+        pub insert_game_companies: String,
     }
 
     #[derive(Deserialize, Debug)]
@@ -67,5 +73,18 @@ mod internal {
         pub get_external_ids_by_internal_ids: String,
         pub get_internal_ids_by_external_ids: String,
         pub upsert_many: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    pub struct Genre {
+        pub upsert_many: String,
+        pub get_internal_ids_by_external_ids: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Company {
+        pub upsert_many: String,
+        pub get_internal_ids_by_external_ids: String,
     }
 }

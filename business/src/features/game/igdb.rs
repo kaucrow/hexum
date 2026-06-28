@@ -21,7 +21,14 @@ impl ExternalRepository for IgdbAdapter {
         let res: Result<Option<Game>, LocalError> = async {
             let url = "https://api.igdb.com/v4/games";
 
-            let body = format!("fields id, name, platforms; where id = {};", id);
+            let body = format!(
+                "fields id, name, platforms, first_release_date, cover.url, \
+                 genres.name, involved_companies.company.name, \
+                 involved_companies.publisher, involved_companies.developer, \
+                 rating, aggregated_rating, total_rating_count, summary; \
+                 where id = {};",
+                id
+            );
 
             let items: Vec<IgdbGameResponse> = videogame_api::Port::request(
                 &self.igdb,
@@ -65,6 +72,8 @@ impl From<LocalError> for ExternalRepositoryError {
     }
 }
 
+// ─── IGDB responses ──────────────────────────────────────────
+
 #[derive(Deserialize)]
 struct IgdbPlatformResponse {
     pub id: u64,
@@ -84,10 +93,46 @@ impl From<IgdbPlatformResponse> for Platform {
 }
 
 #[derive(Deserialize)]
+struct IgdbGenreResponse {
+    pub id: u64,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct IgdbCoverResponse {
+    pub id: u64,
+    pub url: String,
+}
+
+#[derive(Deserialize)]
+struct IgdbCompanyResponse {
+    pub id: u64,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+#[allow(dead_code)]
+struct IgdbInvolvedCompanyResponse {
+    pub id: u64,
+    pub company: IgdbCompanyResponse,
+    pub publisher: bool,
+    pub developer: bool,
+}
+
+#[derive(Deserialize)]
 struct IgdbGameResponse {
     pub id: u64,
     pub name: String,
     pub platforms: Option<Vec<u64>>,
+    pub first_release_date: Option<i64>,
+    pub cover: Option<IgdbCoverResponse>,
+    pub genres: Option<Vec<IgdbGenreResponse>>,
+    pub involved_companies: Option<Vec<IgdbInvolvedCompanyResponse>>,
+    pub rating: Option<f64>,
+    pub aggregated_rating: Option<f64>,
+    pub total_rating_count: Option<i32>,
+    pub summary: Option<String>,
 }
 
 impl From<IgdbGameResponse> for Game {
@@ -104,11 +149,72 @@ impl From<IgdbGameResponse> for Game {
             })
             .collect();
 
+        let genres = response
+            .genres
+            .unwrap_or_default()
+            .into_iter()
+            .map(|g| Genre {
+                id: Uuid::new_v4(),
+                external_id: Some(g.id),
+                name: g.name,
+            })
+            .collect();
+
+        let companies = response
+            .involved_companies
+            .unwrap_or_default()
+            .into_iter()
+            .flat_map(|ic| {
+                let mut roles = Vec::new();
+                if ic.developer {
+                    roles.push(GameCompany {
+                        company: Company {
+                            id: Uuid::new_v4(),
+                            external_id: Some(ic.company.id),
+                            name: ic.company.name.clone(),
+                        },
+                        role: CompanyRole::Developer,
+                    });
+                }
+                if ic.publisher {
+                    roles.push(GameCompany {
+                        company: Company {
+                            id: Uuid::new_v4(),
+                            external_id: Some(ic.company.id),
+                            name: ic.company.name,
+                        },
+                        role: CompanyRole::Publisher,
+                    });
+                }
+                roles
+            })
+            .collect();
+
+        let first_release_date = response
+            .first_release_date
+            .and_then(|ts| DateTime::from_timestamp(ts, 0));
+
+        let cover_url = response.cover.map(|c| {
+            if c.url.starts_with("//") {
+                format!("https:{}", c.url)
+            } else {
+                c.url
+            }
+        });
+
         Self {
             id: Uuid::new_v4(),
             external_id: Some(response.id),
             name: response.name,
+            first_release_date,
+            cover_url,
+            rating: response.rating,
+            aggregated_rating: response.aggregated_rating,
+            total_rating_count: response.total_rating_count,
+            summary: response.summary,
             platforms,
+            genres,
+            companies,
         }
     }
 }

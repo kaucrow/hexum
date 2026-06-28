@@ -2,6 +2,12 @@ CREATE TABLE IF NOT EXISTS game.game (
     id UUID PRIMARY KEY,
     external_id INT UNIQUE,
     game_name VARCHAR(255) NOT NULL,
+    first_release_date TIMESTAMPTZ,
+    cover_url VARCHAR(512),
+    rating DOUBLE PRECISION,
+    aggregated_rating DOUBLE PRECISION,
+    total_rating_count INT,
+    summary TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

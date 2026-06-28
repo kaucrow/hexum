@@ -8,8 +8,14 @@ game:
     g.id,
     g.external_id,
     g.game_name,
+    g.first_release_date,
+    g.cover_url,
+    g.rating,
+    g.aggregated_rating,
+    g.total_rating_count,
+    g.summary,
     COALESCE(
-      jsonb_agg(
+      jsonb_agg(DISTINCT
           jsonb_build_object(
               'id', p.id,
               'external_id', p.external_id,
@@ -18,13 +24,42 @@ game:
           )
       ) FILTER (WHERE p.id IS NOT NULL),
       '[]'::jsonb
-    ) AS platforms
+    ) AS platforms,
+    COALESCE(
+      jsonb_agg(DISTINCT
+          jsonb_build_object(
+              'id', gen.id,
+              'external_id', gen.external_id,
+              'genre_name', gen.genre_name
+          )
+      ) FILTER (WHERE gen.id IS NOT NULL),
+      '[]'::jsonb
+    ) AS genres,
+    COALESCE(
+      jsonb_agg(DISTINCT
+          jsonb_build_object(
+              'id', c.id,
+              'external_id', c.external_id,
+              'company_name', c.company_name,
+              'role', gc.role
+          )
+      ) FILTER (WHERE c.id IS NOT NULL),
+      '[]'::jsonb
+    ) AS companies
     FROM
       game.game g
     LEFT JOIN
       game.game_platform gp ON g.id = gp.game_id
     LEFT JOIN
       platform.platform p ON gp.platform_id = p.id
+    LEFT JOIN
+      game.game_genre gg ON g.id = gg.game_id
+    LEFT JOIN
+      genre.genre gen ON gg.genre_id = gen.id
+    LEFT JOIN
+      game.game_company gc ON g.id = gc.game_id
+    LEFT JOIN
+      company.company c ON gc.company_id = c.id
     WHERE g.id = $1
     GROUP BY
       g.id
@@ -41,10 +76,20 @@ game:
 
   upsert_from_external: |
     WITH upsert_game AS (
-      INSERT INTO game.game (id, external_id, game_name)
-      VALUES ($1, $2, $3)
+      INSERT INTO game.game (
+        id, external_id, game_name,
+        first_release_date, cover_url, rating,
+        aggregated_rating, total_rating_count, summary
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
       ON CONFLICT (external_id) DO UPDATE
-      SET game_name = EXCLUDED.game_name
+      SET game_name = EXCLUDED.game_name,
+          first_release_date = COALESCE(EXCLUDED.first_release_date, game.game.first_release_date),
+          cover_url = COALESCE(EXCLUDED.cover_url, game.game.cover_url),
+          rating = COALESCE(EXCLUDED.rating, game.game.rating),
+          aggregated_rating = COALESCE(EXCLUDED.aggregated_rating, game.game.aggregated_rating),
+          total_rating_count = COALESCE(EXCLUDED.total_rating_count, game.game.total_rating_count),
+          summary = COALESCE(EXCLUDED.summary, game.game.summary)
       RETURNING id
     ),
     delete_old_links AS (
@@ -53,10 +98,28 @@ game:
     ),
     insert_new_links AS (
       INSERT INTO game.game_platform (game_id, platform_id)
-      SELECT (SELECT id FROM upsert_game), UNNEST($4::uuid[])
+      SELECT (SELECT id FROM upsert_game), UNNEST($10::uuid[])
       ON CONFLICT (game_id, platform_id) DO NOTHING
     )
     SELECT id FROM upsert_game
+
+  delete_game_genres: |
+    DELETE FROM game.game_genre
+    WHERE game_id = $1
+
+  insert_game_genres: |
+    INSERT INTO game.game_genre (game_id, genre_id)
+    SELECT $1, UNNEST($2::uuid[])
+    ON CONFLICT (game_id, genre_id) DO NOTHING
+
+  delete_game_companies: |
+    DELETE FROM game.game_company
+    WHERE game_id = $1
+
+  insert_game_companies: |
+    INSERT INTO game.game_company (game_id, company_id, role)
+    SELECT $1, UNNEST($2::uuid[]), UNNEST($3::varchar[])
+    ON CONFLICT (game_id, company_id, role) DO NOTHING
 
 platform:
   get_all: |
@@ -79,3 +142,29 @@ platform:
     SELECT * FROM UNNEST($1::uuid[], $2::int[], $3::varchar[], $4::int[])
     ON CONFLICT (external_id)
     DO UPDATE SET platform_name = EXCLUDED.platform_name
+
+genre:
+  upsert_many: |
+    INSERT INTO genre.genre (id, external_id, genre_name)
+    SELECT * FROM UNNEST($1::uuid[], $2::int[], $3::varchar[])
+    ON CONFLICT (external_id)
+    DO UPDATE SET genre_name = EXCLUDED.genre_name
+    RETURNING id, external_id
+
+  get_internal_ids_by_external_ids: |
+    SELECT id, external_id
+    FROM genre.genre
+    WHERE external_id = ANY($1)
+
+company:
+  upsert_many: |
+    INSERT INTO company.company (id, external_id, company_name)
+    SELECT * FROM UNNEST($1::uuid[], $2::int[], $3::varchar[])
+    ON CONFLICT (external_id)
+    DO UPDATE SET company_name = EXCLUDED.company_name
+    RETURNING id, external_id
+
+  get_internal_ids_by_external_ids: |
+    SELECT id, external_id
+    FROM company.company
+    WHERE external_id = ANY($1)

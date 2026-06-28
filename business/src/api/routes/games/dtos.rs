@@ -75,7 +75,15 @@ pub struct GameResponse {
     pub id: Uuid,
     pub external_id: Option<u64>,
     pub name: String,
+    pub first_release_date: Option<DateTime<Utc>>,
+    pub cover_url: Option<String>,
+    pub rating: Option<f64>,
+    pub aggregated_rating: Option<f64>,
+    pub total_rating_count: Option<i32>,
+    pub summary: Option<String>,
     pub platforms: Vec<GamePlatformResponse>,
+    pub genres: Vec<GenreResponse>,
+    pub companies: Vec<GameCompanyResponse>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -85,4 +93,21 @@ pub struct GamePlatformResponse {
     pub external_id: Option<u64>,
     pub name: String,
     pub generation: Option<u8>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GenreResponse {
+    pub id: Uuid,
+    pub external_id: Option<u64>,
+    pub name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GameCompanyResponse {
+    pub id: Uuid,
+    pub external_id: Option<u64>,
+    pub name: String,
+    pub role: String,
 }

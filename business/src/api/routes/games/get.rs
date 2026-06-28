@@ -62,11 +62,43 @@ pub async fn get_game(
         })
         .collect();
 
+    let genres: Vec<GenreResponse> = game
+        .genres
+        .into_iter()
+        .map(|g| GenreResponse {
+            id: g.id,
+            external_id: g.external_id,
+            name: g.name,
+        })
+        .collect();
+
+    let companies: Vec<GameCompanyResponse> = game
+        .companies
+        .into_iter()
+        .map(|gc| GameCompanyResponse {
+            id: gc.company.id,
+            external_id: gc.company.external_id,
+            name: gc.company.name,
+            role: match gc.role {
+                game::CompanyRole::Developer => "developer".to_string(),
+                game::CompanyRole::Publisher => "publisher".to_string(),
+            },
+        })
+        .collect();
+
     Ok(Json(GameResponse {
         id: game.id,
         external_id: game.external_id,
         name: game.name,
+        first_release_date: game.first_release_date,
+        cover_url: game.cover_url,
+        rating: game.rating,
+        aggregated_rating: game.aggregated_rating,
+        total_rating_count: game.total_rating_count,
+        summary: game.summary,
         platforms,
+        genres,
+        companies,
     }))
 }
 
