@@ -17,6 +17,49 @@ impl IgdbAdapter {
 
 #[async_trait]
 impl ExternalRepository for IgdbAdapter {
+    async fn get_popular_games(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<(Vec<PopularGameItem>, usize), ExternalRepositoryError> {
+        let res: Result<(Vec<PopularGameItem>, usize), LocalError> = async {
+            let url = "https://api.igdb.com/v4/games";
+
+            // Fetch the page of popular games
+            let body = format!(
+                "fields name; sort popularity desc; limit {}; offset {};",
+                limit, offset
+            );
+
+            let items: Vec<IgdbPopularGameResponse> = videogame_api::Port::request(
+                &self.igdb,
+                url,
+                &body,
+            ).await?;
+
+            // Get total count
+            let count_body = "sort popularity desc;".to_string();
+            let count_response: IgdbCountResponse = videogame_api::Port::request(
+                &self.igdb,
+                "https://api.igdb.com/v4/games/count",
+                &count_body,
+            ).await?;
+
+            let games: Vec<PopularGameItem> = items
+                .into_iter()
+                .map(|item| PopularGameItem {
+                    id: None,
+                    external_id: item.id,
+                    name: item.name,
+                })
+                .collect();
+
+            Ok((games, count_response.count))
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn get_game(&self, id: u64) -> Result<Option<Game>, ExternalRepositoryError> {
         let res: Result<Option<Game>, LocalError> = async {
             let url = "https://api.igdb.com/v4/games";
@@ -73,6 +116,17 @@ impl From<LocalError> for ExternalRepositoryError {
 }
 
 // ─── IGDB responses ──────────────────────────────────────────
+
+#[derive(Deserialize)]
+struct IgdbPopularGameResponse {
+    pub id: u64,
+    pub name: String,
+}
+
+#[derive(Deserialize)]
+struct IgdbCountResponse {
+    pub count: usize,
+}
 
 #[derive(Deserialize)]
 struct IgdbPlatformResponse {

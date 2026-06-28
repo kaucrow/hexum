@@ -23,6 +23,12 @@ impl UseCase for Service {
             .get_game(id)
             .await?;
 
+        if full_game.is_some() {
+            self.internal_repo
+                .increment_view_count(id)
+                .await?;
+        }
+
         Ok(full_game)
     }
 
@@ -41,11 +47,57 @@ impl UseCase for Service {
             .sync_db_game_from_external(&mut game)
             .await?;
 
+        // Increment view count for the synced game
+        self.internal_repo
+            .increment_view_count(&internal_game_id)
+            .await?;
+
         // Resolve the game's ID into the full game data
         let full_game = self.internal_repo
             .get_game(&internal_game_id)
             .await?;
 
         Ok(full_game)
+    }
+
+    async fn get_popular_games(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<PopularGamesResult, UseCaseError> {
+        // ─── Try external API first ───
+        match self.external_repo
+            .get_popular_games(limit, offset)
+            .await
+        {
+            Ok((games, total_count)) => {
+                info!("Popular games served from IGDB: {} items (total: {})", games.len(), total_count);
+                Ok(PopularGamesResult {
+                    games,
+                    total_count,
+                    from_internal: false,
+                })
+            }
+            Err(ExternalRepositoryError::VideogameApi(msg)) => {
+                warn!("IGDB unavailable for popular games ({}), falling back to internal DB", msg);
+
+                // ─── Fall back to internal DB ───
+                let games = self.internal_repo
+                    .get_popular_items_by_view_count(limit, offset)
+                    .await?;
+
+                let total_count = self.internal_repo
+                    .count_all_games()
+                    .await?;
+
+                info!("Popular games served from internal DB: {} items (total: {})", games.len(), total_count);
+                Ok(PopularGamesResult {
+                    games,
+                    total_count,
+                    from_internal: true,
+                })
+            }
+            Err(e) => Err(UseCaseError::from(e)),
+        }
     }
 }

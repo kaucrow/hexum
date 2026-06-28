@@ -1,5 +1,14 @@
 use crate::prelude::*;
 
+/// Preview game item for popular games listing.
+/// `id` is `Some` if the game exists in the internal DB, `None` if from external API.
+#[derive(Debug, Clone)]
+pub struct PopularGameItem {
+    pub id: Option<Uuid>,
+    pub external_id: u64,
+    pub name: String,
+}
+
 pub struct Game {
     pub id: Uuid,
     pub external_id: Option<u64>,

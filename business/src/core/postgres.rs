@@ -65,6 +65,9 @@ mod internal {
         pub insert_game_genres: String,
         pub delete_game_companies: String,
         pub insert_game_companies: String,
+        pub increment_view_count: String,
+        pub get_popular_by_view_count: String,
+        pub count_all_games: String,
     }
 
     #[derive(Deserialize, Debug)]

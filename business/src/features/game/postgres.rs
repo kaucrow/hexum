@@ -32,6 +32,52 @@ impl InternalRepository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
+    async fn increment_view_count(&self, id: &Uuid) -> Result<(), InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            sqlx::query(sql(&QUERIES.game.increment_view_count))
+                .bind(id)
+                .execute(&self.pool)
+                .await?;
+
+            Ok(())
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn get_popular_items_by_view_count(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<PopularGameItem>, InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let items = sqlx::query_as::<_, PopularGameItemDbRow>(sql(&QUERIES.game.get_popular_by_view_count))
+                .bind(limit as i64)
+                .bind(offset as i64)
+                .fetch_all(&self.pool)
+                .await?
+                .into_iter()
+                .map(PopularGameItem::from)
+                .collect();
+
+            Ok(items)
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn count_all_games(&self) -> Result<usize, InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let count = sqlx::query_scalar::<_, i32>(sql(&QUERIES.game.count_all_games))
+                .fetch_one(&self.pool)
+                .await?;
+
+            Ok(count as usize)
+        }.await;
+
+        res.map_err(Into::into)
+    }
+
     async fn sync_db_game_from_external(&self, game: &Game) -> Result<Uuid, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
             let mut tx = self.pool.begin().await?;
@@ -215,6 +261,23 @@ impl From<LocalError> for InternalRepositoryError {
 #[derive(FromRow)]
 pub struct InternalIdDbRow {
     pub id: Uuid,
+}
+
+#[derive(FromRow)]
+struct PopularGameItemDbRow {
+    pub id: Uuid,
+    pub external_id: Option<i32>,
+    pub game_name: String,
+}
+
+impl From<PopularGameItemDbRow> for PopularGameItem {
+    fn from(row: PopularGameItemDbRow) -> Self {
+        Self {
+            id: Some(row.id),
+            external_id: row.external_id.unwrap_or(0) as u64,
+            name: row.game_name,
+        }
+    }
 }
 
 #[derive(FromRow)]

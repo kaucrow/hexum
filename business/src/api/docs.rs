@@ -7,6 +7,7 @@ use super::routes;
         routes::health::health,
         routes::games::get::get_game,
         routes::games::search::search,
+        routes::games::popular::popular_games,
         routes::platforms::get::get_platforms,
         routes::platforms::sync::sync_platforms,
     ),
@@ -19,6 +20,9 @@ use super::routes;
             routes::games::dtos::GameSearchResponse,
             routes::games::dtos::GameResponse,
             routes::games::dtos::GamePlatformResponse,
+            routes::games::dtos::PopularGameItemResponse,
+            routes::games::dtos::PopularGamesMeta,
+            routes::games::dtos::PopularGamesResponse,
             routes::platforms::dtos::PlatformResponse,
             routes::platforms::dtos::PlatformSyncResponse,
         )

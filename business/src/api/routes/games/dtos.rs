@@ -111,3 +111,49 @@ pub struct GameCompanyResponse {
     pub name: String,
     pub role: String,
 }
+
+// ─── Popular Games ────────────────────────────────────────────
+
+#[derive(Deserialize, IntoParams, Validate)]
+#[into_params(parameter_in = Query)]
+#[serde(rename_all = "camelCase")]
+pub struct PopularGamesQueryParams {
+    /// Maximum results to return.
+    #[param(example = 10)]
+    #[validate(range(min = 1, max = 100))]
+    pub limit: usize,
+
+    /// Results to skip.
+    #[param(example = 0)]
+    #[validate(range(min = 0))]
+    pub offset: usize,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PopularGameItemResponse {
+    /// The internal game ID. Is null if it doesn't yet exist in the internal repository.
+    pub id: Option<Uuid>,
+
+    /// The external game ID.
+    pub external_id: u64,
+
+    /// The game's name.
+    pub name: String,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PopularGamesMeta {
+    /// Total number of popular games available.
+    pub total_count: usize,
+    /// Whether results came from the internal DB (true) or external API (false).
+    pub from_internal: bool,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct PopularGamesResponse {
+    pub games: Vec<PopularGameItemResponse>,
+    pub meta: PopularGamesMeta,
+}
