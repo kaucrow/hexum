@@ -233,3 +233,40 @@ user:
   insert_authenticator: |
     INSERT INTO platform.user_authenticator (id, user_id, provider, provider_id, passwd, is_verified)
     VALUES ($1, $2, 'Local', NULL, $3, $4)
+
+review:
+  upsert: |
+    INSERT INTO game.review (id, user_id, game_id, review_type, rating, title, content)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    ON CONFLICT (user_id, game_id) DO UPDATE
+    SET review_type = EXCLUDED.review_type,
+        rating = EXCLUDED.rating,
+        title = EXCLUDED.title,
+        content = EXCLUDED.content,
+        updated_at = NOW()
+    RETURNING id, user_id, game_id, review_type, rating, title, content, created_at, updated_at
+
+  get_by_user_and_game: |
+    SELECT id, user_id, game_id, review_type, rating, title, content, created_at, updated_at
+    FROM game.review
+    WHERE user_id = $1 AND game_id = $2
+
+  recalculate_game_ratings: |
+    UPDATE game.game
+    SET
+      rating = (
+        SELECT CASE WHEN COUNT(*) > 0 THEN AVG(rating)::float8 ELSE NULL END
+        FROM game.review
+        WHERE game_id = $1 AND review_type = 'user'
+      ),
+      critic_rating = (
+        SELECT CASE WHEN COUNT(*) > 0 THEN AVG(rating)::float8 ELSE NULL END
+        FROM game.review
+        WHERE game_id = $1 AND review_type = 'critic'
+      ),
+      total_rating_count = (
+        SELECT COUNT(*)
+        FROM game.review
+        WHERE game_id = $1
+      )
+    WHERE id = $1

@@ -14,6 +14,7 @@ use super::routes;
         routes::critic::list::list_applications,
         routes::critic::approve::approve_application,
         routes::critic::approve::reject_application,
+        routes::review::submit::submit_review,
     ),
     components(
         schemas(
@@ -34,6 +35,9 @@ use super::routes;
             routes::critic::dtos::CriticApplicationResponse,
             routes::critic::dtos::ApproveApplicationResponse,
             routes::critic::dtos::RejectApplicationResponse,
+            // ─── Reviews ───
+            routes::review::dtos::SubmitReviewRequest,
+            routes::review::dtos::SubmitReviewResponse,
         )
     ),
 )]

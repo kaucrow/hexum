@@ -31,6 +31,7 @@ pub(crate) struct Queries {
     pub company: self::internal::Company,
     pub critic_application: self::internal::CriticApplication,
     pub user: self::internal::User,
+    pub review: self::internal::Review,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -110,5 +111,12 @@ mod internal {
         pub has_any_admin: String,
         pub insert: String,
         pub insert_authenticator: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Review {
+        pub upsert: String,
+        pub get_by_user_and_game: String,
+        pub recalculate_game_ratings: String,
     }
 }

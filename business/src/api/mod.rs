@@ -16,6 +16,7 @@ pub fn router(state: BusinessState) -> Router {
     Router::new()
         .route("/business-health", get(crate::routes::health::health))
         .route("/game", get(crate::routes::games::get_game))
+        .route("/game/{id}/review", post(crate::routes::review::submit_review))
         .route("/game/search", get(crate::routes::games::search))
         .route("/game/popular", get(crate::routes::games::popular_games))
         .route("/platforms", get(crate::routes::platforms::get_platforms))

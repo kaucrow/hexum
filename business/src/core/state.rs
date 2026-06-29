@@ -17,4 +17,5 @@ pub struct BusinessState {
     pub game: Arc<dyn game::UseCase>,
     pub auth: Arc<dyn platform_crate::features::auth::UseCase>,
     pub critic: Arc<dyn crate::features::critic::UseCase>,
+    pub review: Arc<dyn crate::features::review::UseCase>,
 }

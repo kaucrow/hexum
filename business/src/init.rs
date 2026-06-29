@@ -71,10 +71,15 @@ pub async fn init(
     let pg_critic_adapter = Arc::new(critic::PostgresAdapter::new(pool.clone()));
     let critic_service = Arc::new(critic::Service::new(pg_critic_adapter));
 
+    // ─── Review ───────────────────────────────────────────────────────
+    let pg_review_adapter = Arc::new(review::PostgresAdapter::new(pool.clone()));
+    let review_service = Arc::new(review::Service::new(pg_review_adapter));
+
     // ─── Admin Seed ───────────────────────────────────────────────────
     seed_admin_user(&pool).await?;
 
     // ─── Cron Jobs ────────────────────────────────────────────────────
+
     start_cron_db_sync(platform_service.clone());
 
     Ok(BusinessState {
@@ -85,9 +90,9 @@ pub async fn init(
         game: game_service,
         auth: auth_service,
         critic: critic_service,
+        review: review_service,
     })
 }
-
 /// Seeds an Admin user into the database if none exists.
 ///
 /// Credentials:
