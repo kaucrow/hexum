@@ -17,7 +17,7 @@ pub struct Game {
     pub first_release_date: Option<DateTime<Utc>>,
     pub cover_url: Option<String>,
     pub rating: Option<f64>,
-    pub aggregated_rating: Option<f64>,
+    pub critic_rating: Option<f64>,
     pub total_rating_count: Option<i32>,
     pub summary: Option<String>,
     pub platforms: Vec<Platform>,

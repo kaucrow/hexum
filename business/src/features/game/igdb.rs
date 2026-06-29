@@ -79,7 +79,7 @@ impl ExternalRepository for IgdbAdapter {
                 "fields id, name, platforms, first_release_date, cover.url, \
                  genres.name, involved_companies.company.name, \
                  involved_companies.publisher, involved_companies.developer, \
-                 rating, aggregated_rating, total_rating_count, summary; \
+                 summary; \
                  where id = {};",
                 id
             );
@@ -195,9 +195,6 @@ struct IgdbGameResponse {
     pub cover: Option<IgdbCoverResponse>,
     pub genres: Option<Vec<IgdbGenreResponse>>,
     pub involved_companies: Option<Vec<IgdbInvolvedCompanyResponse>>,
-    pub rating: Option<f64>,
-    pub aggregated_rating: Option<f64>,
-    pub total_rating_count: Option<i32>,
     pub summary: Option<String>,
 }
 
@@ -274,9 +271,9 @@ impl From<IgdbGameResponse> for Game {
             name: response.name,
             first_release_date,
             cover_url,
-            rating: response.rating,
-            aggregated_rating: response.aggregated_rating,
-            total_rating_count: response.total_rating_count,
+            rating: None,
+            critic_rating: None,
+            total_rating_count: None,
             summary: response.summary,
             platforms,
             genres,

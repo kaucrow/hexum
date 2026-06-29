@@ -11,7 +11,7 @@ game:
     g.first_release_date,
     g.cover_url,
     g.rating,
-    g.aggregated_rating,
+    g.critic_rating,
     g.total_rating_count,
     g.summary,
     COALESCE(
@@ -78,17 +78,13 @@ game:
     WITH upsert_game AS (
       INSERT INTO game.game (
         id, external_id, game_name,
-        first_release_date, cover_url, rating,
-        aggregated_rating, total_rating_count, summary
+        first_release_date, cover_url, summary
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      VALUES ($1, $2, $3, $4, $5, $6)
       ON CONFLICT (external_id) DO UPDATE
       SET game_name = EXCLUDED.game_name,
           first_release_date = COALESCE(EXCLUDED.first_release_date, game.game.first_release_date),
           cover_url = COALESCE(EXCLUDED.cover_url, game.game.cover_url),
-          rating = COALESCE(EXCLUDED.rating, game.game.rating),
-          aggregated_rating = COALESCE(EXCLUDED.aggregated_rating, game.game.aggregated_rating),
-          total_rating_count = COALESCE(EXCLUDED.total_rating_count, game.game.total_rating_count),
           summary = COALESCE(EXCLUDED.summary, game.game.summary)
       RETURNING id
     ),
@@ -98,7 +94,7 @@ game:
     ),
     insert_new_links AS (
       INSERT INTO game.game_platform (game_id, platform_id)
-      SELECT (SELECT id FROM upsert_game), UNNEST($10::uuid[])
+      SELECT (SELECT id FROM upsert_game), UNNEST($7::uuid[])
       ON CONFLICT (game_id, platform_id) DO NOTHING
     )
     SELECT id FROM upsert_game

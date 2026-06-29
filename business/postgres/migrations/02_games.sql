@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS game.game (
     first_release_date TIMESTAMPTZ,
     cover_url VARCHAR(512),
     rating DOUBLE PRECISION,
-    aggregated_rating DOUBLE PRECISION,
+    critic_rating DOUBLE PRECISION,
     total_rating_count INT,
     summary TEXT,
     view_count BIGINT NOT NULL DEFAULT 0,

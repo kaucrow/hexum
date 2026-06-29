@@ -183,9 +183,6 @@ impl InternalRepository for PostgresAdapter {
                 .bind(&game.name)
                 .bind(game.first_release_date)
                 .bind(&game.cover_url)
-                .bind(game.rating)
-                .bind(game.aggregated_rating)
-                .bind(game.total_rating_count)
                 .bind(&game.summary)
                 .bind(&platform_uuids)
                 .fetch_one(&mut *tx)
@@ -296,7 +293,7 @@ pub struct GameDbRow {
     first_release_date: Option<DateTime<Utc>>,
     cover_url: Option<String>,
     rating: Option<f64>,
-    aggregated_rating: Option<f64>,
+    critic_rating: Option<f64>,
     total_rating_count: Option<i32>,
     summary: Option<String>,
     #[sqlx(json)]
@@ -334,7 +331,7 @@ impl From<GameDbRow> for Game {
             first_release_date: row.first_release_date,
             cover_url: row.cover_url,
             rating: row.rating,
-            aggregated_rating: row.aggregated_rating,
+            critic_rating: row.critic_rating,
             total_rating_count: row.total_rating_count,
             summary: row.summary,
             platforms,

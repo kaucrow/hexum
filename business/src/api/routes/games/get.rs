@@ -93,7 +93,7 @@ pub async fn get_game(
         first_release_date: game.first_release_date,
         cover_url: game.cover_url,
         rating: game.rating,
-        aggregated_rating: game.aggregated_rating,
+        critic_rating: game.critic_rating,
         total_rating_count: game.total_rating_count,
         summary: game.summary,
         platforms,
