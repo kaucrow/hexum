@@ -10,6 +10,10 @@ use super::routes;
         routes::games::popular::popular_games,
         routes::platforms::get::get_platforms,
         routes::platforms::sync::sync_platforms,
+        routes::critic::apply::apply_for_critic,
+        routes::critic::list::list_applications,
+        routes::critic::approve::approve_application,
+        routes::critic::approve::reject_application,
     ),
     components(
         schemas(
@@ -25,6 +29,11 @@ use super::routes;
             routes::games::dtos::PopularGamesResponse,
             routes::platforms::dtos::PlatformResponse,
             routes::platforms::dtos::PlatformSyncResponse,
+            // ─── Critic ───
+            routes::critic::dtos::ApplyForCriticResponse,
+            routes::critic::dtos::CriticApplicationResponse,
+            routes::critic::dtos::ApproveApplicationResponse,
+            routes::critic::dtos::RejectApplicationResponse,
         )
     ),
 )]

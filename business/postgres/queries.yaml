@@ -178,3 +178,58 @@ company:
     SELECT id, external_id
     FROM company.company
     WHERE external_id = ANY($1)
+
+critic_application:
+  insert: |
+    INSERT INTO platform.critic_application (id, user_id)
+    VALUES ($1, $2)
+    RETURNING id, user_id, status, applied_at, reviewed_at, reviewed_by
+
+  get_by_user_id: |
+    SELECT id, user_id, status, applied_at, reviewed_at, reviewed_by
+    FROM platform.critic_application
+    WHERE user_id = $1
+
+  get_pending: |
+    SELECT ca.id, ca.user_id, ca.status, ca.applied_at, ca.reviewed_at, ca.reviewed_by,
+           u.username, u.email
+    FROM platform.critic_application ca
+    JOIN platform.user u ON ca.user_id = u.id
+    WHERE ca.status = 'pending'
+    ORDER BY ca.applied_at ASC
+
+  get_by_id: |
+    SELECT id, user_id, status, applied_at, reviewed_at, reviewed_by
+    FROM platform.critic_application
+    WHERE id = $1
+
+  update_status: |
+    UPDATE platform.critic_application
+    SET status = $2, reviewed_at = NOW(), reviewed_by = $3
+    WHERE id = $1
+
+user:
+  get_by_id: |
+    SELECT id, username, email, roles, is_active
+    FROM platform.user
+    WHERE id = $1
+
+  add_role: |
+    UPDATE platform.user
+    SET roles = array_append(roles, $2)
+    WHERE id = $1
+    AND NOT ($2 = ANY(roles))
+
+  has_any_admin: |
+    SELECT EXISTS(
+      SELECT 1 FROM platform.user
+      WHERE 'Admin' = ANY(roles)
+    ) as exists
+
+  insert: |
+    INSERT INTO platform.user (id, username, email, roles, is_active)
+    VALUES ($1, $2, $3, $4, $5)
+
+  insert_authenticator: |
+    INSERT INTO platform.user_authenticator (id, user_id, provider, provider_id, passwd, is_verified)
+    VALUES ($1, $2, 'Local', NULL, $3, $4)

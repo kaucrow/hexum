@@ -29,6 +29,8 @@ pub(crate) struct Queries {
     pub platform: self::internal::Platform,
     pub genre: self::internal::Genre,
     pub company: self::internal::Company,
+    pub critic_application: self::internal::CriticApplication,
+    pub user: self::internal::User,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -89,5 +91,24 @@ mod internal {
     pub struct Company {
         pub upsert_many: String,
         pub get_internal_ids_by_external_ids: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct CriticApplication {
+        pub insert: String,
+        pub get_by_user_id: String,
+        pub get_pending: String,
+        pub get_by_id: String,
+        pub update_status: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    #[allow(dead_code)]
+    pub struct User {
+        pub get_by_id: String,
+        pub add_role: String,
+        pub has_any_admin: String,
+        pub insert: String,
+        pub insert_authenticator: String,
     }
 }

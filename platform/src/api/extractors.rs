@@ -87,9 +87,6 @@ pub mod role {
     pub struct Admin;
     impl RoleMarker for Admin { const ROLE: user::Role = user::Role::Admin; }
 
-    pub struct Manager;
-    impl RoleMarker for Manager { const ROLE: user::Role = user::Role::Manager; }
-
     pub struct BasicUser;
     impl RoleMarker for BasicUser { const ROLE: user::Role = user::Role::BasicUser; }
 }

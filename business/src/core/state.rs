@@ -1,5 +1,7 @@
 use axum::extract::FromRef;
 
+use ::platform as platform_crate;
+
 use crate::{
     prelude::*,
     Config,
@@ -13,4 +15,6 @@ pub struct BusinessState {
     pub search: Arc<dyn search::UseCase>,
     pub platform: Arc<dyn platform::UseCase>,
     pub game: Arc<dyn game::UseCase>,
+    pub auth: Arc<dyn platform_crate::features::auth::UseCase>,
+    pub critic: Arc<dyn crate::features::critic::UseCase>,
 }

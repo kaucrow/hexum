@@ -239,12 +239,12 @@ async fn ensure_migrations_run(pool: &PgPool) {
 pub async fn spawn_test_app() -> TestApp {
     // This is test-only code, called before any other threads are spawned.
 
-    // ── Tracing subscriber ────────────────────────────────────
+    // ─── Tracing subscriber ────────────────────────────────────
     let _ = tracing_subscriber::fmt()
         .with_env_filter("info")
         .try_init();
 
-    // ── Wiremock server (mocks Resend API) ────────────────────
+    // ─── Wiremock server (mocks Resend API) ────────────────────
     let mock_server = MockServer::start().await;
 
     // Mock POST /emails (Resend send-email endpoint) -> 200 success
@@ -263,7 +263,7 @@ pub async fn spawn_test_app() -> TestApp {
 
     let config = Arc::new(platform::get_config().expect("Failed to load config"));
 
-    // ── Postgres pool ─────────────────────────────────────────
+    // ─── Postgres pool ─────────────────────────────────────────
     let pool = sqlx::postgres::PgPoolOptions::new()
         .max_connections(config.postgres.pool_max_conn)
         .acquire_timeout(std::time::Duration::from_secs(3))
@@ -274,15 +274,15 @@ pub async fn spawn_test_app() -> TestApp {
     // Run migrations once
     ensure_migrations_run(&pool).await;
 
-    // ── Redis connection (for direct token lookups ─────────────
+    // ─── Redis connection (for direct token lookups ─────────────
     let redis_client =
         ::redis::Client::open(config.redis.url()).expect("Invalid Redis URL");
     let redis_conn = ::redis::aio::ConnectionManager::new(redis_client)
         .await
         .expect("Failed to connect to Redis");
 
-    // ── Build adapters manually (bypass platform::init to avoid   ──
-    // ── setting a global tracing subscriber more than once)       ──
+    // ─── Build adapters manually (bypass platform::init to avoid   ──
+    // ─── setting a global tracing subscriber more than once)       ──
     let pg_user_adapter = Arc::new(platform::features::user::PostgresAdapter::new(
         pool.clone(),
     ));
@@ -297,12 +297,12 @@ pub async fn spawn_test_app() -> TestApp {
     let oauth_adapter =
         Arc::new(platform::features::oauth::OAuthAdapter::new(&config));
 
-    let auth_service = platform::features::auth::Service::new(
+    let auth_service = Arc::new(platform::features::auth::Service::new(
         pg_user_adapter.clone(),
         redis_session_adapter.clone(),
         paseto_security_adapter.clone(),
         oauth_adapter,
-    );
+    ));
 
     let redis_verification_adapter = Arc::new(
         platform::features::verification::RedisAdapter::new(redis_conn.clone())
@@ -342,17 +342,17 @@ pub async fn spawn_test_app() -> TestApp {
 
     let platform_state = platform::PlatformState {
         config: config.clone(),
-        auth: Arc::new(auth_service),
+        auth: auth_service.clone(),
         user: Arc::new(user_service),
         ratelimit: ratelimit_service,
     };
 
-    // ── Business layer (uses business::init) ───────────────────
-    let business_state = business::init(pool.clone(), redis_conn.clone())
+    // ─── Business layer (uses business::init) ───────────────────
+    let business_state = business::init(pool.clone(), redis_conn.clone(), auth_service)
         .await
         .expect("Failed to init business state");
 
-    // ── Router ─────────────────────────────────────────────────
+    // ─── Router ─────────────────────────────────────────────────
     let platform_router =
         platform::api::router(platform_state, config.api.enable_dev_endpoints);
     let business_router = business::api::router(business_state);
@@ -360,13 +360,13 @@ pub async fn spawn_test_app() -> TestApp {
         .merge(platform_router)
         .merge(business_router);
 
-    // ── Bind to a random port ──────────────────────────────────
+    // ─── Bind to a random port ──────────────────────────────────
     let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
         .await
         .expect("Failed to bind to random port");
     let addr = listener.local_addr().expect("Failed to get bound address");
 
-    // ── Spawn the server in the background ──────────────────────
+    // ─── Spawn the server in the background ──────────────────────
     tokio::spawn(async move {
         axum::serve(listener, app)
             .await

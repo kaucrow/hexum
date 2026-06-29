@@ -1,9 +1,16 @@
 use chrono::{Utc, NaiveTime, Duration};
 use tokio::time::sleep;
 
+use ::platform as platform_crate;
+use platform_crate::features::{
+    user::{User, UserAuthenticator, Password},
+    security::PasetoAdapter,
+};
+
 use crate::{
     BusinessState,
     get_config,
+    postgres,
     prelude::*,
     features::*,
 };
@@ -11,6 +18,7 @@ use crate::{
 pub async fn init(
     pool: sqlx::PgPool,
     redis_conn: redis::aio::ConnectionManager,
+    auth_service: Arc<dyn platform_crate::features::auth::UseCase>,
 ) -> Result<BusinessState, anyhow::Error> {
     let config = Arc::new(get_config()?);
 
@@ -51,7 +59,7 @@ pub async fn init(
     ));
 
     // ─── Game ─────────────────────────────────────────────────────────
-    let internal_game_adapter = Arc::new(game::PostgresAdapter::new(pool));
+    let internal_game_adapter = Arc::new(game::PostgresAdapter::new(pool.clone()));
     let external_game_adapter = Arc::new(game::IgdbAdapter::new(igdb_client));
 
     let game_service = Arc::new(game::Service::new(
@@ -59,8 +67,14 @@ pub async fn init(
         external_game_adapter,
     ));
 
-    // ─── Cron Jobs ────────────────────────────────────────────────────
+    // ─── Critic ───────────────────────────────────────────────────────
+    let pg_critic_adapter = Arc::new(critic::PostgresAdapter::new(pool.clone()));
+    let critic_service = Arc::new(critic::Service::new(pg_critic_adapter));
 
+    // ─── Admin Seed ───────────────────────────────────────────────────
+    seed_admin_user(&pool).await?;
+
+    // ─── Cron Jobs ────────────────────────────────────────────────────
     start_cron_db_sync(platform_service.clone());
 
     Ok(BusinessState {
@@ -69,7 +83,71 @@ pub async fn init(
         search: search_service,
         platform: platform_service,
         game: game_service,
+        auth: auth_service,
+        critic: critic_service,
     })
+}
+
+/// Seeds an Admin user into the database if none exists.
+///
+/// Credentials:
+/// - Username: `admin`
+/// - Email: `admin@hexum.local`
+/// - Password: `AdminP@ssword123!` (argon2id hashed at runtime)
+async fn seed_admin_user(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
+    let has_admin: (bool,) = sqlx::query_as(
+        postgres::sql(&postgres::QUERIES.user.has_any_admin),
+    )
+    .fetch_one(pool)
+    .await
+    .context("Failed to check for existing admin users")?;
+
+    if has_admin.0 {
+        info!("Admin user already exists. Skipping seed.");
+        return Ok(());
+    }
+
+    info!("No admin user found. Seeding default admin user...");
+
+    let security = PasetoAdapter::new().context("Failed to create security adapter for admin seed")?;
+    use platform_crate::features::security::Port;
+
+    let admin_user = User::new("admin", "admin@hexum.local")
+        .context("Failed to create admin user")?;
+
+    let password = Password::new("AdminP@ssword123!".to_string())
+        .context("Failed to create admin password")?;
+
+    let passwd_hash = security
+        .hash_password(&password)
+        .map_err(|e| anyhow::anyhow!("Failed to hash admin password: {}", e))?;
+
+    let admin_user_id = admin_user.id;
+
+    sqlx::query(postgres::sql(&postgres::QUERIES.user.insert))
+        .bind(admin_user_id)
+        .bind(admin_user.username.as_str())
+        .bind(admin_user.email.as_str())
+        .bind(vec!["Admin".to_string()])
+        .bind(true)
+        .execute(pool)
+        .await
+        .context("Failed to insert admin user")?;
+
+    let authenticator = UserAuthenticator::new_local(admin_user_id, passwd_hash.clone());
+
+    sqlx::query(postgres::sql(&postgres::QUERIES.user.insert_authenticator))
+        .bind(authenticator.id)
+        .bind(authenticator.user_id)
+        .bind(&passwd_hash)
+        .bind(true) // is_verified = true, so admin can login immediately
+        .execute(pool)
+        .await
+        .context("Failed to insert admin authenticator")?;
+
+    info!("Admin user seeded successfully (admin@hexum.local).");
+
+    Ok(())
 }
 
 fn start_cron_db_sync(

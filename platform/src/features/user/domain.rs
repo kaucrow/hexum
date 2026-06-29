@@ -50,8 +50,8 @@ impl User {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Display, EnumString)]
 pub enum Role {
     Admin,
-    Manager,
     BasicUser,
+    Critic,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -302,7 +302,7 @@ mod tests {
         #[test]
         fn test_user_has_any_role_multiple() {
             let user = User::new("bob", "bob@test.com").unwrap();
-            assert!(user.has_any_role(&[Role::Admin, Role::Manager, Role::BasicUser]));
+            assert!(user.has_any_role(&[Role::Admin, Role::BasicUser]));
         }
 
         #[test]
