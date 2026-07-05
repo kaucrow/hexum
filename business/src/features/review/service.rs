@@ -1,6 +1,3 @@
-use std::sync::Arc;
-
-use async_trait::async_trait;
 use platform::features::user;
 
 use crate::prelude::*;
@@ -8,17 +5,22 @@ use super::*;
 
 #[derive(Clone)]
 pub struct Service {
-    repo: Arc<dyn Repository>,
+    internal_repo: Arc<dyn InternalRepository>,
 }
 
 impl Service {
-    pub fn new(repo: Arc<dyn Repository>) -> Self {
-        Self { repo }
+    pub fn new(internal_repo: Arc<dyn InternalRepository>) -> Self {
+        Self { internal_repo }
     }
 }
 
 #[async_trait]
 impl UseCase for Service {
+    /// Gets the user & critic reviews for a game
+    async fn get_game_reviews(&self, game_id: &Uuid) -> Result<Vec<Review>, UseCaseError> {
+        Ok(self.internal_repo.get_game_reviews(game_id).await?)
+    }
+
     async fn submit_review(
         &self,
         user_id: &Uuid,
@@ -41,10 +43,9 @@ impl UseCase for Service {
         };
 
         // Check if user already has a review for this game (for the ID reuse)
-        let existing = self.repo
+        let existing = self.internal_repo
             .get_review_by_user_and_game(user_id, game_id)
-            .await
-            .map_err(|e| UseCaseError::Internal(e.to_string()))?;
+            .await?;
 
         let review_id = existing
             .as_ref()
@@ -63,17 +64,23 @@ impl UseCase for Service {
             updated_at: Utc::now(),
         };
 
-        let saved = self.repo
+        let saved = self.internal_repo
             .upsert_review(&review)
-            .await
-            .map_err(|e| UseCaseError::Internal(e.to_string()))?;
+            .await?;
 
         // Recalculate game aggregate ratings
-        self.repo
+        self.internal_repo
             .recalculate_game_ratings(game_id)
-            .await
-            .map_err(|e| UseCaseError::Internal(e.to_string()))?;
+            .await?;
 
         Ok(saved)
+    }
+}
+
+impl From<InternalRepositoryError> for UseCaseError {
+    fn from(e: InternalRepositoryError) -> Self {
+        match e {
+            InternalRepositoryError::Internal(e) => UseCaseError::Internal(e),
+        }
     }
 }

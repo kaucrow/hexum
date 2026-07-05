@@ -39,7 +39,7 @@ pub struct SubmitReviewRequest {
     "createdAt": "2025-06-29T20:58:27.379Z",
     "updatedAt": "2025-06-29T20:58:27.379Z"
 }))]
-pub struct SubmitReviewResponse {
+pub struct ReviewResponse {
     pub id: String,
     pub user_id: String,
     pub game_id: String,
@@ -49,6 +49,14 @@ pub struct SubmitReviewResponse {
     pub content: String,
     pub created_at: String,
     pub updated_at: String,
+}
+
+// ─── Get Game Reviews ───
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct GetGameReviewsResponse {
+    pub reviews: Vec<ReviewResponse>,
 }
 
 // ─── Path Params ───

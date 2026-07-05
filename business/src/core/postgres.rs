@@ -115,8 +115,9 @@ mod internal {
 
     #[derive(Deserialize, Debug)]
     pub struct Review {
-        pub upsert: String,
+        pub get_all_by_game: String,
         pub get_by_user_and_game: String,
+        pub upsert: String,
         pub recalculate_game_ratings: String,
     }
 }

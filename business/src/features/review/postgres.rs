@@ -21,8 +21,50 @@ impl PostgresAdapter {
 }
 
 #[async_trait]
-impl Repository for PostgresAdapter {
-    async fn upsert_review(&self, review: &Review) -> Result<Review, RepositoryError> {
+impl InternalRepository for PostgresAdapter {
+    async fn get_game_reviews(&self, game_id: &Uuid) -> Result<Vec<Review>, InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let reviews: Result<Vec<Review>, _> = sqlx::query_as::<_, ReviewDbRow>(
+                sql(&QUERIES.review.get_all_by_game),
+            )
+            .bind(game_id)
+            .fetch_all(&self.pool)
+            .await?
+            .into_iter()
+            .map(|row| Review::try_from(row))
+            .collect();
+
+            Ok(reviews?)
+        }
+        .await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn get_review_by_user_and_game(
+        &self,
+        user_id: &Uuid,
+        game_id: &Uuid,
+    ) -> Result<Option<Review>, InternalRepositoryError> {
+        let res: Result<_, LocalError> = async {
+            let review = sqlx::query_as::<_, ReviewDbRow>(
+                sql(&QUERIES.review.get_by_user_and_game),
+            )
+            .bind(user_id)
+            .bind(game_id)
+            .fetch_optional(&self.pool)
+            .await?
+            .map(|row| Review::try_from(row))
+            .transpose()?;
+
+            Ok(review)
+        }
+        .await;
+
+        res.map_err(Into::into)
+    }
+
+    async fn upsert_review(&self, review: &Review) -> Result<Review, InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
             let row = sqlx::query_as::<_, ReviewDbRow>(
                 sql(&QUERIES.review.upsert),
@@ -44,30 +86,7 @@ impl Repository for PostgresAdapter {
         res.map_err(Into::into)
     }
 
-    async fn get_review_by_user_and_game(
-        &self,
-        user_id: &Uuid,
-        game_id: &Uuid,
-    ) -> Result<Option<Review>, RepositoryError> {
-        let res: Result<_, LocalError> = async {
-            let review = sqlx::query_as::<_, ReviewDbRow>(
-                sql(&QUERIES.review.get_by_user_and_game),
-            )
-            .bind(user_id)
-            .bind(game_id)
-            .fetch_optional(&self.pool)
-            .await?
-            .map(|row| Review::try_from(row))
-            .transpose()?;
-
-            Ok(review)
-        }
-        .await;
-
-        res.map_err(Into::into)
-    }
-
-    async fn recalculate_game_ratings(&self, game_id: &Uuid) -> Result<(), RepositoryError> {
+    async fn recalculate_game_ratings(&self, game_id: &Uuid) -> Result<(), InternalRepositoryError> {
         let res: Result<_, LocalError> = async {
             sqlx::query(sql(&QUERIES.review.recalculate_game_ratings))
                 .bind(game_id)
@@ -90,11 +109,11 @@ pub enum LocalError {
     Parse(String),
 }
 
-impl From<LocalError> for RepositoryError {
+impl From<LocalError> for InternalRepositoryError {
     fn from(e: LocalError) -> Self {
         match e {
-            LocalError::Sqlx(e) => RepositoryError::Internal(e.to_string()),
-            LocalError::Parse(s) => RepositoryError::Internal(s),
+            LocalError::Sqlx(e) => InternalRepositoryError::Internal(e.to_string()),
+            LocalError::Parse(s) => InternalRepositoryError::Internal(s),
         }
     }
 }

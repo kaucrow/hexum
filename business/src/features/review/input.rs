@@ -1,12 +1,14 @@
-use async_trait::async_trait;
-use thiserror::Error;
-
 use crate::prelude::*;
 use platform::features::user;
 use super::Review;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {
+    // ─── Getters ───
+    /// Gets all the user & critic reviews for a specific game.
+    async fn get_game_reviews(&self, game_id: &Uuid) -> Result<Vec<Review>, UseCaseError>;
+
+    // ─── Commands ───
     /// Submit or update a review for a game. The review type (user/critic)
     /// is determined automatically from the user's roles.
     async fn submit_review(

@@ -251,6 +251,11 @@ review:
     FROM game.review
     WHERE user_id = $1 AND game_id = $2
 
+  get_all_by_game: |
+    SELECT id, user_id, game_id, review_type, rating, title, content, created_at, updated_at
+    FROM game.review
+    WHERE game_id = $1
+
   recalculate_game_ratings: |
     UPDATE game.game
     SET

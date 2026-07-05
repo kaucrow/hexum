@@ -15,6 +15,7 @@ use super::routes;
         routes::critic::approve::approve_application,
         routes::critic::approve::reject_application,
         routes::review::submit::submit_review,
+        routes::review::get_by_game::get_game_reviews,
     ),
     components(
         schemas(
@@ -37,7 +38,8 @@ use super::routes;
             routes::critic::dtos::RejectApplicationResponse,
             // ─── Reviews ───
             routes::review::dtos::SubmitReviewRequest,
-            routes::review::dtos::SubmitReviewResponse,
+            routes::review::dtos::ReviewResponse,
+            routes::review::dtos::GetGameReviewsResponse,
         )
     ),
 )]

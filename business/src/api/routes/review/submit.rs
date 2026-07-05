@@ -14,7 +14,7 @@ use super::dtos::*;
     ),
     request_body = SubmitReviewRequest,
     responses(
-        (status = 200, description = "Review submitted/updated", body = SubmitReviewResponse),
+        (status = 200, description = "Review submitted/updated", body = ReviewResponse),
         (status = 401, description = "Unauthorized"),
         (status = 422, description = "Validation Error"),
         (status = 500, description = "Internal Server Error"),
@@ -27,7 +27,7 @@ pub async fn submit_review(
     State(review_service): State<Arc<dyn review::UseCase>>,
     ValidatedPath(path): ValidatedPath<GameIdPath>,
     ValidatedJson(payload): ValidatedJson<SubmitReviewRequest>,
-) -> Result<Json<SubmitReviewResponse>, ApiError> {
+) -> Result<Json<ReviewResponse>, ApiError> {
     let game_id = Uuid::parse_str(&path.id)
         .map_err(|_| ApiError::BadRequest("Invalid game ID format.".to_string()))?;
 
@@ -59,7 +59,7 @@ pub async fn submit_review(
             }
         })?;
 
-    Ok(Json(SubmitReviewResponse {
+    Ok(Json(ReviewResponse {
         id: saved.id.to_string(),
         user_id: saved.user_id.to_string(),
         game_id: saved.game_id.to_string(),
