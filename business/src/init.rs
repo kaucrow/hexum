@@ -93,17 +93,32 @@ pub async fn init(
         review: review_service,
     })
 }
+
 /// Seeds an Admin user into the database if none exists.
+///
+/// Uses a Postgres transaction-level advisory lock to prevent races
+/// across parallel processes.
 ///
 /// Credentials:
 /// - Username: `admin`
 /// - Email: `admin@hexum.local`
-/// - Password: `AdminP@ssword123!` (argon2id hashed at runtime)
+/// - Password: `AdminP@ssword123!`
 async fn seed_admin_user(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
+    // Open a transaction to scope the advisory lock
+    let mut tx = pool
+        .begin()
+        .await
+        .context("Failed to begin transaction for admin seed")?;
+
+    sqlx::query("SELECT pg_advisory_xact_lock(987654321)")
+        .execute(&mut *tx)
+        .await
+        .context("Failed to acquire advisory lock for admin seed")?;
+
     let has_admin: (bool,) = sqlx::query_as(
         postgres::sql(&postgres::QUERIES.user.has_any_admin),
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await
     .context("Failed to check for existing admin users")?;
 
@@ -135,7 +150,7 @@ async fn seed_admin_user(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
         .bind(admin_user.email.as_str())
         .bind(vec!["Admin".to_string()])
         .bind(true)
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .context("Failed to insert admin user")?;
 
@@ -146,9 +161,13 @@ async fn seed_admin_user(pool: &sqlx::PgPool) -> Result<(), anyhow::Error> {
         .bind(authenticator.user_id)
         .bind(&passwd_hash)
         .bind(true) // is_verified = true, so admin can login immediately
-        .execute(pool)
+        .execute(&mut *tx)
         .await
         .context("Failed to insert admin authenticator")?;
+
+    tx.commit()
+        .await
+        .context("Failed to commit admin seed transaction")?;
 
     info!("Admin user seeded successfully (admin@hexum.local).");
 
