@@ -1,5 +1,8 @@
 debug = true
 
+# App name
+app = "Hexum"
+
 [api]
 enable_dev_endpoints = true
 host = "0.0.0.0"

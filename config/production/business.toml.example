@@ -1,0 +1,7 @@
+[videogame_api]
+url = "https://api.igdb.com/v4"
+
+[videogame_api.auth]
+url = "https://id.twitch.tv/oauth2/token"
+client_id = ""
+client_secret = ""

@@ -1,0 +1,7 @@
+[videogame_api]
+url = ""
+
+[videogame_api.auth]
+url = ""
+client_id = ""
+client_secret = ""

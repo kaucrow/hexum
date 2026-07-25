@@ -1,0 +1,61 @@
+debug = true
+
+[api]
+enable_dev_endpoints = true
+host = "0.0.0.0"
+domain = ""
+path_suffix = ""
+port = 8080
+protocol = "http"
+docs_endpoint = "docs"
+
+[api.docs_users]
+hexum = "hexum"
+
+[ratelimit]
+login_max_attempts = 100
+login_window_secs = 900
+login_lockout_secs = 1800
+login_base_delay_ms = 0
+ip_max_per_minute = 100
+register_ip_max_per_hour = 50
+verify_max_per_minute = 50
+
+[frontend]
+url = "http://localhost:8080"
+
+[postgresql]
+pool_max_conn = 5
+host = "127.0.0.1"
+port = 5432
+user = "hexum"
+passwd = "postgres"
+name = "hexum_postgres"
+
+[redis]
+host = "127.0.0.1"
+port = 6379
+passwd = "redis"
+number = "0"
+
+[storage]
+upload_dir = "/tmp"
+
+[email]
+provider = "resend"
+from = "noreply@hexum-test.example"
+api_key = "re_testing_mock_key"
+
+[oauth]
+login_ui_endpoint = "/auth/oauth/login-ui"
+callback_endpoint = "/auth/oauth/callback-ui"
+
+[oauth.google]
+login_endpoint = "/auth/oauth/google/login"
+client_id = ""
+client_secret = ""
+
+[oauth.github]
+login_endpoint = "/auth/oauth/github/login"
+client_id = ""
+client_secret = ""

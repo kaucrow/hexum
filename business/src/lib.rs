@@ -5,6 +5,11 @@ mod init;
 mod core;
 
 pub use init::init;
-pub use core::{BusinessState, postgres};
+pub use core::{
+    Config,
+    BusinessState,
+    get_config,
+    postgres
+};
 
 pub(crate) use api::routes;
