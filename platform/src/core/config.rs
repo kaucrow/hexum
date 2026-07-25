@@ -7,6 +7,7 @@ use anyhow::{Result, anyhow};
 pub struct Config {
     #[serde(default)]
     pub debug: bool,
+    pub app: String,
     #[serde(default)]
     pub environment: Environment,
     pub api: internal::ApiConfig,

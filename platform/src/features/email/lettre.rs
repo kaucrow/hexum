@@ -19,6 +19,7 @@ use super::*;
 
 #[derive(Clone)]
 pub struct LettreAdapter {
+    pub app_name: String,
     pub mailer: AsyncSmtpTransport<Tokio1Executor>,
     pub frontend_url: String,
     pub from_addr: String,
@@ -40,6 +41,7 @@ impl LettreAdapter {
             .build();
 
         Ok(Self {
+            app_name: config.app.clone(),
             mailer,
             frontend_url: config.frontend.url.clone(),
             from_addr: config.email.from.clone(),
@@ -64,12 +66,12 @@ impl LettreAdapter {
         };
         let html_body = template.render()?;
 
-        let subject = context.subject();
+        let subject = context.subject(&self.app_name);
 
         let email = Message::builder()
             .from(self.from_addr.parse()?)
             .to(to.as_str().parse()?)
-            .subject(subject)
+            .subject(&subject)
             .multipart(
                 MultiPart::alternative()
                     .singlepart(
