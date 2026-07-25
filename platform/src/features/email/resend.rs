@@ -22,6 +22,7 @@ struct VerificationEmailTemplate<'a> {
 
 #[derive(Clone)]
 pub struct ResendAdapter {
+    pub app_name: String,
     pub client: Resend,
     pub frontend_url: String,
     pub from_addr: String,
@@ -34,6 +35,7 @@ impl ResendAdapter {
         let client = Resend::new(&resend_config.api_key);
 
         Ok(Self {
+            app_name: config.app.clone(),
             client,
             frontend_url: config.frontend.url.clone(),
             from_addr: config.email.from.clone(),
@@ -52,7 +54,7 @@ impl ResendAdapter {
 
         let from = &self.from_addr;
         let to = [to.as_str()];
-        let subject = context.subject();
+        let subject = context.subject(&self.app_name);
 
         let email = CreateEmailBaseOptions::new(from, to, subject)
             .with_html(&html_body);

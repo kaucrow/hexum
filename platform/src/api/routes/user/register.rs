@@ -27,12 +27,12 @@ pub async fn register(
     ClientIp(client_ip): ClientIp,
     ValidatedJson(payload): ValidatedJson<RegisterRequest>,
 ) -> Result<Json<RegisterResponse>, ApiError> {
-    // ─── IP-based rate limiting for registration (per hour) ───
+    // ─── IP-based rate limiting for registration (per minute) ───
     ratelimit
         .check_custom_limit(
             &format!("ratelimit:ip:{}:register", client_ip),
             config.ratelimit.register_ip_max_per_hour,
-            3600,
+            60,
         )
         .await?;
 

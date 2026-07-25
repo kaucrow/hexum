@@ -13,11 +13,11 @@ pub enum VerificationContext {
 }
 
 impl VerificationContext {
-    pub fn subject(&self) -> &'static str {
+    pub fn subject(&self, app_name: &str) -> String {
         match self {
-            Self::AccountRegistration => "Verify your NativEat account",
-            Self::EmailChange => "Confirm your email change",
-            Self::PasswordReset => "Reset your password",
+            Self::AccountRegistration => format!("Verify your {} account", app_name),
+            Self::EmailChange => "Confirm your email change".to_string(),
+            Self::PasswordReset => "Reset your password".to_string(),
         }
     }
 
