@@ -10,6 +10,7 @@ pub struct User {
     pub email: EmailAddress,
     pub roles: Vec<Role>,
     pub is_active: bool,
+    pub profile_picture_url: Option<String>,
 }
 
 impl User {
@@ -21,6 +22,7 @@ impl User {
             email: EmailAddress::new(email.to_string())?,
             roles: vec![Role::BasicUser],
             is_active: true,
+            profile_picture_url: None,
         })
     }
 

@@ -81,6 +81,7 @@ pub struct VerifyEmailChangeResponse {
     "email": "johndoe@gmail.com",
     "roles": ["BasicUser", "Admin", "Owner"],
     "isActive": true,
+    "profilePictureUrl": "/uploads/abc123.png"
 }))]
 pub struct UserDataResponse {
     /// The User's ID (UUID).
@@ -97,14 +98,9 @@ pub struct UserDataResponse {
 
     /// The user's "is_active" flag. False if the user has been suspended.
     pub is_active: bool,
-}
 
-#[derive(Deserialize, ToSchema, Validate, Debug)]
-pub struct UserDataUpdateRequest {
-    /// Sets a new username.
-    #[schema(example = "janedoe")]
-    #[validate(length(max = 200))]
-    pub new_username: Option<String>
+    /// URL to the user's profile picture, if set.
+    pub profile_picture_url: Option<String>,
 }
 
 #[derive(Serialize, ToSchema)]

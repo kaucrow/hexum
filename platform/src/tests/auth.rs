@@ -18,6 +18,7 @@ fn make_test_user(id: Uuid) -> user::User {
         email: user::EmailAddress::new("test@example.com".into()).unwrap(),
         roles: vec![user::Role::BasicUser],
         is_active: true,
+        profile_picture_url: None,
     }
 }
 

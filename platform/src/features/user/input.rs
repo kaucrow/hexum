@@ -22,6 +22,7 @@ pub trait UseCase: Send + Sync + 'static {
 
 pub struct NewUserData {
     pub username: Option<String>,
+    pub profile_picture_url: Option<String>,
 }
 
 #[derive(Error, Debug)]

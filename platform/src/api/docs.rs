@@ -38,7 +38,6 @@ use super::routes;
             routes::user::dtos::VerifyEmailChangeRequest,
             routes::user::dtos::VerifyEmailChangeResponse,
             routes::user::dtos::UserDataResponse,
-            routes::user::dtos::UserDataUpdateRequest,
             routes::user::dtos::UserDataUpdateResponse,
             routes::user::dtos::UserDeletionResponse,
 

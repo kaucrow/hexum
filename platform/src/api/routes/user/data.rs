@@ -38,8 +38,8 @@ pub async fn get_user_data(
 #[utoipa::path(
     patch,
     path = "/user/update-data",
-    description = "Updates data in the user's profile.",
-    request_body = UserDataUpdateRequest,
+    description = "Updates data in the user's profile. Accepts a multipart form with optional `new_username` text field and optional `image` file. If the image is omitted the existing profile picture is left unchanged.",
+    request_body(content_type = "multipart/form-data"),
     responses(
         (status = 200, description = "User data updated successfully", body = UserDataUpdateResponse),
         (status = 401, description = "Unauthorized"),
@@ -52,16 +52,49 @@ pub async fn get_user_data(
 )]
 pub async fn update_user_data(
     auth: AuthenticatedUser,
-    State(user_service): State<Arc<dyn user::UseCase>>,
-    ValidatedJson(payload): ValidatedJson<UserDataUpdateRequest>,
+    State(state): State<PlatformState>,
+    multipart: Multipart,
 ) -> Result<Json<UserDataUpdateResponse>, ApiError> {
     let user_id = auth.user_id;
 
-    info!("Updating profile data for user ID '{}' with new data: {:?}", &user_id, payload);
+    info!("Updating profile data for user ID '{}'", &user_id);
 
-    user_service
-        .update_user_data(&user_id, NewUserData::from(payload))
-        .await?;
+    // ─── Parse multipart form ───
+    let form = ParsedUserDataForm::from_multipart(multipart).await?;
+
+    // ─── Handle optional image upload ───
+    let profile_picture_url: Option<String> = if let Some((bytes, content_type)) = form.image {
+        let ext = mime_to_extension(&content_type);
+        let filename = format!("{}.{}", Uuid::new_v4(), ext);
+        let upload_path = PathBuf::from(&state.config.storage.upload_dir).join(&filename);
+
+        // Ensure the upload directory exists
+        if let Some(parent) = upload_path.parent() {
+            tokio::fs::create_dir_all(parent).await.map_err(|e| {
+                error!("Failed to create upload directory: {e}");
+                ApiError::Internal
+            })?;
+        }
+
+        // Write the file
+        tokio::fs::write(&upload_path, &bytes).await.map_err(|e| {
+            error!("Failed to write image file: {e}");
+            ApiError::Internal
+        })?;
+
+        info!("Profile picture saved to {:?}", upload_path);
+
+        Some(format!("/uploads/{}", filename))
+    } else {
+        None
+    };
+
+    let new_data = NewUserData {
+        username: form.new_username,
+        profile_picture_url,
+    };
+
+    state.user.update_user_data(&user_id, new_data).await?;
 
     let response = UserDataUpdateResponse { message: "User data updated successfully.".to_string() };
     Ok(Json(response))
@@ -75,14 +108,82 @@ impl From<User> for UserDataResponse {
             email: user.email.as_str().to_string(),
             roles: user.roles.into_iter().map(|role| role.to_string()).collect(),
             is_active: user.is_active,
+            profile_picture_url: user.profile_picture_url,
         }
     }
 }
 
-impl From<UserDataUpdateRequest> for NewUserData {
-    fn from(payload: UserDataUpdateRequest) -> Self {
-        Self {
-            username: payload.new_username,
+// ─── Multipart form parsing ───
+
+/// Maps a MIME content type to a file extension string.
+fn mime_to_extension(mime: &str) -> &'static str {
+    match mime {
+        "image/jpeg" | "image/jpg" => "jpg",
+        "image/png" => "png",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        "image/svg+xml" => "svg",
+        "image/bmp" => "bmp",
+        _ => "bin", // fallback for unknown types
+    }
+}
+
+struct ParsedUserDataForm {
+    pub new_username: Option<String>,
+    pub image: Option<(Bytes, String)>,
+}
+
+impl ParsedUserDataForm {
+    // Limits image payloads to 20MB to avoid memory exhaustion
+    const MAX_FILE_SIZE: usize = 20 * 1024 * 1024;
+
+    pub async fn from_multipart(mut multipart: Multipart) -> Result<Self, ApiError> {
+        let mut new_username: Option<String> = None;
+        let mut image_data: Option<(Bytes, String)> = None;
+
+        while let Some(field) = multipart.next_field().await.map_err(|e| {
+            ApiError::BadRequest(format!("Multipart processing stream failed: {e}"))
+        })? {
+            let field_name: String = field.name().map(|s| s.to_string()).unwrap_or_default();
+
+            match field_name.as_str() {
+                "new_username" => {
+                    let text = field.text().await.map_err(|e| {
+                        ApiError::BadRequest(format!("Failed to read username field: {e}"))
+                    })?;
+                    let trimmed = text.trim().to_string();
+                    if !trimmed.is_empty() {
+                        new_username = Some(trimmed);
+                    }
+                }
+                "image" => {
+                    let content_type: String = field
+                        .content_type()
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|| "application/octet-stream".to_string());
+                    let bytes = field.bytes().await.map_err(|e| {
+                        ApiError::BadRequest(format!("Failed to read image data: {e}"))
+                    })?;
+
+                    if bytes.len() > Self::MAX_FILE_SIZE {
+                        return Err(ApiError::BadRequest(
+                            "Image payload size limit exceeded (20MB max)".to_string(),
+                        ));
+                    }
+
+                    if !bytes.is_empty() {
+                        image_data = Some((bytes, content_type));
+                    }
+                }
+                _ => {
+                    warn!("Unexpected field in multipart form: {field_name}");
+                }
+            }
         }
+
+        Ok(Self {
+            new_username,
+            image: image_data,
+        })
     }
 }

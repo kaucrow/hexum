@@ -1,16 +1,16 @@
 user:
   get_by_id: |
-    SELECT id, username, email, roles, is_active
+    SELECT id, username, email, roles, is_active, profile_picture_url
     FROM platform.user
     WHERE id = $1
 
   get_by_username: |
-    SELECT id, username, email, roles, is_active
+    SELECT id, username, email, roles, is_active, profile_picture_url
     FROM platform.user
     WHERE username = $1
 
   get_by_email: |
-    SELECT id, username, email, roles, is_active
+    SELECT id, username, email, roles, is_active, profile_picture_url
     FROM platform.user
     WHERE email = $1
 
@@ -20,7 +20,8 @@ user:
   update_data: |
     UPDATE platform.user
     SET
-      username = COALESCE($2, username)
+      username = COALESCE($2, username),
+      profile_picture_url = COALESCE($3, profile_picture_url)
     WHERE id = $1
 
   insert: |

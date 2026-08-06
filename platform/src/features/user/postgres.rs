@@ -156,6 +156,7 @@ impl Repository for PostgresAdapter {
             sqlx::query(sql(&QUERIES.user.update_data))
                 .bind(user_id)
                 .bind(new_data.username)
+                .bind(new_data.profile_picture_url)
                 .execute(&self.pool)
                 .await?;
 
@@ -255,6 +256,7 @@ pub struct UserDbRow {
     pub email: String,
     pub roles: Vec<String>,
     pub is_active: bool,
+    pub profile_picture_url: Option<String>,
 }
 
 impl TryFrom<UserDbRow> for User {
@@ -274,6 +276,7 @@ impl TryFrom<UserDbRow> for User {
             email,
             roles,
             is_active: row.is_active,
+            profile_picture_url: row.profile_picture_url,
         })
     }
 }

@@ -13,6 +13,7 @@ fn make_test_user(id: Uuid) -> User {
         email: EmailAddress::new("test@example.com".into()).unwrap(),
         roles: vec![Role::BasicUser],
         is_active: true,
+        profile_picture_url: None,
     }
 }
 
