@@ -22,6 +22,7 @@ pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
 #[derive(Deserialize, Debug)]
 pub(crate) struct Queries {
     pub base: self::internal::Base,
+    pub friends: self::internal::Friends,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -46,5 +47,16 @@ mod internal {
     #[derive(Deserialize, Debug)]
     pub struct Base {
         pub ping: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Friends {
+        pub list_strangers: String,
+        pub insert_request: String,
+        pub get_sent_requests: String,
+        pub get_received_requests: String,
+        pub accept_request: String,
+        pub reject_request: String,
+        pub get_friends: String,
     }
 }

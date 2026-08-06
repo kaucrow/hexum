@@ -6,6 +6,7 @@ pub enum ApiError {
     Unauthorized(String),
     BadRequest(String),
     Conflict(String),
+    NotFound(String),
     Internal(String),
 }
 
@@ -15,6 +16,7 @@ impl IntoResponse for ApiError {
             Self::Unauthorized(msg) => (StatusCode::UNAUTHORIZED, msg),
             Self::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg),
             Self::Conflict(msg) => (StatusCode::CONFLICT, msg),
+            Self::NotFound(msg) => (StatusCode::NOT_FOUND, msg),
             Self::Internal(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg),
         };
 

@@ -1,3 +1,71 @@
 base:
   ping: |
     SELECT 1 as value
+
+friends:
+  list_strangers: |
+    SELECT u.id, u.username, u.profile_picture_url
+    FROM platform.user u
+    WHERE u.id != $1
+      AND u.id NOT IN (
+        SELECT CASE
+          WHEN fr.sender_id = $1 THEN fr.receiver_id
+          ELSE fr.sender_id
+        END
+        FROM friend.friend_request fr
+        WHERE (fr.sender_id = $1 OR fr.receiver_id = $1)
+          AND fr.status IN ('pending', 'accepted')
+      )
+    ORDER BY u.username ASC
+    LIMIT $2 OFFSET $3
+
+  insert_request: |
+    INSERT INTO friend.friend_request (id, sender_id, receiver_id, status)
+    VALUES ($1, $2, $3, 'pending')
+    RETURNING id, sender_id, receiver_id, status, created_at, updated_at
+
+  get_sent_requests: |
+    SELECT fr.id, fr.sender_id, fr.receiver_id, fr.status, fr.created_at, fr.updated_at,
+           s.username AS sender_username,
+           r.username AS receiver_username
+    FROM friend.friend_request fr
+    JOIN platform.user s ON fr.sender_id = s.id
+    JOIN platform.user r ON fr.receiver_id = r.id
+    WHERE fr.sender_id = $1 AND fr.status = 'pending'
+    ORDER BY fr.created_at DESC
+
+  get_received_requests: |
+    SELECT fr.id, fr.sender_id, fr.receiver_id, fr.status, fr.created_at, fr.updated_at,
+           s.username AS sender_username,
+           r.username AS receiver_username
+    FROM friend.friend_request fr
+    JOIN platform.user s ON fr.sender_id = s.id
+    JOIN platform.user r ON fr.receiver_id = r.id
+    WHERE fr.receiver_id = $1 AND fr.status = 'pending'
+    ORDER BY fr.created_at DESC
+
+  accept_request: |
+    UPDATE friend.friend_request
+    SET status = 'accepted', updated_at = NOW()
+    WHERE id = $1 AND receiver_id = $2 AND status = 'pending'
+    RETURNING id, sender_id, receiver_id, status, created_at, updated_at
+
+  reject_request: |
+    UPDATE friend.friend_request
+    SET status = 'rejected', updated_at = NOW()
+    WHERE id = $1 AND receiver_id = $2 AND status = 'pending'
+    RETURNING id, sender_id, receiver_id, status, created_at, updated_at
+
+  get_friends: |
+    SELECT u.id, u.username, u.profile_picture_url
+    FROM platform.user u
+    WHERE u.id IN (
+      SELECT CASE
+        WHEN fr.sender_id = $1 THEN fr.receiver_id
+        ELSE fr.sender_id
+      END
+      FROM friend.friend_request fr
+      WHERE (fr.sender_id = $1 OR fr.receiver_id = $1)
+        AND fr.status = 'accepted'
+    )
+    ORDER BY u.username ASC

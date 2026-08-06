@@ -8,6 +8,7 @@ platform = { path = "../platform" }
 anyhow = { workspace = true }
 async-trait = { workspace = true }
 axum = { workspace = true }
+chrono = { workspace = true }
 config = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -16,3 +17,5 @@ sqlx = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 utoipa = { workspace = true }
+uuid = { workspace = true }
+validator = { workspace = true }
