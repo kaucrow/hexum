@@ -1,1 +1,0 @@
-ALTER TABLE platform.user ADD COLUMN profile_picture_url TEXT;

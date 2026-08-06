@@ -7,6 +7,7 @@ use anyhow::{Result, anyhow};
 pub struct Config {
     #[serde(default)]
     pub debug: bool,
+    pub app: String,
     #[serde(default)]
     pub environment: Environment,
     pub api: internal::ApiConfig,
@@ -55,7 +56,7 @@ pub fn get_config() -> Result<Config, config::ConfigError> {
 
     let config_directory = root_path.join(format!("config/{}", environment));
 
-    let filename = "base.toml";
+    let filename = "platform.toml";
 
     let settings = config::Config::builder()
         .add_source(config::File::from(
