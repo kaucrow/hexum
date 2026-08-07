@@ -62,39 +62,17 @@ pub async fn update_user_data(
     // ─── Parse multipart form ───
     let form = ParsedUserDataForm::from_multipart(multipart).await?;
 
-    // ─── Handle optional image upload ───
-    let profile_picture_url: Option<String> = if let Some((bytes, content_type)) = form.image {
-        let ext = mime_to_extension(&content_type);
-        let filename = format!("{}.{}", Uuid::new_v4(), ext);
-        let upload_path = PathBuf::from(&state.config.storage.upload_dir).join(&filename);
-
-        // Ensure the upload directory exists
-        if let Some(parent) = upload_path.parent() {
-            tokio::fs::create_dir_all(parent).await.map_err(|e| {
-                error!("Failed to create upload directory: {e}");
-                ApiError::Internal
-            })?;
-        }
-
-        // Write the file
-        tokio::fs::write(&upload_path, &bytes).await.map_err(|e| {
-            error!("Failed to write image file: {e}");
-            ApiError::Internal
-        })?;
-
-        info!("Profile picture saved to {:?}", upload_path);
-
-        Some(format!("/uploads/{}", filename))
-    } else {
-        None
-    };
+    // ─── Convert Bytes → Vec<u8> for the service layer ───
+    let image: Option<(Vec<u8>, String)> = form.image.map(|(bytes, ct)| (bytes.to_vec(), ct));
 
     let new_data = NewUserData {
         username: form.new_username,
-        profile_picture_url,
+        profile_picture_url: None,
     };
 
-    state.user.update_user_data(&user_id, new_data).await?;
+    // The service handles image saving (filename = user UUID + extension) and
+    // delegates the final data update to the repository.
+    state.user.update_user_data(&user_id, new_data, image).await?;
 
     let response = UserDataUpdateResponse { message: "User data updated successfully.".to_string() };
     Ok(Json(response))
@@ -114,19 +92,6 @@ impl From<User> for UserDataResponse {
 }
 
 // ─── Multipart form parsing ───
-
-/// Maps a MIME content type to a file extension string.
-fn mime_to_extension(mime: &str) -> &'static str {
-    match mime {
-        "image/jpeg" | "image/jpg" => "jpg",
-        "image/png" => "png",
-        "image/gif" => "gif",
-        "image/webp" => "webp",
-        "image/svg+xml" => "svg",
-        "image/bmp" => "bmp",
-        _ => "bin", // fallback for unknown types
-    }
-}
 
 struct ParsedUserDataForm {
     pub new_username: Option<String>,

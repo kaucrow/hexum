@@ -14,6 +14,7 @@ pub struct Service {
     verification: Arc<dyn verification::Port>,
     security: Arc<dyn security::Port>,
     email: Arc<dyn email::Port>,
+    file_storage: Arc<dyn FileStorage>,
 }
 
 impl Service {
@@ -22,8 +23,9 @@ impl Service {
         verification: Arc<dyn verification::Port>,
         security: Arc<dyn security::Port>,
         email: Arc<dyn email::Port>,
+        file_storage: Arc<dyn FileStorage>,
     ) -> Self {
-        Self { user_repo, verification, security, email }
+        Self { user_repo, verification, security, email, file_storage }
     }
 
     async fn generate_verification_code(
@@ -98,8 +100,24 @@ impl UseCase for Service {
         Ok(())
     }
 
-    async fn update_user_data(&self, user_id: &Uuid, new_data: NewUserData) -> Result<(), UseCaseError> {
-        self.user_repo.update_user_data(user_id, new_data).await?;
+    async fn update_user_data(
+        &self,
+        user_id: &Uuid,
+        new_data: NewUserData,
+        image: Option<(Vec<u8>, String)>,
+    ) -> Result<(), UseCaseError> {
+        let profile_picture_url = if let Some((bytes, content_type)) = image {
+            Some(self.file_storage.save_image(user_id, &bytes, &content_type).await?)
+        } else {
+            new_data.profile_picture_url
+        };
+
+        let final_data = NewUserData {
+            username: new_data.username,
+            profile_picture_url,
+        };
+
+        self.user_repo.update_user_data(user_id, final_data).await?;
 
         Ok(())
     }

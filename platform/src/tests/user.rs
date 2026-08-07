@@ -39,11 +39,14 @@ async fn test_register_user_success() {
     verification.expect_store_verification_token()
         .returning(|_, _, _| Ok(()));
 
+    let file_storage = user::MockFileStorage::new();
+
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let user_id = Uuid::new_v4();
@@ -65,12 +68,14 @@ async fn test_register_user_username_in_use() {
 
     let email = email::MockPort::new();
     let verification = verification::MockPort::new();
+    let file_storage = user::MockFileStorage::new();
 
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let user = make_test_user(Uuid::new_v4());
@@ -90,12 +95,14 @@ async fn test_register_user_email_in_use() {
 
     let email = email::MockPort::new();
     let verification = verification::MockPort::new();
+    let file_storage = user::MockFileStorage::new();
 
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let user = make_test_user(Uuid::new_v4());
@@ -130,11 +137,14 @@ async fn test_register_user_email_failure_deletes_user() {
     verification.expect_store_verification_token()
         .returning(|_, _, _| Ok(()));
 
+    let file_storage = user::MockFileStorage::new();
+
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let user_id = Uuid::new_v4();
@@ -155,6 +165,7 @@ async fn test_verify_user_account_success() {
 
     let security = security::MockPort::new();
     let email = email::MockPort::new();
+    let file_storage = user::MockFileStorage::new();
 
     let mut verification = verification::MockPort::new();
     verification.expect_consume_verification_token()
@@ -165,6 +176,7 @@ async fn test_verify_user_account_success() {
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let result = service.verify_user_account("valid-token").await;
@@ -176,6 +188,7 @@ async fn test_verify_user_account_invalid_token() {
     let user_repo = user::MockRepository::new();
     let security = security::MockPort::new();
     let email = email::MockPort::new();
+    let file_storage = user::MockFileStorage::new();
 
     let mut verification = verification::MockPort::new();
     verification.expect_consume_verification_token()
@@ -188,6 +201,7 @@ async fn test_verify_user_account_invalid_token() {
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let result = service.verify_user_account("bad-token").await;
@@ -231,11 +245,14 @@ async fn test_register_user_code_in_use_retry_succeeds() {
     email.expect_send_verification_email()
         .returning(|_, _, _| Ok(()));
 
+    let file_storage = user::MockFileStorage::new();
+
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email),
+        Arc::new(file_storage),
     );
 
     let user_id = Uuid::new_v4();
@@ -266,11 +283,14 @@ async fn test_register_user_code_in_use_max_retries_fails() {
         .times(5)
         .returning(|_, _, _| Err(verification::PortError::CodeInUse));
 
+    let file_storage = user::MockFileStorage::new();
+
     let service = user::Service::new(
         Arc::new(user_repo),
         Arc::new(verification),
         Arc::new(security),
         Arc::new(email::MockPort::new()),
+        Arc::new(file_storage),
     );
 
     let user_id = Uuid::new_v4();

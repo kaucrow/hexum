@@ -40,11 +40,16 @@ pub async fn init(
         _ => Arc::new(email::ResendAdapter::new(&config)?),
     };
 
+    let disk_storage = Arc::new(user::DiskStorage::new(
+        PathBuf::from(&config.storage.upload_dir)
+    ));
+
     let user_service = user::Service::new(
         pg_user_adapter,
         redis_verification_adapter,
         paseto_security_adapter,
         email_adapter,
+        disk_storage,
     );
 
     Ok(PlatformState {

@@ -1,5 +1,6 @@
 pub(crate) mod postgres;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use axum::Router;
@@ -333,11 +334,16 @@ pub async fn spawn_test_app() -> TestApp {
             )
         };
 
+    let disk_storage = Arc::new(platform::features::user::DiskStorage::new(
+        PathBuf::from(&config.storage.upload_dir)
+    ));
+
     let user_service = platform::features::user::Service::new(
         pg_user_adapter,
         redis_verification_adapter,
         paseto_security_adapter,
         email_adapter,
+        disk_storage,
     );
 
     let platform_state = platform::PlatformState {
