@@ -354,7 +354,7 @@ pub async fn spawn_test_app() -> TestApp {
     };
 
     // ── Business layer (uses business::init) ───────────────────
-    let business_state = business::init(pool.clone(), platform_state.auth.clone())
+    let business_state = business::init(pool.clone(), platform_state.auth.clone(), config.storage.upload_dir.clone())
         .await
         .expect("Failed to init business state");
 

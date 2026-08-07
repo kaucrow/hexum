@@ -1,6 +1,6 @@
+use super::*;
 use crate::prelude::*;
 use crate::postgres::*;
-use super::*;
 
 #[derive(Clone)]
 pub struct PostgresAdapter {
@@ -220,6 +220,7 @@ pub struct UserSummaryDbRow {
     pub profile_picture_url: Option<String>,
     pub last_msg_id: Option<Uuid>,
     pub last_msg_sender_id: Option<Uuid>,
+    pub last_msg_type: Option<String>,
     pub last_msg_content: Option<String>,
     pub last_msg_created_at: Option<sqlx::types::chrono::DateTime<chrono::Utc>>,
 }
@@ -229,13 +230,15 @@ impl From<UserSummaryDbRow> for UserSummary {
         let last_message = match (
             row.last_msg_id,
             row.last_msg_sender_id,
+            row.last_msg_type,
             row.last_msg_content,
             row.last_msg_created_at,
         ) {
-            (Some(id), Some(sender_id), Some(content), Some(created_at)) => {
+            (Some(id), Some(sender_id), Some(msg_type), Some(content), Some(created_at)) => {
                 Some(LastMessage {
                     id,
                     sender_id,
+                    message_type: msg_type,
                     content,
                     created_at,
                 })

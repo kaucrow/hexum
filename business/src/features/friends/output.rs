@@ -16,6 +16,7 @@ pub struct UserSummary {
 pub struct LastMessage {
     pub id: Uuid,
     pub sender_id: Uuid,
+    pub message_type: String,
     pub content: String,
     pub created_at: DateTime<Utc>,
 }

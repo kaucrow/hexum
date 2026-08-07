@@ -1,12 +1,13 @@
-pub use std::sync::Arc;
+pub use std::{
+    sync::Arc,
+    path::PathBuf,
+};
 pub use thiserror::Error;
 pub use async_trait::async_trait;
 pub use uuid::Uuid;
 pub use tracing::{info, error};
 pub use serde::{Serialize, Deserialize};
 pub use anyhow::{Result, Context};
-
-use std::path::PathBuf;
 
 /// Resolves crate assets path safely for both development and production.
 pub fn get_crate_assets_path() -> PathBuf {

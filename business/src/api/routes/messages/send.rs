@@ -48,9 +48,10 @@ pub async fn ws_handler(
 
     let messages_svc = state.messages.clone();
     let cm = state.connection_manager.clone();
+    let upload_dir = state.upload_dir.clone();
     let user_id = auth.user_id;
 
     Ok(ws.on_upgrade(move |socket: WebSocket| {
-        ws::handle_socket(socket, user_id, friend_id, messages_svc, cm)
+        ws::handle_socket(socket, user_id, friend_id, messages_svc, cm, upload_dir)
     }))
 }

@@ -17,6 +17,11 @@ pub struct MessageResponse {
     #[schema(format = "uuid")]
     pub receiver_id: String,
 
+    /// Either "text" or "image".
+    #[schema(example = "text")]
+    pub r#type: String,
+
+    /// For text messages: the message text. For image messages: the image URL.
     pub content: String,
 
     pub created_at: String,
@@ -26,7 +31,7 @@ pub struct MessageResponse {
 #[serde(rename_all = "camelCase")]
 #[schema(example = json!({
     "messages": [
-        {"id": "...", "senderId": "...", "receiverId": "...", "content": "Hello!", "createdAt": "2024-01-01T00:00:00Z"}
+        {"id": "...", "senderId": "...", "receiverId": "...", "type": "text", "content": "Hello!", "createdAt": "2024-01-01T00:00:00Z"}
     ],
     "limit": 50,
     "offset": 0

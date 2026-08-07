@@ -2,6 +2,8 @@ CREATE TABLE msg.message (
     id UUID PRIMARY KEY,
     sender_id UUID NOT NULL REFERENCES platform.user(id) ON DELETE CASCADE,
     receiver_id UUID NOT NULL REFERENCES platform.user(id) ON DELETE CASCADE,
+    ADD COLUMN message_type VARCHAR(10) NOT NULL DEFAULT 'text'
+        CHECK (message_type IN ('text', 'image')),
     content TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

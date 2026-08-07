@@ -1,14 +1,44 @@
 pub mod connection;
 
-use std::sync::Arc;
-
 use axum::extract::ws::{Message as WsMessage, WebSocket};
 use futures::{SinkExt, StreamExt};
 use uuid::Uuid;
-use tracing::info;
+use tracing::{info, error};
 
-use crate::features::messages;
-use crate::ws::connection::ConnectionManager;
+use connection::ConnectionManager;
+use crate::prelude::*;
+use crate::features::messages::{self, MessageType};
+
+/// Detects MIME type from the first few magic bytes of an image.
+fn detect_mime(bytes: &[u8]) -> Option<&'static str> {
+    if bytes.len() < 4 {
+        return None;
+    }
+    if &bytes[..4] == b"\x89PNG" {
+        return Some("image/png");
+    }
+    if bytes.len() >= 3 && &bytes[..3] == b"\xFF\xD8\xFF" {
+        return Some("image/jpeg");
+    }
+    if bytes.len() >= 4 && &bytes[..4] == b"GIF8" {
+        return Some("image/gif");
+    }
+    if bytes.len() >= 12 && &bytes[..4] == b"RIFF" && &bytes[8..12] == b"WEBP" {
+        return Some("image/webp");
+    }
+    None
+}
+
+/// Maps MIME type to file extension.
+fn mime_to_ext(mime: &str) -> &'static str {
+    match mime {
+        "image/png" => "png",
+        "image/jpeg" => "jpg",
+        "image/gif" => "gif",
+        "image/webp" => "webp",
+        _ => "bin",
+    }
+}
 
 /// Spawns the WebSocket send/receive loops for a conversation between
 /// `user_id` (authenticated) and `friend_id` (path param).
@@ -18,13 +48,13 @@ pub async fn handle_socket(
     friend_id: Uuid,
     messages_service: Arc<dyn messages::UseCase>,
     connection_manager: Arc<ConnectionManager>,
+    upload_dir: String,
 ) {
     let (mut ws_sender, mut ws_receiver) = socket.split();
 
-    // Subscribe to this conversation's broadcast channel
     let mut broadcast_rx = connection_manager.subscribe(user_id, friend_id).await;
 
-    // ─── Send loop: forward broadcast messages to this WebSocket client ───
+    // ─── Send loop ───
     let mut send_task = tokio::spawn(async move {
         while let Ok(msg) = broadcast_rx.recv().await {
             if ws_sender
@@ -37,12 +67,17 @@ pub async fn handle_socket(
         }
     });
 
-    // ─── Receive loop: read client messages, persist, broadcast ───
+    // ─── Receive loop ───
     let recv_svc = messages_service.clone();
     let recv_cm = connection_manager.clone();
+    let upload_dir = PathBuf::from(upload_dir);
     let mut recv_task = tokio::spawn(async move {
+        // Ensure upload dir exists
+        let _ = tokio::fs::create_dir_all(&upload_dir).await;
+
         while let Some(Ok(msg)) = ws_receiver.next().await {
             match msg {
+                // ─── Text frame = text message ───
                 WsMessage::Text(text) => {
                     let content = match serde_json::from_str::<serde_json::Value>(&text) {
                         Ok(v) => v
@@ -58,7 +93,7 @@ pub async fn handle_socket(
                     }
 
                     let message = match recv_svc
-                        .send_message(user_id, friend_id, &content)
+                        .send_message(user_id, friend_id, MessageType::Text, &content)
                         .await
                     {
                         Ok(m) => m,
@@ -66,7 +101,7 @@ pub async fn handle_socket(
                     };
 
                     let outbound = serde_json::json!({
-                        "type": "message",
+                        "type": "text",
                         "id": message.id.to_string(),
                         "sender_id": message.sender_id.to_string(),
                         "content": message.content,
@@ -74,22 +109,55 @@ pub async fn handle_socket(
                     })
                     .to_string();
 
-                    recv_cm
-                        .broadcast(user_id, friend_id, outbound)
-                        .await;
-
-                    info!(
-                        "Message from '{}' to '{}' processed",
-                        user_id, friend_id
-                    );
+                    recv_cm.broadcast(user_id, friend_id, outbound).await;
                 }
+
+                // ─── Binary frame = image ───
+                WsMessage::Binary(data) => {
+                    let mime = match detect_mime(&data) {
+                        Some(m) => m,
+                        None => continue,   // unsupported format
+                    };
+
+                    let ext = mime_to_ext(mime);
+                    let filename = format!("msg_{}.{}", Uuid::new_v4(), ext);
+                    let filepath = upload_dir.join(&filename);
+
+                    if let Err(e) = tokio::fs::write(&filepath, &data).await {
+                        error!("Failed to save uploaded image: {e}");
+                        continue;
+                    }
+
+                    let url = format!("/uploads/{}", filename);
+
+                    let message = match recv_svc
+                        .send_message(user_id, friend_id, MessageType::Image, &url)
+                        .await
+                    {
+                        Ok(m) => m,
+                        Err(_) => continue,
+                    };
+
+                    let outbound = serde_json::json!({
+                        "type": "image",
+                        "id": message.id.to_string(),
+                        "sender_id": message.sender_id.to_string(),
+                        "url": url,
+                        "created_at": message.created_at.to_rfc3339(),
+                    })
+                    .to_string();
+
+                    recv_cm.broadcast(user_id, friend_id, outbound).await;
+
+                    info!("Image message from '{}' to '{}' saved as '{}'", user_id, friend_id, filename);
+                }
+
                 WsMessage::Close(_) => break,
                 _ => {}
             }
         }
     });
 
-    // Wait for either task to finish
     tokio::select! {
         _ = &mut send_task => {
             recv_task.abort();

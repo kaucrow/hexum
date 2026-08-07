@@ -20,6 +20,7 @@ impl Port for PostgresAdapter {
         id: Uuid,
         sender_id: Uuid,
         receiver_id: Uuid,
+        message_type: MessageType,
         content: &str,
     ) -> Result<Message, PortError> {
         let res: Result<_, LocalError> = async {
@@ -30,6 +31,7 @@ impl Port for PostgresAdapter {
             .bind(sender_id)
             .bind(receiver_id)
             .bind(content)
+            .bind(message_type.as_str())
             .fetch_one(&self.pool)
             .await?;
 
@@ -91,16 +93,23 @@ pub struct MessageDbRow {
     pub id: Uuid,
     pub sender_id: Uuid,
     pub receiver_id: Uuid,
+    pub message_type: String,
     pub content: String,
     pub created_at: sqlx::types::chrono::DateTime<chrono::Utc>,
 }
 
 impl From<MessageDbRow> for Message {
     fn from(row: MessageDbRow) -> Self {
+        let message_type = match row.message_type.as_str() {
+            "image" => MessageType::Image,
+            _ => MessageType::Text,
+        };
+
         Self {
             id: row.id,
             sender_id: row.sender_id,
             receiver_id: row.receiver_id,
+            message_type,
             content: row.content,
             created_at: row.created_at,
         }

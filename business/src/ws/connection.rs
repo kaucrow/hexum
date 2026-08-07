@@ -1,8 +1,8 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use tokio::sync::{broadcast, RwLock};
-use uuid::Uuid;
+
+use crate::prelude::*;
 
 /// A normalized conversation key: (min(user_a, user_b), max(user_a, user_b)).
 fn conversation_key(a: Uuid, b: Uuid) -> (Uuid, Uuid) {

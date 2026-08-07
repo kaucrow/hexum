@@ -13,4 +13,5 @@ pub struct BusinessState {
     pub friends: Arc<dyn friends::UseCase>,
     pub messages: Arc<dyn messages::UseCase>,
     pub connection_manager: Arc<ConnectionManager>,
+    pub upload_dir: String,
 }

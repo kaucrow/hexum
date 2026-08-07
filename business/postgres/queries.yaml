@@ -60,6 +60,7 @@ friends:
     SELECT u.id, u.username, u.profile_picture_url,
            lm.id AS last_msg_id,
            lm.sender_id AS last_msg_sender_id,
+           lm.message_type AS last_msg_type,
            lm.content AS last_msg_content,
            lm.created_at AS last_msg_created_at
     FROM platform.user u
@@ -67,7 +68,7 @@ friends:
       ON (fr.sender_id = $1 AND fr.receiver_id = u.id)
       OR (fr.receiver_id = $1 AND fr.sender_id = u.id)
     LEFT JOIN LATERAL (
-      SELECT m.id, m.sender_id, m.content, m.created_at
+      SELECT m.id, m.sender_id, m.message_type, m.content, m.created_at
       FROM msg.message m
       WHERE (m.sender_id = $1 AND m.receiver_id = u.id)
          OR (m.sender_id = u.id AND m.receiver_id = $1)
@@ -79,12 +80,12 @@ friends:
 
 messages:
   insert: |
-    INSERT INTO msg.message (id, sender_id, receiver_id, content)
-    VALUES ($1, $2, $3, $4)
-    RETURNING id, sender_id, receiver_id, content, created_at
+    INSERT INTO msg.message (id, sender_id, receiver_id, content, message_type)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id, sender_id, receiver_id, content, message_type, created_at
 
   get_conversation: |
-    SELECT id, sender_id, receiver_id, content, created_at
+    SELECT id, sender_id, receiver_id, content, message_type, created_at
     FROM msg.message
     WHERE (sender_id = $1 AND receiver_id = $2)
        OR (sender_id = $2 AND receiver_id = $1)

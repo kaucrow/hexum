@@ -1,4 +1,4 @@
-use super::Message;
+use super::{Message, MessageType};
 use crate::prelude::*;
 
 #[async_trait]
@@ -8,6 +8,7 @@ pub trait UseCase: Send + Sync + 'static {
         &self,
         sender_id: Uuid,
         receiver_id: Uuid,
+        message_type: MessageType,
         content: &str,
     ) -> Result<Message, UseCaseError>;
 

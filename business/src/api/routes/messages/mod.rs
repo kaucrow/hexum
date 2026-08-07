@@ -20,6 +20,7 @@ impl From<messages::Message> for MessageResponse {
             id: m.id.to_string(),
             sender_id: m.sender_id.to_string(),
             receiver_id: m.receiver_id.to_string(),
+            r#type: m.message_type.as_str().to_string(),
             content: m.content,
             created_at: m.created_at.to_rfc3339(),
         }

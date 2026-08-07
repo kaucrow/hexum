@@ -14,6 +14,11 @@ pub struct LastMessageResponse {
     #[schema(format = "uuid")]
     pub sender_id: String,
 
+    /// Either "text" or "image".
+    #[schema(example = "text")]
+    pub r#type: String,
+
+    /// For text: the message content. For image: the image URL.
     pub content: String,
 
     pub created_at: String,
@@ -68,6 +73,7 @@ pub struct UserSummaryResponse {
             Self {
                 id: lm.id.to_string(),
                 sender_id: lm.sender_id.to_string(),
+                r#type: lm.message_type,
                 content: lm.content,
                 created_at: lm.created_at.to_rfc3339(),
             }

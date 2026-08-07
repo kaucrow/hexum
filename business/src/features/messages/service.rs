@@ -26,6 +26,7 @@ impl UseCase for Service {
         &self,
         sender_id: Uuid,
         receiver_id: Uuid,
+        message_type: MessageType,
         content: &str,
     ) -> Result<Message, UseCaseError> {
         if sender_id == receiver_id {
@@ -37,7 +38,7 @@ impl UseCase for Service {
         }
 
         let id = Uuid::new_v4();
-        let message = self.messages.insert_message(id, sender_id, receiver_id, content).await?;
+        let message = self.messages.insert_message(id, sender_id, receiver_id, message_type, content).await?;
 
         Ok(message)
     }
