@@ -1,8 +1,5 @@
-use async_trait::async_trait;
-use thiserror::Error;
-use uuid::Uuid;
-
 use super::{UserSummary, FriendRequest};
+use crate::prelude::*;
 
 #[async_trait]
 pub trait UseCase: Send + Sync + 'static {

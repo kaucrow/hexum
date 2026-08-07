@@ -1,7 +1,4 @@
-use async_trait::async_trait;
-use thiserror::Error;
-use uuid::Uuid;
-
+use crate::prelude::*;
 use crate::postgres::*;
 use super::*;
 
@@ -58,7 +55,6 @@ impl Port for PostgresAdapter {
             .fetch_one(&self.pool)
             .await
             .map_err(|e| {
-                // Check for the partial unique index violation
                 if is_unique_violation(&e) {
                     LocalError::Logic(PortError::Conflict(
                         ConflictError::PendingRequestExists,
@@ -195,7 +191,6 @@ impl From<LocalError> for PortError {
         match e {
             LocalError::Logic(e) => e,
             LocalError::Sqlx(e) => {
-                // Check for unique violations on the partial index
                 if is_unique_violation(&e) {
                     PortError::Conflict(ConflictError::PendingRequestExists)
                 } else {
@@ -223,14 +218,36 @@ pub struct UserSummaryDbRow {
     pub id: Uuid,
     pub username: String,
     pub profile_picture_url: Option<String>,
+    pub last_msg_id: Option<Uuid>,
+    pub last_msg_sender_id: Option<Uuid>,
+    pub last_msg_content: Option<String>,
+    pub last_msg_created_at: Option<sqlx::types::chrono::DateTime<chrono::Utc>>,
 }
 
 impl From<UserSummaryDbRow> for UserSummary {
     fn from(row: UserSummaryDbRow) -> Self {
+        let last_message = match (
+            row.last_msg_id,
+            row.last_msg_sender_id,
+            row.last_msg_content,
+            row.last_msg_created_at,
+        ) {
+            (Some(id), Some(sender_id), Some(content), Some(created_at)) => {
+                Some(LastMessage {
+                    id,
+                    sender_id,
+                    content,
+                    created_at,
+                })
+            }
+            _ => None,
+        };
+
         Self {
             id: row.id,
             username: row.username,
             profile_picture_url: row.profile_picture_url,
+            last_message,
         }
     }
 }

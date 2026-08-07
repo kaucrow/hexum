@@ -28,12 +28,16 @@ use crate::BusinessState;
 pub fn router(state: BusinessState) -> Router {
     Router::new()
         .route("/business-health", get(crate::routes::health::health))
+        // Friends
         .route("/users", get(crate::routes::friends::list_users))
-        .route("/friends", get(crate::routes::friends::list_friends))
         .route("/users/{user_id}/friend-request", post(crate::routes::friends::send_friend_request))
         .route("/friend-requests/sent", get(crate::routes::friends::get_sent_requests))
         .route("/friend-requests/received", get(crate::routes::friends::get_received_requests))
         .route("/friend-requests/{request_id}/accept", post(crate::routes::friends::accept_friend_request))
         .route("/friend-requests/{request_id}/reject", post(crate::routes::friends::reject_friend_request))
+        .route("/friends", get(crate::routes::friends::get_friends))
+        // Messages
+        .route("/messages/{friend_id}", get(crate::routes::messages::get_conversation))
+        .route("/ws/friends/{friend_id}", get(crate::routes::messages::ws_handler))
         .with_state(state)
 }

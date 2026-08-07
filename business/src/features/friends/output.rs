@@ -1,8 +1,6 @@
-use async_trait::async_trait;
-use thiserror::Error;
-use uuid::Uuid;
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+
+use crate::prelude::*;
 
 // ─── Domain types ───
 
@@ -11,6 +9,15 @@ pub struct UserSummary {
     pub id: Uuid,
     pub username: String,
     pub profile_picture_url: Option<String>,
+    pub last_message: Option<LastMessage>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct LastMessage {
+    pub id: Uuid,
+    pub sender_id: Uuid,
+    pub content: String,
+    pub created_at: DateTime<Utc>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -89,7 +96,7 @@ pub trait Port: Send + Sync + 'static {
     ) -> Result<Vec<UserSummary>, PortError>;
 }
 
-// ─── Errors ───
+// ─── Error types ───
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ConflictError {

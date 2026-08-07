@@ -5,13 +5,17 @@ use super::routes;
 #[openapi(
     paths(
         routes::health::health,
-        routes::friends::list_users::list_users,
-        routes::friends::list_users::list_friends,
-        routes::friends::requests::send_friend_request,
-        routes::friends::requests::get_sent_requests,
-        routes::friends::requests::get_received_requests,
-        routes::friends::requests::accept_friend_request,
-        routes::friends::requests::reject_friend_request,
+        // Friends
+        routes::friends::list_users,
+        routes::friends::send_friend_request,
+        routes::friends::get_sent_requests,
+        routes::friends::get_received_requests,
+        routes::friends::accept_friend_request,
+        routes::friends::reject_friend_request,
+        routes::friends::get_friends,
+        // Messages
+        routes::messages::get_conversation,
+        routes::messages::ws_handler,
     ),
     components(
         schemas(
@@ -20,6 +24,7 @@ use super::routes;
 
             // ==== Friends DTOs ====
             routes::friends::dtos::PaginationQuery,
+            routes::friends::dtos::LastMessageResponse,
             routes::friends::dtos::UserSummaryResponse,
             routes::friends::dtos::UserListResponse,
             routes::friends::dtos::FriendRequestResponse,
@@ -27,6 +32,10 @@ use super::routes;
             routes::friends::dtos::SendFriendRequestResponse,
             routes::friends::dtos::AcceptRejectResponse,
             routes::friends::dtos::FriendListResponse,
+
+            // ==== Messages DTOs ====
+            routes::messages::dtos::MessageResponse,
+            routes::messages::dtos::ConversationResponse,
         )
     ),
 )]

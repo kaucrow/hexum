@@ -57,15 +57,36 @@ friends:
     RETURNING id, sender_id, receiver_id, status, created_at, updated_at
 
   get_friends: |
-    SELECT u.id, u.username, u.profile_picture_url
+    SELECT u.id, u.username, u.profile_picture_url,
+           lm.id AS last_msg_id,
+           lm.sender_id AS last_msg_sender_id,
+           lm.content AS last_msg_content,
+           lm.created_at AS last_msg_created_at
     FROM platform.user u
-    WHERE u.id IN (
-      SELECT CASE
-        WHEN fr.sender_id = $1 THEN fr.receiver_id
-        ELSE fr.sender_id
-      END
-      FROM friend.friend_request fr
-      WHERE (fr.sender_id = $1 OR fr.receiver_id = $1)
-        AND fr.status = 'accepted'
-    )
+    JOIN friend.friend_request fr
+      ON (fr.sender_id = $1 AND fr.receiver_id = u.id)
+      OR (fr.receiver_id = $1 AND fr.sender_id = u.id)
+    LEFT JOIN LATERAL (
+      SELECT m.id, m.sender_id, m.content, m.created_at
+      FROM msg.message m
+      WHERE (m.sender_id = $1 AND m.receiver_id = u.id)
+         OR (m.sender_id = u.id AND m.receiver_id = $1)
+      ORDER BY m.created_at DESC
+      LIMIT 1
+    ) lm ON true
+    WHERE fr.status = 'accepted'
     ORDER BY u.username ASC
+
+messages:
+  insert: |
+    INSERT INTO msg.message (id, sender_id, receiver_id, content)
+    VALUES ($1, $2, $3, $4)
+    RETURNING id, sender_id, receiver_id, content, created_at
+
+  get_conversation: |
+    SELECT id, sender_id, receiver_id, content, created_at
+    FROM msg.message
+    WHERE (sender_id = $1 AND receiver_id = $2)
+       OR (sender_id = $2 AND receiver_id = $1)
+    ORDER BY created_at DESC
+    LIMIT $3 OFFSET $4

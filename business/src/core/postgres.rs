@@ -23,6 +23,7 @@ pub(crate) static QUERIES: LazyLock<Queries> = LazyLock::new(|| {
 pub(crate) struct Queries {
     pub base: self::internal::Base,
     pub friends: self::internal::Friends,
+    pub messages: self::internal::Messages,
 }
 
 fn get_queries() -> Result<Queries, config::ConfigError> {
@@ -58,5 +59,11 @@ mod internal {
         pub accept_request: String,
         pub reject_request: String,
         pub get_friends: String,
+    }
+
+    #[derive(Deserialize, Debug)]
+    pub struct Messages {
+        pub insert: String,
+        pub get_conversation: String,
     }
 }

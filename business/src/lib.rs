@@ -1,6 +1,7 @@
 pub mod api;
 pub(crate) mod prelude;
 pub(crate) mod features;
+pub mod ws;
 mod init;
 mod core;
 

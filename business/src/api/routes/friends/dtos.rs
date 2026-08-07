@@ -3,6 +3,22 @@ use crate::{
     api::*,
 };
 
+// ─── Shared DTO ───
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LastMessageResponse {
+    #[schema(format = "uuid")]
+    pub id: String,
+
+    #[schema(format = "uuid")]
+    pub sender_id: String,
+
+    pub content: String,
+
+    pub created_at: String,
+}
+
 // ─── Pagination ───
 
 #[derive(Deserialize, ToSchema, Validate, IntoParams)]
@@ -42,7 +58,21 @@ pub struct UserSummaryResponse {
 
     /// URL to the user's profile picture, if set.
     pub profile_picture_url: Option<String>,
-}
+
+    /// The last message exchanged with this user, if any.
+        pub last_message: Option<LastMessageResponse>,
+    }
+    
+    impl From<crate::features::friends::LastMessage> for LastMessageResponse {
+        fn from(lm: crate::features::friends::LastMessage) -> Self {
+            Self {
+                id: lm.id.to_string(),
+                sender_id: lm.sender_id.to_string(),
+                content: lm.content,
+                created_at: lm.created_at.to_rfc3339(),
+            }
+        }
+    }
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
