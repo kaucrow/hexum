@@ -22,7 +22,7 @@ impl Port for PostgresAdapter {
         offset: i64,
     ) -> Result<Vec<UserSummary>, PortError> {
         let res: Result<_, LocalError> = async {
-            let rows = sqlx::query_as::<_, UserSummaryDbRow>(
+            let rows = sqlx::query_as::<_, StrangerDbRow>(
                 sql(&QUERIES.friends.list_strangers),
             )
             .bind(user_id)
@@ -212,6 +212,24 @@ fn is_unique_violation(e: &sqlx::Error) -> bool {
 }
 
 // ─── Database rows ───
+
+#[derive(sqlx::FromRow)]
+pub struct StrangerDbRow {
+    pub id: Uuid,
+    pub username: String,
+    pub profile_picture_url: Option<String>,
+}
+
+impl From<StrangerDbRow> for UserSummary {
+    fn from(row: StrangerDbRow) -> Self {
+        Self {
+            id: row.id,
+            username: row.username,
+            profile_picture_url: row.profile_picture_url,
+            last_message: None,
+        }
+    }
+}
 
 #[derive(sqlx::FromRow)]
 pub struct UserSummaryDbRow {
