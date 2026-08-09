@@ -17,3 +17,4 @@ serde_json = { workspace = true }
 tracing-subscriber = { workspace = true }
 redis = { workspace = true }
 wiremock = { workspace = true }
+tower-http = { workspace = true }
