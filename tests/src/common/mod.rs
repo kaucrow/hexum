@@ -361,7 +361,7 @@ pub async fn spawn_test_app() -> TestApp {
     // ── Router ─────────────────────────────────────────────────
     let platform_router =
         platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state);
+    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
     let app = Router::new()
         .merge(platform_router)
         .merge(business_router);

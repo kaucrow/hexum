@@ -22,10 +22,11 @@ pub(crate) use platform::api::{
     ValidatedQuery,
 };
 
+use tower_http::services::ServeDir;
 use axum::{Router, routing::get, routing::post};
 use crate::BusinessState;
 
-pub fn router(state: BusinessState) -> Router {
+pub fn router(state: BusinessState, upload_dir: String) -> Router {
     Router::new()
         .route("/business-health", get(crate::routes::health::health))
         // Friends
