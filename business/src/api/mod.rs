@@ -39,5 +39,7 @@ pub fn router(state: BusinessState) -> Router {
         // Messages
         .route("/messages/{friend_id}", get(crate::routes::messages::get_conversation))
         .route("/ws/friends/{friend_id}", get(crate::routes::messages::ws_handler))
+        // Uploads
+        .nest_service("/uploads", ServeDir::new(&upload_dir))
         .with_state(state)
 }
