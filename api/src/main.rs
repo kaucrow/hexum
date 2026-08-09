@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     let business_state = business::init(pool, platform_state.auth.clone(), config.storage.upload_dir.clone()).await?;
 
     let platform_router = platform::api::router(platform_state, config.api.enable_dev_endpoints);
-    let business_router = business::api::router(business_state, config.storage.upload_dir);
+    let business_router = business::api::router(business_state, config.storage.upload_dir.clone());
 
     let mut openapi = MasterDocs::openapi();
 
